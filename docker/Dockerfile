@@ -19,7 +19,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install 
     apt-get install gfortran \
     apt-get install libblas-dev \ 
     apt-get install libatlas-base-dev \
-    apt-get install liblapack-dev \
+    apt-get install liblapack-dev 
 
 # Setting up dagmc_bld directory for DAGMC and MOAB
 RUN cd/$WORKDIR && \
