@@ -59,7 +59,7 @@ RUN cd /$WORKDIR/dagmc_bld/ && \
     ln -s DAGMC src && \
     mkdir bld && \
     cd bld/ && \ 
-    INSTALL_PATH=/$WORKDIR/dagmc_bld/DAGMC \
+    INSTALL_PATH=/$WORKDIR/dagmc_bld/DAGMC && \
     cmake ../src -DMOAB_DIR=/$WORKDIR/dagmc_bld/MOAB \
                  -DBUILD_TALLY=ON \
                  -DCMAKE_INSTALL_PREFIX=$INSTALL_PATH && \
