@@ -25,7 +25,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install 
 RUN cd/$WORKDIR && \
     mkdir dagmc_bld && \
     cd dagmc_bld && \
-    mkdir -p MOAB\bld && 
+    mkdir -p MOAB\bld
 
 # Install MOAB 
 RUN cd /$WORKDIR/dagmc_bld/MOAB/ && \
