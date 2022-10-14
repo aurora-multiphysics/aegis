@@ -22,7 +22,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install 
     liblapack-dev 
 
 # Setting up dagmc_bld directory for DAGMC and MOAB
-RUN cd/$WORKDIR && \
+RUN cd /$WORKDIR && \
     mkdir dagmc_bld && \
     cd dagmc_bld && \
     mkdir -p MOAB\bld
