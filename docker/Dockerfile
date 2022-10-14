@@ -55,12 +55,12 @@ RUN cd /$WORKDIR/dagmc_bld/ && \
     cd DAGMC && \
     git checkout develop && \
     git submodule update --init && \
-    cd $WORKDIR/dagmc_bld/DAGMC/ && \
-    ls -s DAGMC src && \
+    cd /$WORKDIR/dagmc_bld/DAGMC/ && \
+    ln -s DAGMC src && \
     mkdir bld && \
     cd bld/ && \ 
-    INSTALL_PATH=$WORKDIR/dagmc_bld/DAGMC \
-    cmake ../src -DMOAB_DIR=$WORKDIR/dagmc_bld/MOAB \
+    INSTALL_PATH=/$WORKDIR/dagmc_bld/DAGMC \
+    cmake ../src -DMOAB_DIR=/$WORKDIR/dagmc_bld/MOAB \
                  -DBUILD_TALLY=ON \
                  -DCMAKE_INSTALL_PREFIX=$INSTALL_PATH && \
     make && \
