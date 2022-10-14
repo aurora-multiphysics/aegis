@@ -6,20 +6,20 @@ ARG DAGMC_CMAKE_CONFIG="opt/dagmc_bld/DAGMC/lib/cmake/dagmc"
 
 # Install apt dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install -y \
-    apt-get install git \
-    apt-get install python3 \
-    apt-get install pip \
-    apt-get install libeigen3-dev \
-    apt-get install libhdf5-dev \
-    apt-get install autoconf \
-    apt-get install make \
-    apt-get install cmake \
-    apt-get install libtool \
-    apt-get install g++ \ 
-    apt-get install gfortran \
-    apt-get install libblas-dev \ 
-    apt-get install libatlas-base-dev \
-    apt-get install liblapack-dev 
+    git \
+    python3 \
+    pip \
+    libeigen3-dev \
+    libhdf5-dev \
+    autoconf \
+    make \
+    cmake \
+    libtool \
+    g++ \ 
+    gfortran \
+    libblas-dev \ 
+    libatlas-base-dev \
+    liblapack-dev \
 
 # Setting up dagmc_bld directory for DAGMC and MOAB
 RUN cd/$WORKDIR && \
@@ -59,7 +59,7 @@ RUN cd /$WORKDIR/dagmc_bld/ && \
     ls -s DAGMC src && \
     mkdir bld && \
     cd bld/ && \ 
-    INSTALL_PATH=$WORKDIR/dagmc_bld/DAGMC && \
+    INSTALL_PATH=$WORKDIR/dagmc_bld/DAGMC
     cmake ../src -DMOAB_DIR=$WORKDIR/dagmc_bld/MOAB \
                  -DBUILD_TALLY=ON \
                  -DCMAKE_INSTALL_PREFIX=$INSTALL_PATH && \
