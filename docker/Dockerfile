@@ -38,14 +38,14 @@ RUN cd /$WORKDIR/dagmc_bld/MOAB/ && \
     cd bld/ && \
     ../src/configure --enable-optimize --enable-shared --disable-debug \
     		     --with-hdf5=/usr/lib/x86_64-linux-gnu/hdf5/serial \
-	             --prefix=$HOME/dagmc_bld/MOAB && \
+	             --prefix=/$WORKDIR/dagmc_bld/MOAB && \
     make && \ 
     make check && \
     make install && \
-    echo 'export PATH=$PATH:$HOME/dagmc_bld/HDF5/bin' >> ~/.bashrc && \
-    echo 'export PATH=$PATH:$HOME/dagmc_bld/MOAB/bin' >> ~/.bashrc && \
-    echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/dagmc_bld/HDF5/lib' >> ~/.bashrc && \
-    echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/dagmc_bld/MOAB/lib' >> ~/.bashrc 
+    echo 'export PATH=$PATH:$/WORKDIR/dagmc_bld/HDF5/bin' >> ~/.bashrc && \
+    echo 'export PATH=$PATH:$/WORKDIR/dagmc_bld/MOAB/bin' >> ~/.bashrc && \
+    echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$/WORKDIR/dagmc_bld/HDF5/lib' >> ~/.bashrc && \
+    echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$/WORKDIR/dagmc_bld/MOAB/lib' >> ~/.bashrc 
 
 #Install DAGMC
 RUN cd /$WORKDIR/dagmc_bld/ && \
@@ -65,7 +65,7 @@ RUN cd /$WORKDIR/dagmc_bld/ && \
                  -DCMAKE_INSTALL_PREFIX=$INSTALL_PATH && \
     make && \
     make install && \
-    echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/dagmc_bld/dagmc/lib' >> ~/.bashrc 
+    echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$/WORKDIR/dagmc_bld/dagmc/lib' >> ~/.bashrc 
    
     
     
