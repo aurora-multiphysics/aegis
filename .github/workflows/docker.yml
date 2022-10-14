@@ -15,7 +15,7 @@ jobs:
     steps:
     # Check out repo to get Dockerfile
     - name: Checkout
-    - uses: actions/checkout@v2
+      uses: actions/checkout@v2
     # Build Ubuntu container containing DAGMC 
     - name: PrintGithubContext
       run: echo $PRCOMMITSHA
