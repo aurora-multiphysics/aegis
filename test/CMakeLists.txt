@@ -7,6 +7,7 @@ ExternalProject_Add(
   GIT_REPOSITORY https://github.com/google/googletest.git
   UPDATE_COMMAND ""
   INSTALL_COMMAND ""
+  GIT_TAG main
   )
 
 ExternalProject_Get_Property(googletest source_dir)
