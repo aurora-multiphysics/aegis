@@ -1,4 +1,3 @@
-#include "DataClass.hpp"
 #include <gtest/gtest.h>
 #include "DagMC.hpp"
 #include <iostream>
