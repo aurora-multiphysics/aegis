@@ -80,7 +80,7 @@ RUN cd /$WORKDIR && \
     cd dagmc_testing && \
     mkdir build && \
     cd build && \
-    cmake ../ -DDAGMC_DIR=DAGMC_CMAKE_CONFIG && \
+    cmake ../ -DDAGMC_DIR=$WORKDIR/dagmc_bld/DAGMC/lib/cmake/dagmc/ && \
     make && \
     make test
 
