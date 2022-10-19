@@ -2,7 +2,7 @@
 FROM ubuntu:20.04
 
 ARG WORKDIR="opt"
-ARG DAGMC_CMAKE_CONFIG="opt/dagmc_bld/DAGMC/lib/cmake/dagmc"
+
 
 # Install apt dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install -y \
@@ -65,7 +65,20 @@ RUN cd /$WORKDIR/dagmc_bld/ && \
                  -DCMAKE_INSTALL_PREFIX=$INSTALL_PATH && \
     make && \
     make install && \
-    echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$/WORKDIR/dagmc_bld/dagmc/lib' >> ~/.bashrc 
+    echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$/WORKDIR/dagmc_bld/dagmc/lib' >> ~/.bashrc && \
+    cd ../lib/cmake/dagmc && \
+    DAGMC_CMAKE_CONFIG=$(pwd)
+
    
-    
+# Install dagmc_testing repo 
+RUN cd /$WORKDIR && \
+    git clone https://github.com/Waqar-ukaea/dagmc_testing.git && \
+    cd dagmc_testing && \
+    mkdir build && \
+    cd build && \
+    cmake ../ -DDAGMC_DIR=DAGMC_CMAKE_CONFIG && \
+    make && \
+    make test
+
+
     
