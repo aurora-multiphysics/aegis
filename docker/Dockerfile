@@ -78,9 +78,7 @@ RUN cd /$WORKDIR/dagmc_bld/ && \
 RUN cd /$WORKDIR && \
     git clone https://github.com/Waqar-ukaea/dagmc_testing.git && \
     cd dagmc_testing && \
-    mkdir build && \
-    cd build && \
-    cmake ../ -DDAGMC_DIR=/$WORKDIR/dagmc_bld/DAGMC/lib/cmake/dagmc/ && \
+    cmake -DDAGMC_DIR=/$WORKDIR/dagmc_bld/DAGMC/lib/cmake/dagmc/ && \
     make && \
     make test
 
