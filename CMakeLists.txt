@@ -13,6 +13,8 @@ find_package(Boost REQUIRED COMPONENTS ${Boost_PACKAGES})
 
 #include(${CMAKE_SOURCE_DIR}/cmake/SetBuildType.cmake)
 
+# Set debugging symbols
+set(CMAKE_BUILD_TYPE Debug)
 
 
 # Import DAGMC
