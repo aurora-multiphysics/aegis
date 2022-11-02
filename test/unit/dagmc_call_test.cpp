@@ -113,6 +113,6 @@ TEST_F(DagmcSimpleTest, Ray_Propagation_Pipe) {
     if (prev_surf == next_surf){
       DAG->next_vol(next_surf, vol_h, vol_h);
     }
-  EXPECT_EQ(nrayfire, 8);
   }
+EXPECT_EQ(nrayfire, 8);
 }
