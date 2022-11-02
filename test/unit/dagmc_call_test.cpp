@@ -11,6 +11,7 @@ using moab::DagMC;
 moab::DagMC* DAG;
 
 static const char input_file[] = "triple_block.h5m";
+static const char big_pipe_file[] = "big_pipe.h5m";
 double eps = 1.0e-6;
 
 class DagmcSimpleTest : public ::testing::Test {
@@ -64,7 +65,7 @@ TEST_F(DagmcSimpleTest, Triple_Block_rayfire) {
 
 TEST_F(DagmcSimpleTest, Ray_Propagation_Pipe) {
   DAG = new DagMC();
-  DAG->load_file("big_pipe.h5m"); // open test dag file 
+  DAG->load_file(big_pipe); // open big pipe file 
   DAG->init_OBBTree();
   DagMC::RayHistory history;
   int vol_idx = 1;
