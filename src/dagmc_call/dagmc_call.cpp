@@ -21,7 +21,6 @@
 #include "moab/Interface.hpp"
 #include <moab/OrientedBoxTreeTool.hpp>
 
-#test 
 
 using namespace moab;
 
@@ -50,11 +49,16 @@ int main() {
   int invol; // in volume result
   int nrayfire=0; // No. of ray_fire calls 
   EntityHandle prev_surf; // previous surface id
+  int n_sample=1000;  
+  double sample_step_length;
+  double sample_point[3];
+
 
   std::ofstream ray_coords; // define stream ray_coords
   ray_coords.open("ray_coords.txt"); // write out stream ray_coords to "ray_coords.txt" file 
 
-  ray_coords << origin[0] << ' ' << origin[1] << ' ' << origin[2] << ' ' << std::endl; // store first ray origin
+
+
 
   // check if in volume before ray_fire
   DAG->point_in_volume(vol_h, origin, invol);
@@ -64,12 +68,22 @@ int main() {
 
   // launch
   DAG->ray_fire(vol_h, origin, dir, next_surf, next_surf_dist, &history, 0, 1);
+
+
+  sample_step_length = next_surf_dist/n_sample;
+  std::copy(std::begin(origin), std::end(origin), std::begin(sample_point));
+
+  for (int i=0; i<=n_sample; i++){
+    ray_coords << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] << std::endl;
+    for (int j=0; j<3; ++j) { // calculate next sample point along ray
+      sample_point[j] = sample_point[j] + (sample_step_length * dir[j]);
+    }
+  }
+
   nrayfire +=1;
   for (int i=0; i<3; ++i) { // calculate next ray launch point
     origin[i] = origin[i] + (next_surf_dist * dir[i]);
-    ray_coords << origin[i] << ' '; // write out new ray origin to file
   }
-    ray_coords << std::endl;
     std::cout << std::endl;
     std::cout << "Distance to next surface = " << next_surf_dist << std::endl;
     std::cout << "Next Surface id - " << next_surf << std::endl;
@@ -80,12 +94,22 @@ int main() {
 
     // launch
     DAG->ray_fire(vol_h, origin, dir, next_surf, next_surf_dist, &history, 0, 1);
+
+
+  sample_step_length = next_surf_dist/n_sample;
+  std::copy(std::begin(origin), std::end(origin), std::begin(sample_point));origin;
+
+  for (int i=0; i<=n_sample; i++){
+    ray_coords << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] << std::endl;
+    for (int j=0; j<3; ++j) { // calculate next sample point along ray
+      sample_point[j] = sample_point[j] + (sample_step_length * dir[j]);
+    }
+  }
+
     nrayfire +=1;
     for (int i=0; i<3; ++i) { // loop to calculate next ray launch point
       origin[i] = origin[i] + (next_surf_dist * dir[i]);
-      ray_coords << origin[i] << ' ';
     }
-    ray_coords << std::endl;
     std::cout << std::endl;
     DAG->point_in_volume(vol_h, origin, invol);
     std::cout << "Volume ID - " << vol_h << std::endl;
@@ -100,15 +124,23 @@ int main() {
     prev_surf = next_surf;
     prev_surf_dist = next_surf_dist;
     DAG->ray_fire(vol_h, origin, dir, next_surf, next_surf_dist, &history, 0, 1);
+
+  std::copy(std::begin(origin), std::end(origin), std::begin(sample_point));origin;
     nrayfire +=1;
     if (next_surf_dist < 1e-3){ // fix distance if too small 
       next_surf_dist = prev_surf_dist;
     }  
+  sample_step_length = next_surf_dist/n_sample;
+  for (int i=0; i<=n_sample; i++){
+    ray_coords << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] << std::endl;
+    for (int j=0; j<3; ++j) { // calculate next sample point along ray
+      sample_point[j] = sample_point[j] + (sample_step_length * dir[j]);
+    }
+  }
+
     for (int i=0; i<3; ++i) { // loop to calculate next ray launch point
       origin[i] = origin[i] + (next_surf_dist * dir[i]);
-      ray_coords << origin[i] << ' ';
     }
-    ray_coords << std::endl;
     std::cout << std::endl;
     std::cout << "Distance to next surface = " << next_surf_dist << std::endl;
     std::cout << "Next Surface id - " << next_surf << std::endl;
