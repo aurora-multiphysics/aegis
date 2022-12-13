@@ -66,7 +66,7 @@ RUN cd /$WORKDIR/dagmc_bld/ && \
     git clone https://github.com/embree/embree.git && \
     cd embree && \
     git checkout v3.6.1 && \
-    cmake -DEMBREE_ISPC_SUPPORT=0 && \
+    cmake -DCMAKE_CXX_COMPILER=/usr/bin/g++ -DCMAKE_C_COMPILER=/usr/bin/gcc -DEMBREE_ISPC_SUPPORT=0 && \
     make \
     make install
     
