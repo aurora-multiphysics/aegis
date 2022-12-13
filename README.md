@@ -7,7 +7,7 @@ A ray tracing tool that will eventually be used to calculate power loads on 3D C
 # Building the repo
 Embree should be built with the following additional flags:
 
-    cmake -DMOAB_DIR=\${MOAB_DIR} -DEMBREE_DIR=\${EMBREE_DIR} -DEMBREE_ISPC_SUPPORT=0
+    cmake -DEMBREE_ISPC_SUPPORT=0
 Double-Down should be built with the following additional flags:
 
     cmake -DMOAB_DIR=\${MOAB_DIR} -DEMBREE_DIR=\${EMBREE_DIR}
