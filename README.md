@@ -18,3 +18,5 @@ DAGMC should be built with the following additional flags:
 
     cmake -DMOAB_DIR=\${MOAB_DIR} -DDOUBLE_DOWN=on -DDOUBLE_DOWN_DIR=\${DOUBLEDOWN_DIR} -DBUILD_TALLY=ON
 
+And finally this repo should be built with the following flag:
+    cmake -DDAGMC_DIR=\${DAGMC_DIR}
