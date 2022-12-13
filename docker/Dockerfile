@@ -31,7 +31,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install 
     libhdf5-dev \
     libeigen3-dev \
     libglfw3-dev  \
-    libtbb-dev \
+    libtbb-dev 
 
 # Setting up dagmc_bld directory for DAGMC and MOAB
 RUN cd /$WORKDIR && \
