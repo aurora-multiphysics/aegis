@@ -16,13 +16,24 @@
 #include <set>
 #include <vector>
 #include <array>
+#include <boost/log/core.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/log/expressions.hpp>
+#include <boost/log/sinks/text_file_backend.hpp>
+#include <boost/log/utility/setup/file.hpp>
+#include <boost/log/utility/setup/common_attributes.hpp>
+#include <boost/log/sources/severity_logger.hpp>
+#include <boost/log/sources/record_ostream.hpp>
+#include <boost/log/keywords/format.hpp>
+
 //#include <gtest/gtest.h>
 
 #include "DagMC.hpp"
 #include "moab/Core.hpp"
 #include "moab/Interface.hpp"
 #include <moab/OrientedBoxTreeTool.hpp>
-
+#include "settings.hpp"
+#include "simpleLogger.h"
 
 using namespace moab;
 
@@ -37,12 +48,32 @@ void reflect(double dir[3], double prev_dir[3], EntityHandle next_surf);
 double * vecNorm(double vector[3]);
 
 
-static const char input_file[] = "sduct.h5m";
-static const char ray_qry_exps[] = "exps00000200.qry";
-static const char ray_qry_unif[] = "unif0000100.qry";
+// logging to a file
 
+namespace logging = boost::log;
+namespace src = boost::log::sources;
+namespace sinks = boost::log::sinks;
+namespace keywords = boost::log::keywords;
+
+// LOG macros
+
+//LOG_TRACE << "this is a trace message";
+//LOG_DEBUG << "this is a debug message";
+//LOG_WARNING << "this is a warning message";
+//LOG_ERROR << "this is an error message";
+//LOG_FATAL << "this is a fatal error message";
 
 int main() {
+  settings settings;
+
+  settings.load_settings();
+  LOG_WARNING << "h5m Faceted Geometry file to be used = " << settings.geo_input;
+  //static const char input_file[] = settings.geo_input;
+  //static const char ray_qry_exps[] = settings.ray_qry;
+  static const char* input_file = settings.geo_input.c_str();
+  static const char* ray_qry_exps = settings.ray_qry.c_str();
+  
+
   DAG = new DagMC();
   DAG->load_file(input_file); // open test dag file
   DAG->init_OBBTree(); // initialise OBBTree 
@@ -68,15 +99,18 @@ int main() {
   double reflect_dot; // dot product of ray dir vector and normal vector  
 
 
-  std::cout << "No. of surfaces - " << n_surfs << std::endl;
-  std::cout << "No. of Volumes - " << n_vols << std::endl;
+  LOG_WARNING << "No. of surfaces - " << n_surfs;
+  LOG_WARNING << "No. of Volumes - " << n_vols;
 
   std::vector<std::vector<double>> rayqry; // xyz data from rayqry file
 
+
+
+
   // Read in qry data 
   std::ifstream ray_input(ray_qry_exps);
-  std::string line;
   double word;
+  std::string line;
 
   if (ray_input) {
         while(getline(ray_input, line, '\n'))        
@@ -87,7 +121,7 @@ int main() {
             //read word by word(or int by int) 
             while(ss >> word)
             {
-                //std::cout<<"word:"<<word<<std::endl;
+                //LOG_WARNING<<"word:"<<word;
                 //add the word to the temporary vector 
                 tempVec.push_back(word);
             }             
@@ -97,7 +131,7 @@ int main() {
     }
     else 
     {
-        std::cout<<"file cannot be opened"<<std::endl;
+        LOG_ERROR<<"file cannot be opened";
     }
     ray_input.close();
 
@@ -106,19 +140,31 @@ int main() {
     int k;
     int qrymax = rayqry.size();
     double dir_array[rayqry.size()][3]; 
-    std::cout << rayqry.size() << " - rayqry.size()" << std::endl;
-    std::cout << qrymax << " - qrymax" << std::endl;
+    LOG_WARNING << rayqry.size() << " - rayqry.size()" ;
+    LOG_WARNING << qrymax << " - qrymax" ;
+
+    //lets check out the elements of the 2D vector so the we can confirm if it contains all the right elements(rows and columns)
+    for(std::vector<double> &newvec: rayqry)
+    {
+      k=0;
+        for(const double &elem: newvec)
+        {
+          dir_array[j][k]=elem;
+          //LOG_WARNING << elem;
+          k+=1;
+        }
+        j+=1;
+    }
 
     double raydirs[qrymax][3];
-    //next_dir(raydir, qrymax, dir_array);
      for (int j=0; j<qrymax; j+=2)
      {
       for (int k=0; k<3; k++)
       {
         raydirs[j][k] = dir_array[j+1][k] - dir_array[j][k]; 
-        std::cout << raydirs[j][k]<<std::endl;
       }
-      std::cout << std::endl;
+      LOG_TRACE << raydirs[j][0] << ", " << raydirs[j][1] << ", " << raydirs[j][2]; // print out all ray directions from ray_qry
+
     }
     // define qrydata origin
     double qryorigin[3];
@@ -129,20 +175,23 @@ int main() {
     std::ofstream ray_intersect; // stream for ray-surface intersection points
     ray_intersect.open("ray_intersect.txt"); // write out stream to "ray_intersect.txt" file
     ray_intersect << std::setprecision(5) << std::fixed;
-    ray_intersect << qryorigin[0] << ' ' << qryorigin[1] << ' ' << qryorigin[2] << ' ' << std::endl; // store first ray origin
+    ray_intersect << qryorigin[0] << ' ' << qryorigin[1] << ' ' << qryorigin[2] << ' ' ; // store first ray origin
 
     // check if in volume before ray_fire
     DAG->point_in_volume(vol_h, qryorigin, invol);
-    std::cout << invol << " = in volume (1 for yes, 0 for no)" << std::endl;
-    std::cout << "Volume ID - " << vol_h << std::endl;
+    LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)" ;
+    LOG_WARNING << "Volume ID - " << vol_h ;
     double *normdir;
     //loop through qrydata
     for (int qrycount=0; qrycount < qrymax; qrycount+=2){
       normdir = vecNorm(raydirs[qrycount]);
-      std::cout << normdir[0] << std::endl;
-      std::cout << normdir[1] << std::endl;
-      std::cout << normdir[2] << std::endl;
-      std::cout << std::endl;
+      // print normalised ray directions
+
+      //LOG_WARNING << normdir[0] ;
+      //LOG_WARNING << normdir[1] ;
+      //LOG_WARNING << normdir[2] ;
+      //LOG_WARNING ;
+
       history.reset(); // reset history before launching ray
       // launch
       DAG->ray_fire(vol_h, qryorigin, normdir, next_surf, next_surf_dist, &history, 0, 1);
@@ -152,7 +201,7 @@ int main() {
         intersect[i] = qryorigin[i] + (next_surf_dist * normdir[i]);
         ray_intersect << intersect[i] << ' ';
         }
-        ray_intersect << std::endl;
+        ray_intersect ;
 
 
     }
@@ -165,11 +214,11 @@ int main() {
 
 
   // dir_mag = sqrt(dir[0]*dir[0] + dir[1]*dir[1] + dir[2]*dir[2]);
-  // std::cout << "---- DIR_mag = " << dir_mag << " ----" << std::endl;
+  // LOG_WARNING << "---- DIR_mag = " << dir_mag << " ----" ;
 
   // for (int i=0; i<3; ++i) { // calculate next ray launch point
   //   dir[i] = dir[i]/dir_mag;
-  //   std::cout << "---- DIR[" << i << "] = " << dir[i] << " ----" << std::endl;
+  //   LOG_WARNING << "---- DIR[" << i << "] = " << dir[i] << " ----" ;
   // }
 
   // std::ofstream ray_coords1; // define stream ray_coords1
@@ -179,14 +228,14 @@ int main() {
   // ray_coords2.open("ray_coords2.txt"); // write out stream ray_coords2 to "ray_coords1.txt" file 
   // ray_intersect.open("ray_intersect.txt"); // write out stream to "ray_intersect.txt" file
 
-  // ray_intersect << origin[0] << ' ' << origin[1] << ' ' << origin[2] << ' ' << std::endl; // store first ray origin
+  // ray_intersect << origin[0] << ' ' << origin[1] << ' ' << origin[2] << ' ' ; // store first ray origin
 
 
 
   // // check if in volume before ray_fire
   // DAG->point_in_volume(vol_h, origin, invol);
-  // std::cout << invol << " = in volume (1 for yes, 0 for no)" << std::endl;
-  // std::cout << "Volume ID - " << vol_h << std::endl;
+  // LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)" ;
+  // LOG_WARNING << "Volume ID - " << vol_h ;
   // history.reset(); // reset history before launching any rays
 
   // // launch
@@ -197,7 +246,7 @@ int main() {
   // std::copy(std::begin(origin), std::end(origin), std::begin(sample_point));
 
   // for (int i=0; i<=n_sample; i++){
-  //   ray_coords1 << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] << std::endl;
+  //   ray_coords1 << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] ;
   //   for (int j=0; j<3; ++j) { // calculate next sample point along ray
   //     sample_point[j] = sample_point[j] + (sample_step_length * dir[j]);
   //   }
@@ -206,13 +255,13 @@ int main() {
   // nrayfire +=1;
 
   // next_pt(origin, origin, next_surf_dist, dir, ray_intersect);
-  // std::cout << std::endl;
-  // std::cout << "Distance to next surface = " << next_surf_dist << std::endl;
-  // std::cout << "Next Surface id - " << next_surf << std::endl;
+  // LOG_WARNING ;
+  // LOG_WARNING << "Distance to next surface = " << next_surf_dist ;
+  // LOG_WARNING << "Next Surface id - " << next_surf ;
   // DAG->next_vol(next_surf, vol_h, vol_h); // move to next volume id (determined from next_surf)
   // DAG->point_in_volume(vol_h, origin, invol);
-  // std::cout << "Volume ID - " << vol_h << std::endl;
-  // std::cout << invol << " = in volume (1 for yes, 0 for no)" << std::endl;
+  // LOG_WARNING << "Volume ID - " << vol_h ;
+  // LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)" ;
 
   // //launch
   // DAG->ray_fire(vol_h, origin, dir, next_surf, next_surf_dist, &history, 0, 1);
@@ -222,7 +271,7 @@ int main() {
   // std::copy(std::begin(origin), std::end(origin), std::begin(sample_point));origin;
 
   // for (int i=0; i<=n_sample; i++){
-  //   ray_coords1 << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] << std::endl;
+  //   ray_coords1 << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] ;
   //   for (int j=0; j<3; ++j) { // calculate next sample point along ray
   //     sample_point[j] = sample_point[j] + (sample_step_length * dir[j]);
   //   }
@@ -231,14 +280,14 @@ int main() {
   //   nrayfire +=1;
 
   // next_pt(origin, origin, next_surf_dist, dir, ray_intersect);    
-  // std::cout << std::endl;
+  // LOG_WARNING ;
   // DAG->point_in_volume(vol_h, origin, invol);
-  // std::cout << "Volume ID - " << vol_h << std::endl;
-  // std::cout << "Distance to next surface = " << next_surf_dist << std::endl;
-  // std::cout << "Next Surface id - " << next_surf << std::endl;
+  // LOG_WARNING << "Volume ID - " << vol_h ;
+  // LOG_WARNING << "Distance to next surface = " << next_surf_dist ;
+  // LOG_WARNING << "Next Surface id - " << next_surf ;
   // DAG->point_in_volume(vol_h, origin, invol);
-  // std::cout << "Volume ID - " << vol_h << std::endl;
-  // std::cout << invol << " = in volume (1 for yes, 0 for no)" << std::endl;
+  // LOG_WARNING << "Volume ID - " << vol_h ;
+  // LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)" ;
   
   
   // while (next_surf !=0){
@@ -272,13 +321,13 @@ int main() {
   //   nrayfire +=1;
   // for (int i=0; i<=n_sample; i++){
   //   if (dir[2] < 0){
-  //     ray_coords2 << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] << std::endl;
+  //     ray_coords2 << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] ;
   //     for (int j=0; j<3; ++j) { // calculate next sample point along ray
   //       sample_point[j] = sample_point[j] + (sample_step_length * dir[j]);
   //     }
   //     }
   //   else {
-  //     ray_coords1 << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] << std::endl;
+  //     ray_coords1 << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] ;
   //     for (int j=0; j<3; ++j) { // calculate next sample point along ray
   //       sample_point[j] = sample_point[j] + (sample_step_length * dir[j]);
   //     }
@@ -286,19 +335,19 @@ int main() {
   // }
   
   //   next_pt(origin, origin, next_surf_dist, dir, ray_intersect);
-  //   std::cout << std::endl;
-  //   std::cout << "Distance to next surface = " << next_surf_dist << std::endl;
-  //   std::cout << "Next Surface id - " << next_surf << std::endl;
-  //   std::cout << "Volume ID - " << vol_h << std::endl;
+  //   LOG_WARNING ;
+  //   LOG_WARNING << "Distance to next surface = " << next_surf_dist ;
+  //   LOG_WARNING << "Next Surface id - " << next_surf ;
+  //   LOG_WARNING << "Volume ID - " << vol_h ;
   //   if (prev_surf == next_surf){
   //     DAG->next_vol(next_surf, vol_h, vol_h);
   //     DAG->point_in_volume(vol_h, origin, invol);
-  //     std::cout << "Volume ID - " << vol_h << std::endl;
-  //     std::cout << invol << " = in volume (1 for yes, 0 for no)" << std::endl;
+  //     LOG_WARNING << "Volume ID - " << vol_h ;
+  //     LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)" ;
   //   }
 
   // }
-  // std::cout << "No. of ray_fire calls - " << nrayfire << std::endl; // print the No. of ray_fire calls
+  // LOG_WARNING << "No. of ray_fire calls - " << nrayfire ; // print the No. of ray_fire calls
     
     
     return 0;
@@ -315,7 +364,7 @@ void next_pt(double prev_pt[3], double origin[3], double next_surf_dist,
     origin[i] = prev_pt[i] + (next_surf_dist * dir[i]);
     ray_intersect << origin[i] << ' ';
   }
-  ray_intersect << std::endl;
+  ray_intersect ;
   return;
 }
 
@@ -337,9 +386,9 @@ double * vecNorm(double vector[3]){
 //     for (int k=0; k<3; k++)
 //   {
 //     raydir[k] = dir_array[j+1][k] - dir_array[j][k]; 
-//     //std::cout << raydir[k]<<std::endl;
+//     //LOG_WARNING << raydir[k];
 //   }
-//   //std::cout << std::endl;
+//   //LOG_WARNING ;
 //   }
 //   return;
 // }

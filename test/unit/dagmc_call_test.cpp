@@ -136,7 +136,6 @@ EXPECT_EQ(nrayfire, 15);
 }
 
 TEST_F(DagmcSimpleTest, SMARDDA_comparison_test) {
-  double max_tol = 0.6;
   DAG = new DagMC();
   DAG->load_file(sduct); // open big pipe file 
   DAG->init_OBBTree();
@@ -276,6 +275,13 @@ TEST_F(DagmcSimpleTest, SMARDDA_comparison_test) {
 
       smardda_count += 1;
     }
+    
+    double max_tol = 0.6;    
+
+    std::cout << "max_xdiff = " << max_xdiff << std::endl; 
+    std::cout << "max_ydiff = " << max_ydiff << std::endl; 
+    std::cout << "max_zdiff = " << max_zdiff << std::endl; 
+
     EXPECT_TRUE(max_xdiff < max_tol);
     EXPECT_TRUE(max_ydiff < max_tol);
     EXPECT_TRUE(max_zdiff < max_tol);

@@ -6,10 +6,16 @@ set(PROJECT_LIB_NAME ${PROJECT_NAME}-lib)
 
 project(${PROJECT_NAME} VERSION 0.0.0 LANGUAGES CXX)
 
-set(Boost_PACKAGES system)
-set(BOOST_REQUESTED_VERSION 1.42)
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_MULTITHREAD ON)
+ADD_DEFINITIONS(-DBOOST_LOG_DYN_LINK)
+set(Boost_PACKAGES system log log_setup)
+set(BOOST_REQUESTED_VERSION 1.71)
 
 find_package(Boost REQUIRED COMPONENTS ${Boost_PACKAGES})
+
+find_package(OpenMP REQUIRED)
+
 
 #include(${CMAKE_SOURCE_DIR}/cmake/SetBuildType.cmake)
 
