@@ -31,7 +31,11 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install 
     libhdf5-dev \
     libeigen3-dev \
     libglfw3-dev  \
-    libtbb-dev 
+    libtbb-dev \
+    pkg-config \
+    rsync \
+    bison \
+    flex
 
 # Setting up dagmc_bld directory for DAGMC and MOAB
 RUN cd /$WORKDIR && \
@@ -67,7 +71,7 @@ RUN cd /$WORKDIR/dagmc_bld/ && \
     cd embree && \
     git checkout v3.6.1 && \
     cmake -DCMAKE_CXX_COMPILER=/usr/bin/g++ -DCMAKE_C_COMPILER=/usr/bin/gcc -DEMBREE_ISPC_SUPPORT=0 && \
-    make \
+    make && \
     make install
     
 # Install Double-Down
