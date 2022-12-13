@@ -1,0 +1,2 @@
+geo_input sduct.h5m
+ray_qry exps00000200.qry
