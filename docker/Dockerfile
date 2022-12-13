@@ -79,9 +79,9 @@ RUN cd /$WORKDIR/dagmc_bld/ && \
     mkdir DOUBLE-DOWN && \
     cd DOUBLE-DOWN && \
     git clone https://github.com/pshriwise/double-down && \
-    cd double-down \
-    cmake -DMOAB_DIR=/$WORKDIR/dagmc_bld/MOAB/moab -DEMBBREE_DIR=/$WORKDIR/dagmc_bld/EMBREE/embree \
-    make \
+    cd double-down && \
+    cmake -DMOAB_DIR=/$WORKDIR/dagmc_bld/MOAB/moab -DEMBBREE_DIR=/$WORKDIR/dagmc_bld/EMBREE/embree && \
+    make && \
     make install
     
 
