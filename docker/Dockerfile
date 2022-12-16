@@ -82,7 +82,7 @@ RUN cd /$WORKDIR/dagmc_bld/ && \
     cd double-down && \
     cmake -DMOAB_DIR=/$WORKDIR/dagmc_bld/MOAB -DEMBBREE_DIR=/$WORKDIR/dagmc_bld/EMBREE/embree && \
     make && \
-    make install && 
+    make install && \
     make test
     
 
