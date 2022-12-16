@@ -82,7 +82,8 @@ RUN cd /$WORKDIR/dagmc_bld/ && \
     cd double-down && \
     cmake -DMOAB_DIR=/$WORKDIR/dagmc_bld/MOAB -DEMBBREE_DIR=/$WORKDIR/dagmc_bld/EMBREE/embree && \
     make && \
-    make install
+    make install && 
+    make test
     
 
 # Install DAGMC
@@ -100,7 +101,7 @@ RUN cd /$WORKDIR/dagmc_bld/ && \
     INSTALL_PATH=/$WORKDIR/dagmc_bld/DAGMC && \
     cmake ../src -DMOAB_DIR=/$WORKDIR/dagmc_bld/MOAB \
     		 -DDOUBLE_DOWN=ON \
-		 -DDOBULE_DOWN_DIR=/$WORKDIR/dagmc_bld/DOUBLE-DOWN/double-down \
+		 -DDOUBLE_DOWN_DIR=/$WORKDIR/dagmc_bld/DOUBLE-DOWN/double-down \
                  -DBUILD_TALLY=ON \
                  -DCMAKE_INSTALL_PREFIX=$INSTALL_PATH && \
     make && \
