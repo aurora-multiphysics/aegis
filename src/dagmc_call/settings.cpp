@@ -10,8 +10,6 @@
 // Object for storing 
 
 
-
-
     void settings::load_settings()
     {
       std::ifstream in("settings.txt");
@@ -36,6 +34,10 @@
         else if (param == "ray_qry")
         {
           ray_qry = value;
+        }
+        else if (param == "runcase")
+        {
+          runcase = value;
         }
       }
       in.close();

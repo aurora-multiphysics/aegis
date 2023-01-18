@@ -7,6 +7,8 @@ class settings{
   public: 
     std::string ray_qry;
     std::string geo_input;
+    std::string runcase;
+    bool debug;
     void load_settings();
 };
 
