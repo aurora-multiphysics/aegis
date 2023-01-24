@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <math.h>
 #include <time.h>
-
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
