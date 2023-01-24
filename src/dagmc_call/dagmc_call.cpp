@@ -22,6 +22,7 @@
 #include <moab/OrientedBoxTreeTool.hpp>
 #include "settings.hpp"
 #include "simpleLogger.h"
+#include "equData.h"
 
 using namespace moab;
 
@@ -51,6 +52,7 @@ int main() {
   LOG_WARNING << "ray directions file to be used = " << settings.ray_qry;
   static const char* input_file = settings.geo_input.c_str();
   static const char* ray_qry_exps = settings.ray_qry.c_str();
+  std::string eqdsk_file = settings.eqdsk_file;
 
   DAG = new DagMC(); // New DAGMC instance
   DAG->load_file(input_file); // open test dag file
@@ -337,6 +339,111 @@ int main() {
   }
 
   // --------------------------------------------------------------------------------------------------------
+  
+  else if (settings.runcase=="eqdsk"){
+    equData EquData;
+    EquData.read_eqdsk(eqdsk_file);
+
+    // TEST code to read in eqdsk data. Get it working here before moving to class/methods
+    // Local variables 
+
+    // int nw; // No. of horizontal R points in grid
+    // int nh; // No. of vertical Z points in grid
+    // std::vector<int> header_ints; // vector to store nw and nh from header case string
+    // double xdim; // EFIT Horizontal dimension in metre of computational box
+    // double zdim; // EFIT Vertical dimension in metre of computational box
+    // double rcentr; // EFIT Radial dimension at centre of plasma IGNORED BY SMARDDA
+    // double rgrid; // EFIT Minimum R in metre of rectangular computational box
+    // double zmid; // EFIT centre of computational box in metres ORGINALLY IGNORED BY SMARDDA  
+
+    // double rmaxis; // EFIT plasma centre (magnetic axis) in metre
+    // double zmaxis; // EFIT plasma centre (magnetic axis) in metre
+    // double psimag1; // EFIT poloidal flux at the magnetic axis (Wb/rad)
+    // double psibdry1; // EFIT poloidal flux at the boundary (Wb/rad)
+    // double bcentr; // EFIT vacuum toroidal field at r=rcentr IGNORED BY SMARDDA
+
+    // double cpasma; // EFIT computed plasma current in A IGNORED BY SMARDDA
+    // double psimag2; // EFIT poloidal flux at the magnetic axis (Wb/rad) IGNORED BY SMARDDA
+    // double psibdry2; // EFIT poloidal flux at the boundary (Wb/rad) IGNORED BY SMARDDA
+    // double xdum; // empty dummy variables in data
+
+    // std::ifstream eqdsk_input(eqdsk_file);
+    // std::ofstream eqdsk_read_out;
+    // eqdsk_read_out.open("eqdsk_read_out.txt");
+    // std::cout << "The eqdsk file selected is " << eqdsk_file << std::endl;
+
+    // // Read first line to extract nw and nh  
+
+    // std::string eqdsk_str;
+    // std::stringstream eqdsk_ss; 
+    // std::getline(eqdsk_input, eqdsk_str); // Skip header line
+
+    // std::cout << "First line string - " << eqdsk_str << std::endl;
+
+    // eqdsk_ss << eqdsk_str;
+    // std::string temp; 
+    // int int_found; 
+
+    // while (!eqdsk_ss.eof())
+    //   {
+    //     eqdsk_ss >> temp;
+    //     if(std::stringstream(temp) >> int_found)
+    //     { 
+    //       std::cout << int_found << std::endl;
+    //       header_ints.push_back(int_found);
+    //     }
+    //   }
+
+
+    // // nw and nh are always the last two integers in header, so store as such from vector
+    // nw = header_ints[header_ints.size()-2];
+    // std::cout << "nw = " << nw << std::endl;
+    // nh = header_ints[header_ints.size()-1];
+    // std::cout << "nh = " << nh << std::endl;
+
+    // // First four lines from eqdsk
+
+    // eqdsk_input >> xdim >> zdim >> rcentr >> rgrid >> zmid; // Line 1 read
+    // eqdsk_input >> rmaxis >> zmaxis >> psimag1 >> psibdry1 >> bcentr; // Line 2 read
+    // eqdsk_input >> cpasma >> psimag2 >> xdum >> rmaxis >> xdum; // Line 3 read
+    // eqdsk_input >> zmaxis >> xdum >> psibdry2 >> xdum >> xdum; // Line 4 read
+
+    // LOG_WARNING << "Geometry parameters from EFIT";
+    // LOG_WARNING << "Domain size in R xdim " << xdim;
+    // LOG_WARNING << "Domain size in Z zdim " << zdim;
+    // LOG_WARNING << "R at centre " << rcentr;
+    // LOG_WARNING << "Domain start in R rgrid " << rgrid;
+    // LOG_WARNING << "Domain centre in Z zmid " << zmid;
+    // LOG_WARNING << "Plasma parameters from EFIT";
+    // LOG_WARNING << "B at rcentre " << bcentr;
+    // LOG_WARNING << "Flux at centre ssimag1 " << psimag1;
+    // LOG_WARNING << "Flux at boundary ssibry1 "<< psibdry1;
+    // LOG_WARNING << "Plasma centre in R rmaxis " << rmaxis;
+    // LOG_WARNING << "Plasma centre in Z zmaxis " << zmaxis;
+    // LOG_WARNING << "Plasma current " << cpasma;
+
+
+    // // Read 1D data
+    // if (nw>0)
+    // {
+    //   std::vector<double> fpol(nw);
+    // }
+    // else 
+    // {
+    //   LOG_WARNING << "No 1D data found within eqdsk"
+    // }
+
+
+
+
+
+// Following on from this is allocation of arrays and reading in said arrays
+
+
+
+
+  }
+  
   else // No runcase specified
   {
     LOG_FATAL << "No runcase specified - please set runcase parameter as either 'specific' or 'rayqry'";

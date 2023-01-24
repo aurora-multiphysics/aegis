@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <stdio.h>
 #include "DagMC.hpp"
 #include <iostream>
 #include "moab/Core.hpp"
@@ -6,6 +7,7 @@
 #include <fstream>
 #include <vector>
 #include <cmath>
+#include "equData.h"
 
 using namespace moab;
 
@@ -289,6 +291,14 @@ TEST_F(DagmcSimpleTest, SMARDDA_comparison_test) {
   
 }
 
+
+TEST_F(DagmcSimpleTest, eqdsk_float_read) {
+
+  equData EquData;
+  std::string eqdsk_file = "EQ3.eqdsk";
+  EquData.read_eqdsk(eqdsk_file);
+
+}
 
 
 double * vecNorm(double vector[3]){

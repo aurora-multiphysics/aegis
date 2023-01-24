@@ -35,6 +35,10 @@
         {
           ray_qry = value;
         }
+        else if (param == "eqdsk_file")
+        {
+          eqdsk_file = value;
+        }
         else if (param == "runcase")
         {
           runcase = value;
