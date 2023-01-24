@@ -8,6 +8,7 @@ class settings{
     std::string ray_qry;
     std::string geo_input;
     std::string runcase;
+    std::string eqdsk_file;
     bool debug;
     void load_settings();
 };

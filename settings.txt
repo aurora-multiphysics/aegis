@@ -1,3 +1,4 @@
 geo_input cubes.h5m
 ray_qry exps00010000.qry
-runcase specific
+runcase eqdsk
+eqdsk_file EQ3.eqdsk 
