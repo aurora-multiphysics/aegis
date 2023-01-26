@@ -292,13 +292,41 @@ TEST_F(DagmcSimpleTest, SMARDDA_comparison_test) {
 }
 
 
-TEST_F(DagmcSimpleTest, eqdsk_float_read) {
+TEST_F(DagmcSimpleTest, eqdsk_read) {
 
   equData EquData;
-  std::string eqdsk_file = "EQ3.eqdsk";
-  EquData.read_eqdsk(eqdsk_file);
+  EquData.read_eqdsk("test.eqdsk");
+
+  std::string header = " disr     610.00 msec    nw      nh      vde       0  65 129";
+
+  // Test if header is correctly read
+  EXPECT_TRUE(EquData.header == header);
+
+  // Test if integer values are correctly read in
+
+  EXPECT_EQ(EquData.nw, 65);
+  EXPECT_EQ(EquData.nh, 129);
+  EXPECT_EQ(EquData.nbdry, 89);
+  EXPECT_EQ(EquData.nlim, 57);
+
+  // Test size of 2D psi vector (dimensions nw*nh)
+  EXPECT_EQ(EquData.psi.size()*EquData.psi[0].size(), 8385);
+
+  EXPECT_FLOAT_EQ(EquData.fpol[35], 33.2359842);
+  EXPECT_FLOAT_EQ(EquData.pres[13], 457077.309);
+  EXPECT_FLOAT_EQ(EquData.ffprime[54], 252.582128);
+  EXPECT_FLOAT_EQ(EquData.pprime[11], 1742.17328);  
+  EXPECT_FLOAT_EQ(EquData.psi[56][1], -1.39236796);
+  EXPECT_FLOAT_EQ(EquData.psi[1][24], 6.80347259);
+  EXPECT_FLOAT_EQ(EquData.psi[12][102], 2.22815321);
+  EXPECT_FLOAT_EQ(EquData.qpsi[52], 1.64743552);
+  EXPECT_FLOAT_EQ(EquData.rbdry[4], 7.9430907);  
+  EXPECT_FLOAT_EQ(EquData.zbdry[39], 0.986207476);
+  EXPECT_FLOAT_EQ(EquData.rlim[27], 557.200115);
+  EXPECT_FLOAT_EQ(EquData.zlim[1], -149.995359);
 
 }
+
 
 
 double * vecNorm(double vector[3]){

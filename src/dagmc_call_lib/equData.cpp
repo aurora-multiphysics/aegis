@@ -10,48 +10,43 @@
 #include "simpleLogger.h"
 #include "equData.h"
 
-
-
-// Read eqdsk
-
-
+// Read eqdsk file
 void equData::read_eqdsk(std::string filename)
 {
-    std::ifstream eqdsk_file(filename);
-    std::string line;
-    std::stringstream line_ss;
+    eqdsk_file.open(filename);
+    std::stringstream header_ss;
     std::string temp;
     std::vector<int> header_ints;
 
     LOG_WARNING << "eqdsk file to be read - " << filename;
 
     // Extract header information
-    std::getline(eqdsk_file, line);
-    line_ss << line;
+    std::getline(eqdsk_file, header);
+    header_ss << header;
     int number_found;
-
-    while (!line_ss.eof()) // Search for solitary numbers in header information
+    
+    while (header_ss >> temp)
     {
-      line_ss >> temp;
       if (std::stringstream(temp) >> number_found)
       {
         header_ints.push_back(number_found);
       }
     }
+
     // Store nw and nh from header information (last two numbers in header)
     nw = header_ints[header_ints.size()-2];
     nh = header_ints[header_ints.size()-1];
-    LOG_WARNING << "nw found from eqdsk file to be = " << nw;
-    LOG_WARNING << "read found from eqdsk file to be = " << nh;
+    LOG_WARNING << "Number of grid points in R (nw) = " << nw;
+    LOG_WARNING << "Number of grid points in Z (nh) = " << nh;
 
     // Read first four lines of data
-    eqdsk_file >> xdim >> zdim >> rcentr >> rgrid >> zmid;
-    eqdsk_file >> rmaxis >> zmaxis >> psimag1 >> psibdry1 >> bcentr; 
-    eqdsk_file >> cpasma >> psimag2 >> xdum >> rmaxis >> xdum; 
-    eqdsk_file >> zmaxis >> xdum >> psibdry2 >> xdum >> xdum; 
+    eqdsk_file >> rdim >> zdim >> rcentr >> rgrid >> zmid;
+    eqdsk_file >> rmaxis >> zmaxis >> psimag1 >> psibdry1 >> bcentr;
+    eqdsk_file >> cpasma >> psimag2 >> xdum >> rmaxis >> xdum;
+    eqdsk_file >> zmaxis >> xdum >> psibdry2 >> xdum >> xdum;
 
     LOG_WARNING << "Geometry parameters from EFIT:";
-    LOG_WARNING << "Domain size in R xdim " << xdim;
+    LOG_WARNING << "Domain size in R rdim " << rdim;
     LOG_WARNING << "Domain size in Z zdim " << zdim;
     LOG_WARNING << "R at centre " << rcentr;
     LOG_WARNING << "Domain start in R rgrid " << rgrid;
@@ -66,115 +61,175 @@ void equData::read_eqdsk(std::string filename)
 
     // Read 1D array data
 
-    if (nw>0)
+    if (nw > 0)
     {
-      LOG_WARNING << "Reading fpol values...";
-      fpol = read_array(eqdsk_file);
-      LOG_WARNING << "Reading pres values";
-      pres = read_array(eqdsk_file);
-      LOG_WARNING << "Reading ffprime values";
-      ffprime = read_array(eqdsk_file);
-      LOG_WARNING << "Reading pprime values";
-      pprime = read_array(eqdsk_file);      
+      fpol = read_array(nw, "fpol");
+      pres = read_array(nw, "pres");
+      ffprime = read_array(nw, "ffprime");
+      pprime = read_array(nw, "pprime");
     }
     else
     {
-      LOG_FATAL << "Unable to read 1D data from eqdsk";
+      LOG_FATAL << "Error reading 1D data from eqdsk";
     }
 
     // Read Psi(R,Z) data
-    
-    LOG_WARNING << "Reading Psi(R,Z) values:";
-    psi = read_2darray(eqdsk_file);
-    
+    if (nh > 0)
+    {
+      psi = read_2darray(nw, nh, "Psi(R,Z)");
+    }
+    else
+    {
+      LOG_FATAL << "Error reading 2D data from eqdsk";
+    }
+
+    // Read the rest of the data
+    qpsi = read_array(nw, "qpsi");
+    eqdsk_file >> nbdry >> nlim;
+    LOG_WARNING << "Number of boundary points " << nbdry;
+    LOG_WARNING << "Number of limiter points " << nlim;
+
+    if (nbdry > 0)
+    {
+      rbdry.reserve(nbdry);
+      zbdry.reserve(nbdry);
+      LOG_WARNING << "Reading rbdry and zbdry...";
+      for(int i=0; i<nbdry; i++) // Read in n elements into vector from file
+      {
+        eqdsk_file >> rbdry[i] >> zbdry[i];
+      }
+      LOG_WARNING << "Number of rbdry/zbdry values read " << nbdry;
+    }
+    else
+    {
+      LOG_FATAL << "Error reading boundary data from eqdsk";
+    }
+
+    if (nlim > 0)
+    {
+      LOG_WARNING << "Reading rlim and zlim...";
+      rlim.reserve(nlim);
+      zlim.reserve(nlim);
+      for (int i=0; i<nlim; i++)
+      {
+        eqdsk_file >> rlim[i] >> zlim[i];
+      } 
+      LOG_WARNING << "Number of rlim/zlim values read " << nlim;
+    }
+    else
+    {
+      LOG_FATAL << "Error reading limiter data from eqdsk";
+    }
 }
 
-
-
 // Read 1D array from eqdsk
-std::vector<double> equData::read_array(std::ifstream &eqdsk_file)
+std::vector<double> equData::read_array(int n, std::string varName)
 {
-  std::vector<double> work1d(nw); // working vector of doubles of size n 
+  std::vector<double> work1d(n); // working vector of doubles of size n
+  LOG_WARNING << "Reading " << varName << " values...";
   for(int i=0; i<nw; i++) // Read in n elements into vector from file
   {
     eqdsk_file >> work1d[i];
-    LOG_WARNING << work1d[i];
   }
+  LOG_WARNING << "Number of " << varName << " values read = " << n;
   return work1d;
 }
 
 // Read 2D array from eqdsk
-std::vector<std::vector<double>> equData::read_2darray(std::ifstream &eqdsk_file)
+std::vector<std::vector<double>> equData::read_2darray(int nx, int ny, std::string varName)
 {
   std::vector<std::vector<double>> work2d(nw, std::vector<double>(nh));
-
-  for (int i=0; i<nw; i++)
+  LOG_WARNING << "Reading " << varName << " values...";
+  for (int i=0; i<nx; i++)
   {
-    for(int j=0; j<nh; j++)
+    for(int j=0; j<ny; j++)
     {
       eqdsk_file >> work2d[i][j];
     }
   }
+  LOG_WARNING << "Number of " << varName << " values read = " << nx*ny;
   return work2d;
 }
 
 // Write out eqdsk data back out in eqdsk format
 void equData::write_eqdsk_out()
 {
-  std::ofstream eqdsk_out("eqdsk.out"); 
+  std::ofstream eqdsk_out("eqdsk.out");
   eqdsk_out << std::setprecision(9) << std::scientific;
   eqdsk_out << std::setiosflags(std::ios::uppercase);
-
   double element;
   int counter=0;
 
+  // Write out header information
+  eqdsk_out << header << std::endl;
+
   // Write out initial four lines of floats
-  eqdsk_out << " " << xdim << " " << zdim << " " << rcentr << " " << rgrid << " " << zmid << std::endl;
-  eqdsk_out << " " << rmaxis << " " << zmaxis << " " << psimag1 << " " << psibdry1 << " " << bcentr << std::endl; 
-  eqdsk_out << " " << cpasma << " " << psimag2 << " " << xdum << " " << rmaxis << " " << xdum << std::endl; 
-  eqdsk_out << " " << zmaxis << " " << xdum << " " << psibdry2 << " " << xdum << " " << xdum << std::endl; 
-  
-  // Write out fpol
-  for (int i=0; i<nw; i++)
+  double parameters[20] = {rdim, zdim, rcentr, rgrid, zmid, rmaxis, zmaxis, psimag1, psibdry1, 
+                bcentr, cpasma, psimag2, xdum, rmaxis, xdum, zmaxis, xdum, psibdry2, xdum, xdum};
+
+  for (int i=0; i<20; i++)
   {
-    element = fpol[i];
-    counter = write_line_out(eqdsk_out, element, counter);
+    element = parameters[i];
+    counter = eqdsk_line_out(eqdsk_out, element, counter);
   }
 
-  // Write out pres
-  for (int i=0; i<nw; i++)
-  {
-    element = pres[i];
-    counter = write_line_out(eqdsk_out, element, counter);
-  }
+  // Write out data
+  eqdsk_write_array(eqdsk_out, fpol, counter); // write fpol array
+  eqdsk_write_array(eqdsk_out, pres, counter); // write pres array 
+  eqdsk_write_array(eqdsk_out, ffprime, counter); // write ffprime array
+  eqdsk_write_array(eqdsk_out, pprime, counter); // write pprime array 
 
-  // Write out ffprime
-  for (int i=0; i<nw; i++)
-  {
-    element = ffprime[i];
-    counter = write_line_out(eqdsk_out, element, counter);
-  }
-
-  // Write out pprime
-  for (int i=0; i<nw; i++)
-  {
-    element = pprime[i];
-    counter = write_line_out(eqdsk_out, element, counter);
-  }
-
-  // Write out psi(R,Z) 
+  // Write out psi(R,Z)
   for (int i=0; i<nw; i++)
   {
     for(int j=0; j<nh; j++)
     {
       element = psi[i][j];
-      counter = write_line_out(eqdsk_out, element, counter);
+      counter = eqdsk_line_out(eqdsk_out, element, counter);
     }
-  } 
+  }
+  if (counter < 5)
+  {
+    counter = 0;
+    eqdsk_out << std::endl;
+  }
+
+  eqdsk_write_array(eqdsk_out, qpsi, counter); // write qpsi array
+  eqdsk_out << std::endl << "  " << nbdry << "   " << nlim << std::endl; // write nbdry and nlim
+
+  // write rbdry and zbdry
+  for (int i=0; i<nbdry; i++)
+  { 
+      element = rbdry[i];
+      counter = eqdsk_line_out(eqdsk_out, element, counter);
+      element = zbdry[i];
+      counter = eqdsk_line_out(eqdsk_out, element, counter);
+      element = rbdry[i];
+  }
+  if (counter < 5)
+  {
+    counter = 0;
+    eqdsk_out << std::endl;
+  }
+
+  // write rlim and zlim arrays
+  for (int i=0; i<nlim; i++)
+  { 
+      element = rlim[i];
+      counter = eqdsk_line_out(eqdsk_out, element, counter);
+      element = zlim[i];
+      counter = eqdsk_line_out(eqdsk_out, element, counter);
+  }
+
+  if (counter < 5)
+  {
+    counter = 0;
+    eqdsk_out << std::endl;
+  }
 }
 
 // Write singular line out in EQDSK format
-int equData::write_line_out(std::ofstream &file, double element, int counter)
+int equData::eqdsk_line_out(std::ofstream &file, double element, int counter)
     {
       if (counter == 5)
       {
@@ -192,3 +247,14 @@ int equData::write_line_out(std::ofstream &file, double element, int counter)
       counter +=1;
       return counter;
     }
+
+// Write out eqdsk array
+void equData::eqdsk_write_array(std::ofstream &file, std::vector<double> array, int counter)
+{
+  double element;
+  for(int i=0; i<nw; i++)
+  {
+    element = array[i];
+    counter = eqdsk_line_out(file, element, counter);
+  }
+}
