@@ -1,9 +1,11 @@
 name: BuildTest
 on:
-  push 
-  pull_request 
+  push:
+    branches: [main, ${GITHUB_REF##*/}]
+  pull_request:
+    branches: [main, ${GITHUB_REF##*/}]
   schedule:
-  - cron: "0 0 * * *"
+    - cron: "0 0 * * *"
 
 jobs:
   docker-build-test-ubuntu:
