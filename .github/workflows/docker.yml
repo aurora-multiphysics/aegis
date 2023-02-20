@@ -1,9 +1,9 @@
 name: BuildTest
 on:
   push:
-    branches: [ main, ${GITHUB_REF##*/} ]
+    branches: [ main, Feature--Waqar ]
   pull_request:
-    branches: [ main, ${GITHUB_REF##*/} ]
+    branches: [ main, Feature--Waqar ]
   schedule:
     - cron: "0 0 * * *"
 
