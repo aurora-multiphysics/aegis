@@ -22,10 +22,10 @@ jobs:
       name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
     -
-    name: Build and push
-    uses: docker/build-push-action@v4
-    with:
-      context: .
-      file: ./docker/Dockerfile
-      push: true
-      tags: ${{ secrets.DOCKERHUB_USERNAME }}/smardda-dagmc/v1
+      name: Build and push
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./docker/Dockerfile
+        push: true
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/smardda-dagmc/v1
