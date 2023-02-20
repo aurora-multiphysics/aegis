@@ -1,11 +1,11 @@
 name: BuildTest
 on:
   push:
-    branches: [ main, Feature--Waqar ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, Feature--Waqar ]
+    branches: [ main ]
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "47 10 * * *"
 
 jobs:
   docker-build-test-ubuntu:
