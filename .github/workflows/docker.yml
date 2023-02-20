@@ -1,7 +1,7 @@
 name: BuildTest
 on:
   schedule:
-    - cron: "55 10 * * *"
+    - cron: "57 10 * * *"
     
 jobs:
   docker-build-test-ubuntu:
