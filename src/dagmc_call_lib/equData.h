@@ -7,13 +7,23 @@
 
 class equData{
   public:
+
+  // File streams
+  std::ifstream eqdsk_file;
+  std::ofstream eqdsk_out;
+
+  // Header string
+  std::string header; // string containing header information
+
   // Integer data
-  int nw; // No. of horizontal R points in grid
-  int nh; // No. of vertical Z points in grid
+  int nw; // Number of horizontal R points in grid
+  int nh; // Number of vertical Z points in grid
+  int nbdry; // Number of boundary points
+  int nlim; // Number of limiter points
 
 
   // Floating point data
-  double xdim; // EFIT Horizontal dimension in metre of computational box
+  double rdim; // EFIT Horizontal dimension in metre of computational box
   double zdim; // EFIT Vertical dimension in metre of computational box
   double rcentr; // EFIT Radial dimension at centre of plasma
   double rgrid; // EFIT Minimum R in metre of rectangular computational box
@@ -34,17 +44,27 @@ class equData{
   std::vector<double> pres; // pres size(nw)
   std::vector<double> ffprime; // ffprime(nw)
   std::vector<double> pprime; // pprime(nw)
+
   std::vector<double> qpsi; // qpsi(nw)
+  std::vector<double> rbdry; // Boundary points in R
+  std::vector<double> zbdry; // Boundary points in Z
+  std::vector<double> rlim; // Limiter points in R  
+  std::vector<double> zlim; // Limiter points in Z  
+
 
   // 2D array data
   std::vector<std::vector<double>> psi; // psi(R,Z) size(nw*nh)
 
   // Methods
   void read_eqdsk(std::string filename);
-  std::vector<double> read_array(std::ifstream &eqdsk_file);
-  std::vector<std::vector<double>> read_2darray(std::ifstream &eqdsk_file);
+  std::vector<double> read_array(int n, std::string varName);
+  std::vector<std::vector<double>> read_2darray(int nx, int ny, std::string varName);
   void write_eqdsk_out();
-  int write_line_out(std::ofstream &file, double element, int counter);
+  int eqdsk_line_out(std::ofstream &file, double element, int counter);
+  void eqdsk_write_array(std::ofstream &file, std::vector<double> array, int counter);
 };
 
 #endif
+
+                                          
+
