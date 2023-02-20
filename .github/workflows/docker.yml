@@ -1,11 +1,7 @@
 name: BuildTest
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   schedule:
-    - cron: "53 10 * * *"
+    - cron: "55 10 * * *"
     
 jobs:
   docker-build-test-ubuntu:
