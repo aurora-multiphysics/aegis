@@ -1,9 +1,9 @@
 name: BuildTest
 on:
   push:
-    branches: [main, ${GITHUB_REF##*/}]
+    branches: [ main, ${GITHUB_REF##*/} ]
   pull_request:
-    branches: [main, ${GITHUB_REF##*/}]
+    branches: [ main, ${GITHUB_REF##*/} ]
   schedule:
     - cron: "0 0 * * *"
 
