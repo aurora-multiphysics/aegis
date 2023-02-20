@@ -3,7 +3,7 @@ on:
   - push
   - pull_request
   - schedule:
-  - cron: "*/5 * * * *"
+  - cron: "0 40 10 * * ?"
 
 jobs:
   docker-build-test-ubuntu:
