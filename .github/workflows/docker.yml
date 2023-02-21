@@ -9,7 +9,7 @@ jobs:
   docker-build-test-ubuntu:
     runs-on: ubuntu-latest
     container: 
-      image: waqar1711/smardda-dagmc/v1
+      image: waqar1711/smardda-dagmc:v1
       credentials: 
         username: ${{ secrets.DOCKERHUB_USERNAME }} 
         password: ${{ secrets.DOCKERHUB_TOKEN }}
