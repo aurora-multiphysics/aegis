@@ -1,5 +1,5 @@
 # Get base image 
-FROM waqar1711/smardda-dagmc/v1
+FROM waqar1711/smardda-dagmc:v1
 
 ARG WORKDIR="opt"
 
