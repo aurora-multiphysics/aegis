@@ -6,6 +6,7 @@ ARG WORKDIR="opt"
 
 # Install apt dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install -y \
+    docker \
     git \
     python3 \
     pip \
