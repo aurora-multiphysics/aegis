@@ -1,16 +1,15 @@
-name: ci
+name: SMARDDA-DAGMC Image Push
 
 on:
-  push:
-    branches:
-      - "main"
+  schedule:
+  - cron: "0 0 * * 5"
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
     - 
-    - name: Checkout
+      name: Checkout
       uses: actions/checkout@v2
     -
       name: Login to Docker Hub
@@ -22,10 +21,10 @@ jobs:
       name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
     -
-    name: Build and push
-    uses: docker/build-push-action@v4
-    with:
-      context: .
-      file: ./docker/Dockerfile
-      push: true
-      tags: ${{ secrets.DOCKERHUB_USERNAME }}/smardda-dagmc/v1
+      name: Build and push
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./docker/Dockerfile
+        push: true
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/smardda-dagmc/v1
