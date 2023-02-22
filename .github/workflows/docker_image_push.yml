@@ -24,4 +24,4 @@ jobs:
         context: .
         file: ./docker/weekly_build/Dockerfile
         push: true
-        tags: ${{ secrets.DOCKERHUB_USERNAME }}/smardda-dagmc/v1
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/smardda-dagmc:v2
