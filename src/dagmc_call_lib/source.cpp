@@ -45,7 +45,6 @@ pointSource::pointSource(double xyz[3])
 // sample a random direction isotropically from point 
 void pointSource::get_isotropic_dir()
 {
-  std::vector<double> test(3);
   std::random_device dev;
   std::mt19937 rng(dev());
   std::uniform_real_distribution<double> dist(0.0,1.0);
@@ -56,6 +55,17 @@ void pointSource::get_isotropic_dir()
   dir[2] = cos(phi);
 }
 
+void pointSource::get_hemisphere_surface_dir(double surfaceNormal[3])
+{
+  std::random_device dev;
+  std::mt19937 rng(dev());
+  std::uniform_real_distribution<double> dist(0.0,1.0);
+  double theta = 2 * M_PI * dist(rng);
+  double phi = acos(1 - 2 * dist(rng));
+  dir[0] = sin(phi) * cos(theta);
+  dir[1] = sin(phi) * sin(theta);
+  dir[2] = cos(phi);
+}
 
 
 // boxSource constructor, a square plane can be described by providing position vectors
