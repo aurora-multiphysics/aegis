@@ -23,6 +23,7 @@
 #include "simpleLogger.h"
 #include "equData.h"
 #include "source.h"
+#include "integrator.h"
 
 using namespace moab;
 
@@ -49,7 +50,9 @@ int main() {
   settings settings;
   settings.load_settings();
   LOG_WARNING << "h5m Faceted Geometry file to be used = " << settings.geo_input;
-  LOG_WARNING << "ray directions file to be used = " << settings.ray_qry;
+ // LOG_WARNING << "ray directions file to be used = " << settings.ray_qry;
+ // LOG_WARNING << "source_power (MW) = " << settings.source_power;
+
   static const char* input_file = settings.geo_input.c_str();
   static const char* ray_qry_exps = settings.ray_qry.c_str();
   std::string eqdsk_file = settings.eqdsk_file;
@@ -70,7 +73,6 @@ int main() {
   int nrayfire=0; // No. of ray_fire calls 
   EntityHandle prev_surf; // previous surface id
   double dir_mag; // magnitude of ray direction vector
-  double normal[3]; // vector of surface facet normal intersected by last ray_fire
   double reflect_dot; // dot product of ray dir vector and normal vector 
   double *normdir;
   int lost_rays=0;
@@ -189,7 +191,7 @@ int main() {
   else if (settings.runcase == "specific") // specific ray case
   {
     std::cout << "------------------------------------------------------" << std::endl;
-    std::cout << "--------------------SPECIFIC CASE---------------------" << std::endl;
+    std::cout << "--------------------SOURCE DEFINED CASE---------------------" << std::endl;
     std::cout << "------------------------------------------------------" << std::endl;
 
     // Set the specific launch direction and origin
@@ -208,56 +210,104 @@ int main() {
     std::ofstream ray_coords1; // define stream ray_coords1
     std::ofstream ray_coords2; // define stream ray_coords2
     std::ofstream ray_intersect; // stream for ray-surface intersection points
+    int nSample = 50; // Number of rays sampled
     ray_coords1.open("ray_coords1.txt"); // write out stream ray_coords1 to "ray_coords1.txt" file 
     ray_coords2.open("ray_coords2.txt"); // write out stream ray_coords2 to "ray_coords1.txt" file 
     ray_intersect.open("ray_intersect.txt"); // write out stream to "ray_intersect.txt" file
 
     //ray_intersect << origin[0] << ' ' << origin[1] << ' ' << origin[2] << ' ' ; // store first ray origin
 
-    EntityHandle surface;
+    //ray_intersect << nSample << " " << "0" << " " << "0" << std::endl;
+
+    std::vector<EntityHandle> surface_list;
     for (int i=1; i <=n_surfs; i++)
     { 
-      surface = DAG->entity_by_index(2, i);
-      std::cout << surface << std::endl;
+      surface_list.push_back(DAG->entity_by_index(2, i));
+     // std::cout << surface_list[i-1] << std::endl;
     }
+    surfaceIntegrator integrator(surface_list);
+    std::map<EntityHandle, int>::iterator it = integrator.nRays.begin();
 
-    DAG->write_mesh("dag.out", 1);
+
+
+    //DAG->write_mesh("dag.out", 1);
     
     //double pA[3] = {-50, 50, -100};
     //double pB[3] = {-50, 50, -121};
     double intersect_pt[3];
-    
-    double pSource[3] = {0, 0, 100};
-
+    double pSource[3] = {0, -20, 0};
+    EntityHandle meshElement;
+    double distanceMesh;
     //boxSource spatialSource(pA, pB);
     pointSource spatialSource(pSource);
-    int nSample = 10000;
-    int ray_hit = 0;
+    double reflected_dir[3];
+    double reflect_dot;
+    double surface_normal[3];
+    DAG->next_vol(surface_list[0], vol_h, vol_h);
+
+
     for (int i=0; i<nSample; i++)
     {
       spatialSource.get_isotropic_dir();
 
-      DAG->ray_fire(vol_h, spatialSource.r, spatialSource.dir, next_surf, next_surf_dist, &history, 0, -1);
-      history.reset();
+      DAG->ray_fire(vol_h, spatialSource.r, spatialSource.dir, next_surf, next_surf_dist, &history, 0, 1);
+
+      
       if (next_surf == 0)
       {
         next_surf_dist = 0;
+        std::cout << "LOST RAY" << std::endl;
       }
       else
       {
-        ray_hit += 1; 
         for (int j=0; j<3; j++)
         {
           intersect_pt[j] = spatialSource.r[j] + next_surf_dist*spatialSource.dir[j];
         }
-      ray_intersect << intersect_pt[0] << ' ' << intersect_pt[1] << ' ' << intersect_pt[2] << std::endl;
+        DAG->closest_to_location(vol_h, intersect_pt, distanceMesh, &meshElement);
+        integrator.count_hit(meshElement);
+
+
+        ray_intersect << spatialSource.r[0] << ' ' << spatialSource.r[1] << ' ' << spatialSource.r[2] << std::endl;
+        ray_intersect << intersect_pt[0] << ' ' << intersect_pt[1] << ' ' << intersect_pt[2] << std::endl;
       }
       ray_coords1 << spatialSource.dir[0] << ' ' << spatialSource.dir[1] << ' ' << spatialSource.dir[2] << std::endl;
-    
+      
+      // REFLECTION CODE
+
+        DAG->get_angle(next_surf, NULL, surface_normal, &history);
+        reflect_dot = dot_product(spatialSource.dir, surface_normal);
+
+        reflected_dir[0] = spatialSource.dir[0] - 2*reflect_dot*surface_normal[0];
+        reflected_dir[1] = spatialSource.dir[1] - 2*reflect_dot*surface_normal[1];
+        reflected_dir[2] = spatialSource.dir[2] - 2*reflect_dot*surface_normal[2];
+
+        DAG->ray_fire(vol_h, intersect_pt, reflected_dir, next_surf, next_surf_dist, &history, 0, 1);
+        
+        if (reflected_dir != spatialSource.dir)
+        {
+          history.reset();
+        }
+        for (int j=0; j<3; j++)
+        {
+          intersect_pt[j] = intersect_pt[j] + next_surf_dist*reflected_dir[j];
+        }
+        DAG->closest_to_location(vol_h, intersect_pt, distanceMesh, &meshElement);
+        integrator.count_hit(meshElement);
+
+        ray_intersect << intersect_pt[0] << ' ' << intersect_pt[1] << ' ' << intersect_pt[2] << std::endl;
+      }
+
+    LOG_WARNING << "Number of ray geometry intersections = " << integrator.raysHit;
+    while (it != integrator.nRays.end())
+    {
+      if (it->second > 0)
+      {
+        LOG_WARNING << "EntityHandle: " << it->first << " [" << it->second << "] rays hit" << std::endl;
+      }
+      ++it;
     }
-
-    LOG_WARNING << "Number of rays hit = " << ray_hit;
-
+  
 
 
     // // check if in volume before ray_fire
@@ -451,12 +501,12 @@ double * vecNorm(double vector[3]){
 
 
 
-// double dot_product(double vector_a[], double vector_b[]){
-//    double product = 0;
-//    for (int i = 0; i < 3; i++)
-//    product = product + vector_a[i] * vector_b[i];
-//    return product;
-// }
+double dot_product(double vector_a[], double vector_b[]){
+   double product = 0;
+   for (int i = 0; i < 3; i++)
+   product = product + vector_a[i] * vector_b[i];
+   return product;
+}
 
 // void reflect(double dir[3], double prev_dir[3], EntityHandle next_surf){
 //   double normal[3];

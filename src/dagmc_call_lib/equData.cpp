@@ -91,8 +91,8 @@ void equData::read_eqdsk(std::string filename)
 
     if (nbdry > 0)
     {
-      rbdry.reserve(nbdry);
-      zbdry.reserve(nbdry);
+      rbdry.resize(nbdry);
+      zbdry.resize(nbdry);
       LOG_WARNING << "Reading rbdry and zbdry...";
       for(int i=0; i<nbdry; i++) // Read in n elements into vector from file
       {
@@ -108,8 +108,8 @@ void equData::read_eqdsk(std::string filename)
     if (nlim > 0)
     {
       LOG_WARNING << "Reading rlim and zlim...";
-      rlim.reserve(nlim);
-      zlim.reserve(nlim);
+      rlim.resize(nlim);
+      zlim.resize(nlim);
       for (int i=0; i<nlim; i++)
       {
         eqdsk_file >> rlim[i] >> zlim[i];

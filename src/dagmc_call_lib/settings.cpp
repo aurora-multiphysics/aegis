@@ -29,24 +29,33 @@
 
         if (param == "geo_input")
         {
-          geo_input = value;
+          geo_input = value; // string
         }
         else if (param == "ray_qry")
         {
-          ray_qry = value;
+          ray_qry = value; // string
         }
         else if (param == "eqdsk_file")
         {
-          eqdsk_file = value;
+          eqdsk_file = value; // string
         }
         else if (param == "runcase")
         {
-          runcase = value;
+          runcase = value; // string
         }
+	      else if (param == "source_power")
+	      {
+	      source_power = value; // double
+	      }
+	      else if (param == "reflections")
+	      {
+	      reflections = value; // int
+	      }
+        else if (param == "number_of_rays_fired")
+	      {
+	      nSample = value; // int
+	      }
       }
       in.close();
     }
-
-
-
 
