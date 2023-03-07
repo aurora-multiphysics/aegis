@@ -22,6 +22,8 @@
 #include "settings.hpp"
 #include "simpleLogger.h"
 #include "equData.h"
+#include "source.h"
+#include "integrator.h"
 
 using namespace moab;
 
@@ -48,7 +50,9 @@ int main() {
   settings settings;
   settings.load_settings();
   LOG_WARNING << "h5m Faceted Geometry file to be used = " << settings.geo_input;
-  LOG_WARNING << "ray directions file to be used = " << settings.ray_qry;
+ // LOG_WARNING << "ray directions file to be used = " << settings.ray_qry;
+ // LOG_WARNING << "source_power (MW) = " << settings.source_power;
+
   static const char* input_file = settings.geo_input.c_str();
   static const char* ray_qry_exps = settings.ray_qry.c_str();
   std::string eqdsk_file = settings.eqdsk_file;
@@ -69,7 +73,6 @@ int main() {
   int nrayfire=0; // No. of ray_fire calls 
   EntityHandle prev_surf; // previous surface id
   double dir_mag; // magnitude of ray direction vector
-  double normal[3]; // vector of surface facet normal intersected by last ray_fire
   double reflect_dot; // dot product of ray dir vector and normal vector 
   double *normdir;
   int lost_rays=0;
@@ -188,12 +191,12 @@ int main() {
   else if (settings.runcase == "specific") // specific ray case
   {
     std::cout << "------------------------------------------------------" << std::endl;
-    std::cout << "--------------------SPECIFIC CASE---------------------" << std::endl;
+    std::cout << "--------------------SOURCE DEFINED CASE---------------------" << std::endl;
     std::cout << "------------------------------------------------------" << std::endl;
 
     // Set the specific launch direction and origin
-    double dir[3] = {240, 120, 100}; // ray launch direction
-    double origin[3] = {120.0, 41.0, 0.0};  // ray launch origin
+    double dir[3] = {0, 0, 1}; // ray launch direction
+    double origin[3] = {0.0, 0.0, 0.0};  // ray launch origin
 
     int n_sample=10;  // number of samples along ray 
     double sample_step_length; // step length between sample positions along ray
@@ -207,132 +210,226 @@ int main() {
     std::ofstream ray_coords1; // define stream ray_coords1
     std::ofstream ray_coords2; // define stream ray_coords2
     std::ofstream ray_intersect; // stream for ray-surface intersection points
+    int nSample = 50; // Number of rays sampled
     ray_coords1.open("ray_coords1.txt"); // write out stream ray_coords1 to "ray_coords1.txt" file 
     ray_coords2.open("ray_coords2.txt"); // write out stream ray_coords2 to "ray_coords1.txt" file 
     ray_intersect.open("ray_intersect.txt"); // write out stream to "ray_intersect.txt" file
 
-    ray_intersect << origin[0] << ' ' << origin[1] << ' ' << origin[2] << ' ' ; // store first ray origin
+    //ray_intersect << origin[0] << ' ' << origin[1] << ' ' << origin[2] << ' ' ; // store first ray origin
 
-    // check if in volume before ray_fire
-    DAG->point_in_volume(vol_h, origin, invol);
-    LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)" ;
-    LOG_WARNING << "Volume ID - " << vol_h ;
-    history.reset(); // reset history before launching any rays
+    //ray_intersect << nSample << " " << "0" << " " << "0" << std::endl;
 
-    // launch
-    DAG->ray_fire(vol_h, origin, dir, next_surf, next_surf_dist, &history, 0, 1);
-    LOG_WARNING << "Next Surface Distance = " << next_surf_dist;
-    sample_step_length = next_surf_dist/n_sample;
-    std::copy(std::begin(origin), std::end(origin), std::begin(sample_point));
-
-    for (int i=0; i<=n_sample; i++){
-      ray_coords1 << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] ;
-      for (int j=0; j<3; ++j) { // calculate next sample point along ray
-        sample_point[j] = sample_point[j] + (sample_step_length * dir[j]);
-      }
-      ray_coords1 << std::endl;
+    std::vector<EntityHandle> surface_list;
+    for (int i=1; i <=n_surfs; i++)
+    { 
+      surface_list.push_back(DAG->entity_by_index(2, i));
+     // std::cout << surface_list[i-1] << std::endl;
     }
-
-    nrayfire +=1;
-
-
-    next_pt(origin, origin, next_surf_dist, dir, ray_intersect);
-    LOG_WARNING << "Next Surface id - " << next_surf ;
-    DAG->next_vol(next_surf, vol_h, vol_h); // move to next volume id (determined from next_surf)
-    DAG->point_in_volume(vol_h, origin, invol);
-    LOG_WARNING << "Volume ID - " << vol_h ;
-    LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)";
-
-    //launch
-    DAG->ray_fire(vol_h, origin, dir, next_surf, next_surf_dist, &history, 0, 1);
-    LOG_WARNING << "Next Surface Distance = " << next_surf_dist;
-    DAG->next_vol(next_surf, vol_h, vol_h); // move to next volume id (determined from next_surf)
+    surfaceIntegrator integrator(surface_list);
+    std::map<EntityHandle, int>::iterator it = integrator.nRays.begin();
 
 
-    sample_step_length = next_surf_dist/n_sample;
-    std::copy(std::begin(origin), std::end(origin), std::begin(sample_point));origin;
 
-    for (int i=0; i<=n_sample; i++){
-      ray_coords1 << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] ;
-      for (int j=0; j<3; ++j) { // calculate next sample point along ray
-        sample_point[j] = sample_point[j] + (sample_step_length * dir[j]);
+    //DAG->write_mesh("dag.out", 1);
+    
+    //double pA[3] = {-50, 50, -100};
+    //double pB[3] = {-50, 50, -121};
+    double intersect_pt[3];
+    double pSource[3] = {0, -20, 0};
+    EntityHandle meshElement;
+    double distanceMesh;
+    //boxSource spatialSource(pA, pB);
+    pointSource spatialSource(pSource);
+    double reflected_dir[3];
+    double reflect_dot;
+    double surface_normal[3];
+    DAG->next_vol(surface_list[0], vol_h, vol_h);
+
+
+    for (int i=0; i<nSample; i++)
+    {
+      spatialSource.get_isotropic_dir();
+
+      DAG->ray_fire(vol_h, spatialSource.r, spatialSource.dir, next_surf, next_surf_dist, &history, 0, 1);
+
+      
+      if (next_surf == 0)
+      {
+        next_surf_dist = 0;
+        std::cout << "LOST RAY" << std::endl;
       }
-      ray_coords1 << std::endl;
-    }
-
-    nrayfire +=1;
-
-    next_pt(origin, origin, next_surf_dist, dir, ray_intersect);    
-    LOG_WARNING ;
-    DAG->point_in_volume(vol_h, origin, invol);
-    LOG_WARNING << "Volume ID - " << vol_h ;
-    LOG_WARNING << "Distance to next surface = " << next_surf_dist ;
-    LOG_WARNING << "Next Surface id - " << next_surf ;
-    DAG->point_in_volume(vol_h, origin, invol);
-    LOG_WARNING << "Volume ID - " << vol_h ;
-    LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)" ;
-    LOG_WARNING << "No. of ray_fire calls - " << nrayfire ; // print the No. of ray_fire calls
-
-    next_pt(origin, origin, next_surf_dist, dir, ray_intersect);
-    LOG_WARNING << "Distance to next surface = " << next_surf_dist ;
-    LOG_WARNING << "Next Surface id - " << next_surf ;
-    DAG->next_vol(next_surf, vol_h, vol_h); // move to next volume id (determined from next_surf)
-    DAG->point_in_volume(vol_h, origin, invol);
-    LOG_WARNING << "Volume ID - " << vol_h ;
-    LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)";
-
-    //launch
-    DAG->ray_fire(vol_h, origin, dir, next_surf, next_surf_dist, &history, 0, 1);
+      else
+      {
+        for (int j=0; j<3; j++)
+        {
+          intersect_pt[j] = spatialSource.r[j] + next_surf_dist*spatialSource.dir[j];
+        }
+        DAG->closest_to_location(vol_h, intersect_pt, distanceMesh, &meshElement);
+        integrator.count_hit(meshElement);
 
 
-    sample_step_length = next_surf_dist/n_sample;
-    std::copy(std::begin(origin), std::end(origin), std::begin(sample_point));origin;
-
-    for (int i=0; i<=n_sample; i++){
-      ray_coords1 << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] ;
-      for (int j=0; j<3; ++j) { // calculate next sample point along ray
-        sample_point[j] = sample_point[j] + (sample_step_length * dir[j]);
+        ray_intersect << spatialSource.r[0] << ' ' << spatialSource.r[1] << ' ' << spatialSource.r[2] << std::endl;
+        ray_intersect << intersect_pt[0] << ' ' << intersect_pt[1] << ' ' << intersect_pt[2] << std::endl;
       }
-      ray_coords1 << std::endl;
-    }
+      ray_coords1 << spatialSource.dir[0] << ' ' << spatialSource.dir[1] << ' ' << spatialSource.dir[2] << std::endl;
+      
+      // REFLECTION CODE
 
-      nrayfire +=1;
+        DAG->get_angle(next_surf, NULL, surface_normal, &history);
+        reflect_dot = dot_product(spatialSource.dir, surface_normal);
 
-          next_pt(origin, origin, next_surf_dist, dir, ray_intersect);    
-    LOG_WARNING ;
-    DAG->point_in_volume(vol_h, origin, invol);
-    LOG_WARNING << "Volume ID - " << vol_h ;
-    LOG_WARNING << "Distance to next surface = " << next_surf_dist ;
-    LOG_WARNING << "Next Surface id - " << next_surf ;
-    DAG->point_in_volume(vol_h, origin, invol);
-    LOG_WARNING << "Volume ID - " << vol_h ;
-    LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)" ;
-    LOG_WARNING << "No. of ray_fire calls - " << nrayfire ; // print the No. of ray_fire calls
+        reflected_dir[0] = spatialSource.dir[0] - 2*reflect_dot*surface_normal[0];
+        reflected_dir[1] = spatialSource.dir[1] - 2*reflect_dot*surface_normal[1];
+        reflected_dir[2] = spatialSource.dir[2] - 2*reflect_dot*surface_normal[2];
 
-    next_pt(origin, origin, next_surf_dist, dir, ray_intersect);
-    LOG_WARNING << "Distance to next surface = " << next_surf_dist ;
-    LOG_WARNING << "Next Surface id - " << next_surf ;
-    DAG->next_vol(next_surf, vol_h, vol_h); // move to next volume id (determined from next_surf)
-    DAG->point_in_volume(vol_h, origin, invol);
-    LOG_WARNING << "Volume ID - " << vol_h ;
-    LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)";
+        DAG->ray_fire(vol_h, intersect_pt, reflected_dir, next_surf, next_surf_dist, &history, 0, 1);
+        
+        if (reflected_dir != spatialSource.dir)
+        {
+          history.reset();
+        }
+        for (int j=0; j<3; j++)
+        {
+          intersect_pt[j] = intersect_pt[j] + next_surf_dist*reflected_dir[j];
+        }
+        DAG->closest_to_location(vol_h, intersect_pt, distanceMesh, &meshElement);
+        integrator.count_hit(meshElement);
 
-    //launch
-    DAG->ray_fire(vol_h, origin, dir, next_surf, next_surf_dist, &history, 0, 1);
-
-
-    sample_step_length = next_surf_dist/n_sample;
-    std::copy(std::begin(origin), std::end(origin), std::begin(sample_point));origin;
-
-    for (int i=0; i<=n_sample; i++){
-      ray_coords1 << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] ;
-      for (int j=0; j<3; ++j) { // calculate next sample point along ray
-        sample_point[j] = sample_point[j] + (sample_step_length * dir[j]);
+        ray_intersect << intersect_pt[0] << ' ' << intersect_pt[1] << ' ' << intersect_pt[2] << std::endl;
       }
-      ray_coords1 << std::endl;
-    }
 
-      nrayfire +=1;
+    LOG_WARNING << "Number of ray geometry intersections = " << integrator.raysHit;
+    while (it != integrator.nRays.end())
+    {
+      if (it->second > 0)
+      {
+        LOG_WARNING << "EntityHandle: " << it->first << " [" << it->second << "] rays hit" << std::endl;
+      }
+      ++it;
+    }
+  
+
+
+    // // check if in volume before ray_fire
+    // DAG->point_in_volume(vol_h, origin, invol);
+    // LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)" ;
+    // LOG_WARNING << "Volume ID - " << vol_h ;
+    // history.reset(); // reset history before launching any rays
+
+    // // launch
+    // DAG->ray_fire(vol_h, origin, dir, next_surf, next_surf_dist, &history, 0, 1);
+    // LOG_WARNING << "Next Surface Distance = " << next_surf_dist;
+    // sample_step_length = next_surf_dist/n_sample;
+    // std::copy(std::begin(origin), std::end(origin), std::begin(sample_point));
+
+    // for (int i=0; i<=n_sample; i++){
+    //   ray_coords1 << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] ;
+    //   for (int j=0; j<3; ++j) { // calculate next sample point along ray
+    //     sample_point[j] = sample_point[j] + (sample_step_length * dir[j]);
+    //   }
+    //   ray_coords1 << std::endl;
+    // }
+
+    // nrayfire +=1;
+
+
+    // next_pt(origin, origin, next_surf_dist, dir, ray_intersect);
+    // LOG_WARNING << "Next Surface id - " << next_surf ;
+    // DAG->next_vol(next_surf, vol_h, vol_h); // move to next volume id (determined from next_surf)
+    // DAG->point_in_volume(vol_h, origin, invol);
+    // LOG_WARNING << "Volume ID - " << vol_h ;
+    // LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)";
+
+    // //launch
+    // DAG->ray_fire(vol_h, origin, dir, next_surf, next_surf_dist, &history, 0, 1);
+    // LOG_WARNING << "Next Surface Distance = " << next_surf_dist;
+    // DAG->next_vol(next_surf, vol_h, vol_h); // move to next volume id (determined from next_surf)
+
+
+    // sample_step_length = next_surf_dist/n_sample;
+    // std::copy(std::begin(origin), std::end(origin), std::begin(sample_point));origin;
+
+    // for (int i=0; i<=n_sample; i++){
+    //   ray_coords1 << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] ;
+    //   for (int j=0; j<3; ++j) { // calculate next sample point along ray
+    //     sample_point[j] = sample_point[j] + (sample_step_length * dir[j]);
+    //   }
+    //   ray_coords1 << std::endl;
+    // }
+
+    // nrayfire +=1;
+
+    // next_pt(origin, origin, next_surf_dist, dir, ray_intersect);    
+    // LOG_WARNING ;
+    // DAG->point_in_volume(vol_h, origin, invol);
+    // LOG_WARNING << "Volume ID - " << vol_h ;
+    // LOG_WARNING << "Distance to next surface = " << next_surf_dist ;
+    // LOG_WARNING << "Next Surface id - " << next_surf ;
+    // DAG->point_in_volume(vol_h, origin, invol);
+    // LOG_WARNING << "Volume ID - " << vol_h ;
+    // LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)" ;
+    // LOG_WARNING << "No. of ray_fire calls - " << nrayfire ; // print the No. of ray_fire calls
+
+    // next_pt(origin, origin, next_surf_dist, dir, ray_intersect);
+    // LOG_WARNING << "Distance to next surface = " << next_surf_dist ;
+    // LOG_WARNING << "Next Surface id - " << next_surf ;
+    // DAG->next_vol(next_surf, vol_h, vol_h); // move to next volume id (determined from next_surf)
+    // DAG->point_in_volume(vol_h, origin, invol);
+    // LOG_WARNING << "Volume ID - " << vol_h ;
+    // LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)";
+
+    // //launch
+    // DAG->ray_fire(vol_h, origin, dir, next_surf, next_surf_dist, &history, 0, 1);
+
+
+    // sample_step_length = next_surf_dist/n_sample;
+    // std::copy(std::begin(origin), std::end(origin), std::begin(sample_point));origin;
+
+    // for (int i=0; i<=n_sample; i++){
+    //   ray_coords1 << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] ;
+    //   for (int j=0; j<3; ++j) { // calculate next sample point along ray
+    //     sample_point[j] = sample_point[j] + (sample_step_length * dir[j]);
+    //   }
+    //   ray_coords1 << std::endl;
+    // }
+
+    //   nrayfire +=1;
+
+    //       next_pt(origin, origin, next_surf_dist, dir, ray_intersect);    
+    // LOG_WARNING ;
+    // DAG->point_in_volume(vol_h, origin, invol);
+    // LOG_WARNING << "Volume ID - " << vol_h ;
+    // LOG_WARNING << "Distance to next surface = " << next_surf_dist ;
+    // LOG_WARNING << "Next Surface id - " << next_surf ;
+    // DAG->point_in_volume(vol_h, origin, invol);
+    // LOG_WARNING << "Volume ID - " << vol_h ;
+    // LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)" ;
+    // LOG_WARNING << "No. of ray_fire calls - " << nrayfire ; // print the No. of ray_fire calls
+
+    // next_pt(origin, origin, next_surf_dist, dir, ray_intersect);
+    // LOG_WARNING << "Distance to next surface = " << next_surf_dist ;
+    // LOG_WARNING << "Next Surface id - " << next_surf ;
+    // DAG->next_vol(next_surf, vol_h, vol_h); // move to next volume id (determined from next_surf)
+    // DAG->point_in_volume(vol_h, origin, invol);
+    // LOG_WARNING << "Volume ID - " << vol_h ;
+    // LOG_WARNING << invol << " = in volume (1 for yes, 0 for no)";
+
+    // //launch
+    // DAG->ray_fire(vol_h, origin, dir, next_surf, next_surf_dist, &history, 0, 1);
+
+
+    // sample_step_length = next_surf_dist/n_sample;
+    // std::copy(std::begin(origin), std::end(origin), std::begin(sample_point));origin;
+
+    // for (int i=0; i<=n_sample; i++){
+    //   ray_coords1 << sample_point[0] << ' ' << sample_point[1] << ' ' << sample_point[2] ;
+    //   for (int j=0; j<3; ++j) { // calculate next sample point along ray
+    //     sample_point[j] = sample_point[j] + (sample_step_length * dir[j]);
+    //   }
+    //   ray_coords1 << std::endl;
+    // }
+
+    //   nrayfire +=1;
 
 
   }
@@ -404,12 +501,12 @@ double * vecNorm(double vector[3]){
 
 
 
-// double dot_product(double vector_a[], double vector_b[]){
-//    double product = 0;
-//    for (int i = 0; i < 3; i++)
-//    product = product + vector_a[i] * vector_b[i];
-//    return product;
-// }
+double dot_product(double vector_a[], double vector_b[]){
+   double product = 0;
+   for (int i = 0; i < 3; i++)
+   product = product + vector_a[i] * vector_b[i];
+   return product;
+}
 
 // void reflect(double dir[3], double prev_dir[3], EntityHandle next_surf){
 //   double normal[3];

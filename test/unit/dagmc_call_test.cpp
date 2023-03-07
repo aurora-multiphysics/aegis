@@ -298,7 +298,6 @@ TEST_F(DagmcSimpleTest, SMARDDA_comparison_test) {
 //   EquData.read_eqdsk("test.eqdsk");
 
 //   std::string header = " disr     610.00 msec    nw      nh      vde       0  65 129";
-  
 //   // Test if header is correctly read
 //   EXPECT_TRUE(EquData.header == header);
 
@@ -309,9 +308,21 @@ TEST_F(DagmcSimpleTest, SMARDDA_comparison_test) {
 //   EXPECT_EQ(EquData.nbdry, 89);
 //   EXPECT_EQ(EquData.nlim, 57);
 
-//   // Test size of 2D psi vector (dimensions nw*nh)
+//   // Test size of arrays 
+//   EXPECT_EQ(EquData.fpol.size(), 65);
+//   EXPECT_EQ(EquData.pres.size(), 65);
+//   EXPECT_EQ(EquData.ffprime.size(), 65);
+//   EXPECT_EQ(EquData.pprime.size(), 65);
+//   EXPECT_EQ(EquData.qpsi.size(), 65);
+//   EXPECT_EQ(EquData.rbdry.size(), 89);
+//   EXPECT_EQ(EquData.zbdry.size(), 89);
+//   EXPECT_EQ(EquData.rlim.size(), 57);
+//   EXPECT_EQ(EquData.zlim.size(), 57);
+
+
 //   EXPECT_EQ(EquData.psi.size()*EquData.psi[0].size(), 8385);
 
+//   // Test random elements of array
 //   EXPECT_FLOAT_EQ(EquData.fpol[35], 33.2359842);
 //   EXPECT_FLOAT_EQ(EquData.pres[13], 457077.309);
 //   EXPECT_FLOAT_EQ(EquData.ffprime[54], 252.582128);

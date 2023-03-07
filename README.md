@@ -1,5 +1,8 @@
-# dagmc_testing (name undecided)
-A ray tracing tool that will eventually be used to calculate power loads on 3D CAD geometry, with the intention of use in Nuclear Fusion reactor component design aid. Makes use of Embree/Double-down/DAGMC as ray tracing engine. The following dependancies are required:
+# dagmc-SMARDDA (name undecided)
+A fusion simulation tool to be used to caluclate power loading on first wall components. Makes use of DAGMC/Double-Down as a ray tracing tool that will be used to 
+calculate neutral particle trajectories. Charged particle trajectories will mostly likely need to be calculated from field-line tracing and solving of the ODEs which
+govern these particles trajectories. The simulations will be performed on 3D CAD surface geometries, with the intention of helping engineers with their design process. 
+The following dependancies are required:
 - **Embree v3.6.1** (Intel Embree Ray Tracer)  
 - **Double-Down v1.0.0** (A double precision interface to Embree) 
 - **MOAB Version 5.2.0** (Mesh Oriented datABase) 

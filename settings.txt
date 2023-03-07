@@ -1,4 +1,5 @@
-geo_input cubes.h5m
-ray_qry exps00010000.qry
-runcase eqdsk
-eqdsk_file EQ3.eqdsk 
+geo_input h5m/utah_teapot.h5m
+ray_qry exps/exps00010000.qry
+runcase specific
+eqdsk_file eqdsk/VDE_DW_li0.8_610ms.eqdsk 
+source_power 100.0
