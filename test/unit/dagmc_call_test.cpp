@@ -298,7 +298,7 @@ TEST_F(DagmcSimpleTest, eqdsk_read) {
   EquData.read_eqdsk("test.eqdsk");
 
   std::string header = " disr     610.00 msec    nw      nh      vde       0  65 129";
-
+  
   // Test if header is correctly read
   EXPECT_TRUE(EquData.header == header);
 
