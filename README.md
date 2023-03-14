@@ -1,7 +1,6 @@
-# dagmc-SMARDDA (name undecided)
-A fusion simulation tool to be used to caluclate power loading on first wall components. Makes use of DAGMC/Double-Down as a ray tracing tool that will be used to 
-calculate neutral particle trajectories. Charged particle trajectories will mostly likely need to be calculated from field-line tracing and solving of the ODEs which
-govern these particles trajectories. The simulations will be performed on 3D CAD surface geometries, with the intention of helping engineers with their design process. 
+# Aegis 
+Aegis is a Monte-Carlo particle tracking tool for calculating power deposition loads (inspired by the SMARDDA FORTRAN code used for the same case) due to particles on surface accurate representations of fusion plasma First Wall Shielding. Makes use of DAGMC/Double-Down as a ray tracing tool that will be used to calculate neutral particle trajectories. Charged particle trajectories will eventually be calculated from field-line tracing and solving of the ODEs which govern these particles trajectories. 
+
 The following dependancies are required:
 - **Embree v3.6.1** (Intel Embree Ray Tracer)  
 - **Double-Down v1.0.0** (A double precision interface to Embree) 
