@@ -25,6 +25,5 @@ jobs:
       uses: docker/build-push-action@v4
       with:
         context: .
-        file: ./docker/weekly_build/Dockerfile
         push: true
         tags: ${{ secrets.DOCKERHUB_USERNAME }}/smardda-dagmc/v1
