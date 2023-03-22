@@ -1,4 +1,4 @@
-geo_input hashtag_mesh.h5m
+geo_input h5m/sduct.h5m
 ray_qry exps00010000.qry
 runcase specific
 eqdsk_file eqdsk/VDE_DW_li0.8_610ms.eqdsk 
