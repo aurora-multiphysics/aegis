@@ -9,7 +9,9 @@ class settings{
     std::string geo_input;
     std::string runcase;
     std::string eqdsk_file;
-    bool debug;
+    std::string source_power;
+    std::string reflections;
+    std::string nSample;
     void load_settings();
 };
 

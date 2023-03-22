@@ -22,7 +22,7 @@ static const char smardda_intersect[] ="smardda-intersect.txt";
 static const char ray_qry_exps[] = "exps00000200.qry";
 static const char sduct[] = "sduct.h5m";
 
-class DagmcSimpleTest : public ::testing::Test {
+class aegisUnitTest: public ::testing::Test {
  protected:
   virtual void SetUp() {}
   virtual void TearDown() {}
@@ -30,18 +30,18 @@ class DagmcSimpleTest : public ::testing::Test {
 
 
 // Static DAGMC version call
-TEST(DagmcCallTest, loadfile) {
+// TEST(aegisUnitTest, loadfile) {
 
-  DAG = new DagMC();
-  DAG->load_file(input_file); // open test dag file
-  DAG->init_OBBTree(); // initialise OBBTree 
-  } 
+//  DAG = new DagMC();
+//  DAG->load_file(input_file); // open test dag file
+//  DAG->init_OBBTree(); // initialise OBBTree 
+//  } 
 
 
 
 // ray_fire test with triple block geometry 
 // simply tests ray_fire functionality
-TEST_F(DagmcSimpleTest, Triple_Block_rayfire) {
+TEST_F(aegisUnitTest, Triple_Block_rayfire) {
   double max_tol = 1.0e-6;
   DAG = new DagMC();
   DAG->load_file(input_file); // open test dag file 
@@ -59,7 +59,7 @@ TEST_F(DagmcSimpleTest, Triple_Block_rayfire) {
 }
 
 
-TEST_F(DagmcSimpleTest, Ray_Propagation_Pipe) {
+TEST_F(aegisUnitTest, Ray_Propagation_Pipe) {
   DAG = new DagMC();
   DAG->load_file(scaled_fixed_end); // open big pipe file 
   DAG->init_OBBTree();
@@ -137,7 +137,7 @@ TEST_F(DagmcSimpleTest, Ray_Propagation_Pipe) {
 EXPECT_EQ(nrayfire, 15);
 }
 
-TEST_F(DagmcSimpleTest, SMARDDA_comparison_test) {
+TEST_F(aegisUnitTest, SMARDDA_comparison_test) {
   DAG = new DagMC();
   DAG->load_file(sduct); // open big pipe file 
   DAG->init_OBBTree();
@@ -292,13 +292,12 @@ TEST_F(DagmcSimpleTest, SMARDDA_comparison_test) {
 }
 
 
-TEST_F(DagmcSimpleTest, eqdsk_read) {
+TEST_F(aegisUnitTest, eqdsk_read) {
 
   equData EquData;
   EquData.read_eqdsk("test.eqdsk");
 
   std::string header = " disr     610.00 msec    nw      nh      vde       0  65 129";
-
   // Test if header is correctly read
   EXPECT_TRUE(EquData.header == header);
 

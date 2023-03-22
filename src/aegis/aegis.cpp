@@ -23,6 +23,7 @@
 #include "simpleLogger.h"
 #include "equData.h"
 #include "source.h"
+#include "integrator.h"
 
 #include "integrator.h"
 

@@ -53,6 +53,7 @@ class pointSource{
 
   pointSource(double xyz[3]);
   void get_isotropic_dir();
+  void get_hemisphere_surface_dir(double surfaceNormal[3]);
 };
 
 

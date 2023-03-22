@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 
 # no space in these names! used as shared object name and python module name
-set(PROJECT_NAME dagmc_call) # TODO - change dagmc_call
+set(PROJECT_NAME aegis) 
 set(PROJECT_LIB_NAME ${PROJECT_NAME}-lib)
 
 project(${PROJECT_NAME} VERSION 0.0.0 LANGUAGES CXX)
