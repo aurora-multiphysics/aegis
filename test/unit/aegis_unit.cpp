@@ -30,7 +30,7 @@ class aegisUnitTest: public ::testing::Test {
 
 
 // Static DAGMC version call
-TEST(DagmcCallTest, loadfile) {
+TEST(aegisUnitTest, loadfile) {
 
   DAG = new DagMC();
   DAG->load_file(input_file); // open test dag file
