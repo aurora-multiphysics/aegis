@@ -6,6 +6,7 @@ ARG WORKDIR="opt"
 
 # Install apt dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install -y \
+    docker \
     git \
     python3 \
     pip \
@@ -109,15 +110,4 @@ RUN cd /$WORKDIR/dagmc_bld/ && \
     echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$/WORKDIR/dagmc_bld/dagmc/lib' >> ~/.bashrc && \
     cd ../lib/cmake/dagmc && \
     DAGMC_CMAKE_CONFIG=$(pwd)
-
    
-# Install dagmc_testing  
-RUN cd /$WORKDIR && \
-    git clone https://github.com/Waqar-ukaea/dagmc_testing.git && \
-    cd dagmc_testing && \
-    cmake -DDAGMC_DIR=/$WORKDIR/dagmc_bld/DAGMC/lib/cmake/dagmc/ && \
-    make && \
-    make test
-
-
-    

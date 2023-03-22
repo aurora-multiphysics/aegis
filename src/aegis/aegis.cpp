@@ -25,6 +25,10 @@
 #include "source.h"
 #include "integrator.h"
 
+#include "integrator.h"
+
+#include "interpolation.h"
+
 using namespace moab;
 
 using moab::DagMC;
@@ -284,6 +288,10 @@ int main() {
       }
       ++it;
     }
+  
+
+
+    
 
   }
 
@@ -294,6 +302,8 @@ int main() {
     std::cout << "--------------------READING EQDSK---------------------" << std::endl;
     std::cout << "------------------------------------------------------" << std::endl;
     equData EquData;
+
+
     EquData.read_eqdsk(eqdsk_file);
     EquData.write_eqdsk_out();
 
