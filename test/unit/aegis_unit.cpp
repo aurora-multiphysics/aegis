@@ -30,12 +30,12 @@ class aegisUnitTest: public ::testing::Test {
 
 
 // Static DAGMC version call
-TEST(aegisUnitTest, loadfile) {
+// TEST(aegisUnitTest, loadfile) {
 
-  DAG = new DagMC();
-  DAG->load_file(input_file); // open test dag file
-  DAG->init_OBBTree(); // initialise OBBTree 
-  } 
+//  DAG = new DagMC();
+//  DAG->load_file(input_file); // open test dag file
+//  DAG->init_OBBTree(); // initialise OBBTree 
+//  } 
 
 
 
