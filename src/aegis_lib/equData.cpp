@@ -148,7 +148,7 @@ std::vector<std::vector<double>> equData::read_2darray(int nx, int ny, std::stri
     for(int j=0; j<ny; j++)
     {
       eqdsk_file >> work2d[i][j];
-      work2d[i][j] = -work2d[i][j];
+      // work2d[i][j] = -work2d[i][j]; // reverse sign of psi if needed
     }
   }
   LOG_WARNING << "Number of " << varName << " values read = " << nx*ny;
