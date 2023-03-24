@@ -13,18 +13,18 @@
 
 // cpp file for integrator. Count nuber of ray intersections belonging to a given surface
 
-surfaceIntegrator::surfaceIntegrator(std::vector<EntityHandle> surface_list)
+surfaceIntegrator::surfaceIntegrator(moab::Range Facets)
 {
-  nSurfaces = surface_list.size();
-  for (auto i:surface_list)
+  nFacets = Facets.size();
+  for (auto i:Facets)
   {
     nRays[i] = 0;
   }
 }
 
-void surfaceIntegrator::count_hit(EntityHandle surface_hit)
+void surfaceIntegrator::count_hit(EntityHandle facet_hit)
 {
-  nRays[surface_hit] +=1;
+  nRays[facet_hit] +=1;
   raysHit +=1;
 }
 
