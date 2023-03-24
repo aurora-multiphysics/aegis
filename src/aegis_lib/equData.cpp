@@ -10,6 +10,9 @@
 #include "simpleLogger.h"
 #include "equData.h"
 
+
+#include "alglib/interpolation.h"
+
 // Read eqdsk file
 void equData::read_eqdsk(std::string filename)
 {
@@ -145,6 +148,7 @@ std::vector<std::vector<double>> equData::read_2darray(int nx, int ny, std::stri
     for(int j=0; j<ny; j++)
     {
       eqdsk_file >> work2d[i][j];
+      work2d[i][j] = -work2d[i][j];
     }
   }
   LOG_WARNING << "Number of " << varName << " values read = " << nx*ny;
@@ -257,4 +261,72 @@ void equData::eqdsk_write_array(std::ofstream &file, std::vector<double> array, 
     element = array[i];
     counter = eqdsk_line_out(file, element, counter);
   }
+}
+
+// Initialise the 1D arrays and spline functions
+void equData::init_interp_splines()
+{
+  rmin = rgrid;
+  zmin = zmid - zdim/2;
+  rmax = rgrid+rdim;
+  zmax = zmid + zdim/2;
+
+  nr = nw-1;
+  nz = nh-1;
+
+  dr = (rmax-rmin)/nr;
+  dz = (zmax-zmin)/nz;
+
+  double r_pts[nw];
+  double z_pts[nh];
+  r_pts[0] = rmin;
+  z_pts[0] = zmin;
+
+  for (int i=0; i<nw; i++)
+  {
+    r_pts[i+1] = r_pts[i]+dr;
+  }
+
+  for (int i=0; i<nh; i++)
+  {
+    z_pts[i+1] = z_pts[i]+dz;
+  }
+
+  double psi_pts[nw*nh];
+  int count = 0;
+  for (int i=0; i<nw; i++)
+  {
+    for(int j=0; j<nh; j++)
+    {
+      psi_pts[count] = psi[i][j];
+      count += 1;
+    }
+  }
+
+  // set 1d arrays for R grid, Z grid and Psi grid
+  r_grid.setcontent(nw, r_pts);
+  z_grid.setcontent(nh, z_pts);
+  psi_grid.setcontent(count, psi_pts);
+
+  // Construct the spline interpolant to be used later 
+  alglib::spline2dbuildbilinearv(r_grid, nw, z_grid, nh, psi_grid, 1, psiSpline);
+
+  
+} 
+
+void equData::gnuplot_out()
+{
+  std::ofstream psiRZ_out;
+  psiRZ_out.open("psi_RZ.gnu"); 
+
+  for (int j=0; j<nh; j++)
+  {
+    for (int i=0; i<nw; i++)
+    {
+      psiRZ_out << i << " " << j << " " <<  r_grid[i] << " " << z_grid[j] << " " << 
+                  spline2dcalc(psiSpline, r_grid[i], z_grid[j]) << std::endl;
+    }
+    psiRZ_out << std::endl;
+  }
+
 }
