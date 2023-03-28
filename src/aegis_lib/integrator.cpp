@@ -11,15 +11,19 @@
 #include "moab/Interface.hpp"
 #include <moab/OrientedBoxTreeTool.hpp>
 
-// cpp file for integrator. Count nuber of ray intersections belonging to a given surface
 
+// surface integrator class constructor 
+// initialise list of EntityHandles and maps associated with 
 surfaceIntegrator::surfaceIntegrator(moab::Range Facets)
 {
   nFacets = Facets.size();
   for (auto i:Facets)
   {
+    facetEntities.push_back(i);
     nRays[i] = 0;
+    powFac[i] = 0;
   }
+
 }
 
 void surfaceIntegrator::count_hit(EntityHandle facet_hit)

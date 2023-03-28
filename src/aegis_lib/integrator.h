@@ -24,10 +24,11 @@ class surfaceIntegrator
   public:
   int raysTotal=0; // Total number of rays fired into geometry
   int raysHit=0; // Number of rays hit
-  int nFacets=0; // Number of surfaces in geometry
+  int nFacets=0; // Number of facets in geometry
   int raysLost;
+  std::vector<EntityHandle> facetEntities; // list of all entity handles in geometry
   std::map<EntityHandle, int> nRays; // Number of rays intersected with a given surface EntityHandle
-  
+  std::map<EntityHandle, double> powFac; // power assigned to each facet
   
   surfaceIntegrator(moab::Range Facets); // constructor
   void count_hit(EntityHandle facet_hit); // count hits belonging to each facet
