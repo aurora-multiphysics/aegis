@@ -1,5 +1,5 @@
-geo_input h5m/utah_teapot.h5m
+geo_input h5m/hashtag_mesh.h5m
 ray_qry exps/exps00010000.qry
 runcase specific
-eqdsk_file eqdsk/VDE_DW_li0.8_610ms.eqdsk 
+eqdsk_file eqdsk/EQ3.eqdsk 
 source_power 100.0
