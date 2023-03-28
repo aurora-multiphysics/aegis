@@ -270,13 +270,10 @@ void equData::init_interp_splines()
   zmin = zmid - zdim/2;
   rmax = rgrid+rdim;
   zmax = zmid + zdim/2;
-
   nr = nw-1;
   nz = nh-1;
-
   dr = (rmax-rmin)/nr;
   dz = (zmax-zmin)/nz;
-
   double r_pts[nw];
   double z_pts[nh];
   r_pts[0] = rmin;
@@ -310,9 +307,13 @@ void equData::init_interp_splines()
 
   // Construct the spline interpolant to be used later 
   alglib::spline2dbuildbilinearv(r_grid, nw, z_grid, nh, psi_grid, 1, psiSpline);
-
   
+  // Alglib::spline2ddiff function can return a value of spline at (R,Z) as well as derivatives. 
+  // I.e no need to have a separate spline for each derivative dPsidR and dPsidZ 
+
 } 
+
+
 
 void equData::gnuplot_out()
 {
