@@ -42,13 +42,13 @@ class equData{
   double psibdry2; // EFIT poloidal flux at the boundary (Wb/rad) IGNORED BY SMARDDA
   double xdum; // empty dummy variables in data
 
-  double rmin; 
-  double zmin; 
-  double rmax;
-  double zmax; 
+  double rmin; // min R value in equillibrium data
+  double zmin; // min Z value in equillibrium data
+  double rmax; // max R value in equillibrium data
+  double zmax; // max Z value in equillibrium data
 
-  double dr; // step size in r
-  double dz; // step size in z
+  double dr; // step size in R (rmax-rmin)
+  double dz; // step size in Z (zmax-zmin)
 
 
   // 1D array data
