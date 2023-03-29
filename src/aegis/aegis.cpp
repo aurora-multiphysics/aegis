@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <iostream>
 #include <assert.h>
-#include <math.h>
 #include <time.h>
 #include <algorithm>
 #include <cmath>
@@ -24,12 +23,13 @@
 #include "equData.h"
 #include "source.h"
 #include "integrator.h"
-
-#include "integrator.h"
-
+#include <algorithm>
+#include <unordered_map>
 
 
 using namespace moab;
+
+
 
 using moab::DagMC;
 using moab::OrientedBoxTreeTool;
@@ -64,8 +64,10 @@ int main() {
   DAG->load_file(input_file); // open test dag file
   DAG->init_OBBTree(); // initialise OBBTree 
   DAG->setup_geometry(Surfs, Vols);
+  //DAG->create_graveyard();
   DAG->moab_instance()->get_entities_by_type(0, MBTRI, Facets);
   LOG_WARNING << "No of triangles in geometry " << Facets.size();
+
 
 
   DAG->write_mesh("dag.out", 1);
@@ -202,7 +204,7 @@ int main() {
 
 
     surfaceIntegrator integrator(Facets);
-    std::map<EntityHandle, int>::iterator it = integrator.nRays.begin();
+    //std::map<EntityHandle, int>::iterator it = integrator.nRays.begin();
     int lostRays=0;
 
     double intersect_pt[3];
@@ -221,7 +223,7 @@ int main() {
     for (int i=0; i<nSample; i++)
     {
       spatialSource.get_isotropic_dir();
-      //history.reset();
+      history.reset();
       DAG->ray_fire(vol_h, spatialSource.r, spatialSource.dir, next_surf, next_surf_dist, &history, 0, 1);
       history.get_last_intersection(facet_hit);
       
@@ -277,17 +279,22 @@ int main() {
       }
     }
 
-    //LOG_WARNING << "Number of rays lost = " << lostRays;
-    //LOG_WARNING << "Number of rays launched = " << nSample;
+
+    LOG_WARNING << "Number of rays lost = " << lostRays;
+    LOG_WARNING << "Number of rays launched = " << nSample;
     LOG_WARNING << "Number of ray-facet intersections = " << integrator.raysHit;
-    while (it != integrator.nRays.end())
+    int_sorted_map nRays_sorted = integrator.sort_map(integrator.nRays);
+    
+
+    for (auto const &pair: nRays_sorted) 
     {
-      if (it->second > 0)
+      if (pair.second > 0)
       {
-        LOG_WARNING << "EntityHandle: " << it->first << " [" << it->second << "] rays hit" << std::endl;
+        LOG_WARNING << "EntityHandle: " << pair.first << "[" << pair.second << "] rays hit" << std::endl;
       }
-      ++it;
     }
+
+
   
 
 
