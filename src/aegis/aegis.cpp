@@ -14,6 +14,10 @@
 #include <set>
 #include <vector>
 #include <array>
+#include <algorithm>
+#include <unordered_map>
+
+
 #include "DagMC.hpp"
 #include "moab/Core.hpp"
 #include "moab/Interface.hpp"
@@ -23,13 +27,9 @@
 #include "equData.h"
 #include "source.h"
 #include "integrator.h"
-#include <algorithm>
-#include <unordered_map>
-
+#include "alglib/interpolation.h"
 
 using namespace moab;
-
-
 
 using moab::DagMC;
 using moab::OrientedBoxTreeTool;
@@ -313,6 +313,10 @@ int main() {
 
     EquData.read_eqdsk(eqdsk_file);
     EquData.write_eqdsk_out();
+
+    EquData.init_interp_splines();
+    EquData.gnuplot_out();
+
 
   }
   
