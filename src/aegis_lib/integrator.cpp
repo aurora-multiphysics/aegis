@@ -1,25 +1,24 @@
-#include <stdio.h>
-#include <iostream>
-#include <cctype>
-#include <vector>
-#include <map>
-#include <math.h>
+
 #include "integrator.h"
-
-
 #include <moab/Core.hpp>
 #include "moab/Interface.hpp"
 #include <moab/OrientedBoxTreeTool.hpp>
 
-// cpp file for integrator. Count nuber of ray intersections belonging to a given surface
 
-surfaceIntegrator::surfaceIntegrator(moab::Range Facets)
+
+
+// surface integrator class constructor 
+// initialise list of EntityHandles and maps associated with 
+surfaceIntegrator::surfaceIntegrator(moab::Range const &Facets)
 {
   nFacets = Facets.size();
   for (auto i:Facets)
   {
+    facetEntities.push_back(i);
     nRays[i] = 0;
+    powFac[i] = 0;
   }
+
 }
 
 void surfaceIntegrator::count_hit(EntityHandle facet_hit)
@@ -29,10 +28,10 @@ void surfaceIntegrator::count_hit(EntityHandle facet_hit)
 }
 
 
-void surfaceIntegrator::ray_reflect_dir(double prev_dir[3], double surface_normal[3], 
+void surfaceIntegrator::ray_reflect_dir(double const prev_dir[3], double const surface_normal[3], 
                                         double reflected_dir[3])
 {
-  double reflect_dot;
+  double reflect_dot = 0 ;
   reflect_dot = prev_dir[0]*surface_normal[0] + prev_dir[1]*surface_normal[1] 
                 + prev_dir[2]*surface_normal[2]; 
   
@@ -40,4 +39,16 @@ void surfaceIntegrator::ray_reflect_dir(double prev_dir[3], double surface_norma
   {
     reflected_dir[i] = prev_dir[i] - 2*reflect_dot*surface_normal[i];
   }
+}
+
+int_sorted_map surfaceIntegrator::sort_map(std::unordered_map<moab::EntityHandle, int> const &map)
+{
+  int_sorted_map sorted_map(map.begin(), map.end());
+  return sorted_map;
+}
+
+dbl_sorted_map surfaceIntegrator::sort_map(std::unordered_map<moab::EntityHandle, double> const &map)
+{
+  dbl_sorted_map sorted_map(map.begin(), map.end());
+  return sorted_map;
 }

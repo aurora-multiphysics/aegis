@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <iostream>
 #include <assert.h>
-#include <math.h>
 #include <time.h>
 #include <algorithm>
 #include <cmath>
@@ -15,6 +14,10 @@
 #include <set>
 #include <vector>
 #include <array>
+#include <algorithm>
+#include <unordered_map>
+
+
 #include "DagMC.hpp"
 #include "moab/Core.hpp"
 #include "moab/Interface.hpp"
@@ -24,12 +27,9 @@
 #include "equData.h"
 #include "source.h"
 #include "integrator.h"
-
-
 #include "alglib/interpolation.h"
 
 using namespace moab;
-
 
 using moab::DagMC;
 using moab::OrientedBoxTreeTool;
@@ -64,8 +64,10 @@ int main() {
   DAG->load_file(input_file); // open test dag file
   DAG->init_OBBTree(); // initialise OBBTree 
   DAG->setup_geometry(Surfs, Vols);
+  //DAG->create_graveyard();
   DAG->moab_instance()->get_entities_by_type(0, MBTRI, Facets);
   LOG_WARNING << "No of triangles in geometry " << Facets.size();
+
 
 
   DAG->write_mesh("dag.out", 1);
@@ -195,18 +197,18 @@ int main() {
     std::ofstream ray_coords2; // define stream ray_coords2
     std::ofstream ray_intersect; // stream for ray-surface intersection points
     int reflection = 1;
-    int nSample = 100; // Number of rays sampled
+    int nSample = 10000; // Number of rays sampled
     ray_coords1.open("ray_coords1.txt"); // write out stream ray_coords1 to "ray_coords1.txt" file 
     ray_coords2.open("ray_coords2.txt"); // write out stream ray_coords2 to "ray_coords1.txt" file 
     ray_intersect.open("ray_intersect.txt"); // write out stream to "ray_intersect.txt" file
 
 
     surfaceIntegrator integrator(Facets);
-    std::map<EntityHandle, int>::iterator it = integrator.nRays.begin();
+    //std::map<EntityHandle, int>::iterator it = integrator.nRays.begin();
     int lostRays=0;
 
     double intersect_pt[3];
-    double pSource[3] = {0, 0, 0};
+    double pSource[3] = {0, 0, -30};
     EntityHandle meshElement;
     double distanceMesh;
     pointSource spatialSource(pSource);
@@ -214,14 +216,14 @@ int main() {
     double reflect_dot;
     double surface_normal[3];
     EntityHandle obb_root;
-    //DAG->next_vol(Surfs[0], vol_h, vol_h);
+    DAG->next_vol(Surfs[0], vol_h, vol_h);
     DAG->get_root(vol_h, obb_root);
     //DAG->obb_tree()->print(obb_root, std::cout, false);
     EntityHandle facet_hit;
     for (int i=0; i<nSample; i++)
     {
       spatialSource.get_isotropic_dir();
-      //history.reset();
+      history.reset();
       DAG->ray_fire(vol_h, spatialSource.r, spatialSource.dir, next_surf, next_surf_dist, &history, 0, 1);
       history.get_last_intersection(facet_hit);
       
@@ -252,42 +254,47 @@ int main() {
       // REFLECTION CODE
         // if (reflection==1)
         // {
-          DAG->get_angle(next_surf, NULL, surface_normal, &history);
-          reflect_dot = dot_product(spatialSource.dir, surface_normal);
+          // DAG->get_angle(next_surf, NULL, surface_normal, &history);
+          // reflect_dot = dot_product(spatialSource.dir, surface_normal);
 
-          reflected_dir[0] = spatialSource.dir[0] - 2*reflect_dot*surface_normal[0];
-          reflected_dir[1] = spatialSource.dir[1] - 2*reflect_dot*surface_normal[1];
-          reflected_dir[2] = spatialSource.dir[2] - 2*reflect_dot*surface_normal[2];
+          // reflected_dir[0] = spatialSource.dir[0] - 2*reflect_dot*surface_normal[0];
+          // reflected_dir[1] = spatialSource.dir[1] - 2*reflect_dot*surface_normal[1];
+          // reflected_dir[2] = spatialSource.dir[2] - 2*reflect_dot*surface_normal[2];
 
-          DAG->ray_fire(vol_h, intersect_pt, reflected_dir, next_surf, next_surf_dist, &history, 0, 1);
-          history.get_last_intersection(facet_hit);
-            if (reflected_dir != spatialSource.dir)
-            {
-              history.reset();
-            }
-            for (int j=0; j<3; j++)
-            {
-              intersect_pt[j] = intersect_pt[j] + next_surf_dist*reflected_dir[j];
-            }
-            DAG->closest_to_location(vol_h, intersect_pt, distanceMesh, &meshElement);
-            integrator.count_hit(facet_hit);
+          // DAG->ray_fire(vol_h, intersect_pt, reflected_dir, next_surf, next_surf_dist, &history, 0, 1);
+          // history.get_last_intersection(facet_hit);
+          //   if (reflected_dir != spatialSource.dir)
+          //   {
+          //     history.reset();
+          //   }
+          //   for (int j=0; j<3; j++)
+          //   {
+          //     intersect_pt[j] = intersect_pt[j] + next_surf_dist*reflected_dir[j];
+          //   }
+          //   DAG->closest_to_location(vol_h, intersect_pt, distanceMesh, &meshElement);
+          //   integrator.count_hit(facet_hit);
 
-            ray_intersect << intersect_pt[0] << ' ' << intersect_pt[1] << ' ' << intersect_pt[2] << std::endl;
-          //}
+          //   ray_intersect << intersect_pt[0] << ' ' << intersect_pt[1] << ' ' << intersect_pt[2] << std::endl;
+          // //}
       }
     }
+
 
     LOG_WARNING << "Number of rays lost = " << lostRays;
     LOG_WARNING << "Number of rays launched = " << nSample;
     LOG_WARNING << "Number of ray-facet intersections = " << integrator.raysHit;
-    while (it != integrator.nRays.end())
+    int_sorted_map nRays_sorted = integrator.sort_map(integrator.nRays);
+    
+
+    for (auto const &pair: nRays_sorted) 
     {
-      if (it->second > 0)
+      if (pair.second > 0)
       {
-        LOG_WARNING << "EntityHandle: " << it->first << " [" << it->second << "] rays hit" << std::endl;
+        LOG_WARNING << "EntityHandle: " << pair.first << "[" << pair.second << "] rays hit" << std::endl;
       }
-      ++it;
     }
+
+
   
 
 
