@@ -10,7 +10,7 @@ on:
 jobs:
   docker-build-test-ubuntu:
     runs-on: ubuntu-latest
-    name: Build Test aegis container
+    name: Aegis Build Test (in pre-built dependency environment)
     env: 
       PRCOMMITSHA : ${{ github.event.pull_request.head.sha }}
     steps:
