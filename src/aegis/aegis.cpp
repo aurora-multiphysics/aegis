@@ -70,6 +70,7 @@ int main() {
 
 
 
+
   DAG->write_mesh("dag.out", 1);
   EntityHandle prev_surf; // previous surface id
   EntityHandle next_surf; // surface id 
@@ -240,7 +241,6 @@ int main() {
         {
           intersect_pt[j] = spatialSource.r[j] + next_surf_dist*spatialSource.dir[j];
         }
-        DAG->closest_to_location(vol_h, intersect_pt, distanceMesh, &meshElement);
         integrator.count_hit(facet_hit);
 
 
