@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <vector>
 #include <fstream>
+#include "alglib/interpolation.h"
 
 class equData{
   public:
@@ -20,6 +21,9 @@ class equData{
   int nh; // Number of vertical Z points in grid
   int nbdry; // Number of boundary points
   int nlim; // Number of limiter points
+
+  int nr; // nw-1 (used for finite difference)
+  int nz; // nh-1 (used for finite difference)
 
 
   // Floating point data
@@ -38,12 +42,22 @@ class equData{
   double psibdry2; // EFIT poloidal flux at the boundary (Wb/rad) IGNORED BY SMARDDA
   double xdum; // empty dummy variables in data
 
+  double rmin; // min R value in equillibrium data
+  double zmin; // min Z value in equillibrium data
+  double rmax; // max R value in equillibrium data
+  double zmax; // max Z value in equillibrium data
+
+  double dr; // step size in R (rmax-rmin)
+  double dz; // step size in Z (zmax-zmin)
+
 
   // 1D array data
   std::vector<double> fpol; // fpol size(nw)
   std::vector<double> pres; // pres size(nw)
   std::vector<double> ffprime; // ffprime(nw)
   std::vector<double> pprime; // pprime(nw)
+
+  alglib::real_1d_array r_grid, z_grid, psi_grid;
 
   std::vector<double> qpsi; // qpsi(nw)
   std::vector<double> rbdry; // Boundary points in R
@@ -55,6 +69,9 @@ class equData{
   // 2D array data
   std::vector<std::vector<double>> psi; // psi(R,Z) size(nw*nh)
 
+  // Splines
+  alglib::spline2dinterpolant psiSpline; // 2d spline interpolant for Psi(R,Z)
+
   // Methods
   void read_eqdsk(std::string filename);
   std::vector<double> read_array(int n, std::string varName);
@@ -62,6 +79,8 @@ class equData{
   void write_eqdsk_out();
   int eqdsk_line_out(std::ofstream &file, double element, int counter);
   void eqdsk_write_array(std::ofstream &file, std::vector<double> array, int counter);
+  void init_interp_splines();
+  void gnuplot_out();
 };
 
 #endif

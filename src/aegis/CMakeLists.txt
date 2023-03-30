@@ -2,6 +2,8 @@ file(GLOB_RECURSE src_files "*.h" "*.hpp" "*.cpp")
 
 message(STATUS "src files:")
 message(STATUS ${src_files})
+#ADD_DEFINITIONS(-DBOOST_LOG_DYN_LINK)
+include_directories(${Boost_INCLUDE_DIRS})
 add_executable(${PROJECT_NAME} ${src_files})
 add_compile_options(${PROJECT_NAME} ${BUILD_TYPE_COMPILE_FLAGS})
 
@@ -12,5 +14,4 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}-lib)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${Boost_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} PUBLIC dagmc-shared uwuw-shared )
 target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
-
 
