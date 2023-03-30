@@ -1,4 +1,4 @@
-name: SMARDDA-DAGMC Image Push
+name: Aegis Dockerhub image build/push
 
 on:
   schedule:
@@ -30,4 +30,4 @@ jobs:
         context: docker/weekly_build
         file: docker/weekly_build/Dockerfile
         push: true
-        tags: ${{ secrets.DOCKERHUB_USERNAME }}/smardda-dagmc/v1
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/aegis/stable
