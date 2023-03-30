@@ -30,4 +30,4 @@ jobs:
         context: docker/weekly_build
         file: docker/weekly_build/Dockerfile
         push: true
-        tags: ${{ secrets.DOCKERHUB_USERNAME }}/aegis/stable
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/aegis
