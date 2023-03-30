@@ -9,6 +9,7 @@
 #include <cmath>
 #include "equData.h"
 #include "integrator.h"
+#include "source.h"
  
 using namespace moab;
 
@@ -348,6 +349,64 @@ TEST_F(aegisUnitTest, read_facets) {
   EXPECT_EQ(integrator.facetEntities.size(), 2240);
   EXPECT_EQ(integrator.nRays.size(), 2240);
   EXPECT_EQ(integrator.powFac.size(), 2240);
+}
+
+TEST_F(aegisUnitTest, count_ray_facet_hits){
+  DAG = new DagMC();
+  DAG->load_file(hashtag_mesh); // open big pipe file 
+  DAG->init_OBBTree();
+  DAG->create_graveyard();
+
+  moab::Range Surfs, Vols, Facets;
+  DAG->setup_geometry(Surfs, Vols);
+  DAG->moab_instance()->get_entities_by_type(0, MBTRI, Facets);
+  surfaceIntegrator integrator(Facets);
+  double pDir[3] = {0, 0, 1};
+  double pSource[3] = {0, 25, -5};
+  pointSource spatialSource(pSource);
+  spatialSource.set_dir(pDir);
+  int nsample = 100;
+  EntityHandle facetHit;
+  DagMC::RayHistory history;
+  EntityHandle vol_h = DAG->entity_by_index(3, 1);
+  EntityHandle next_surf;
+  double next_surf_dist;
+  double intersect_pt[3];
+
+  for (int i=0; i<nsample; i++)
+  {
+    history.reset();
+    DAG->ray_fire(vol_h, spatialSource.r, spatialSource.dir, next_surf, next_surf_dist, &history, 0, 1);
+    history.get_last_intersection(facetHit);
+  
+    if (next_surf == 0)
+    {
+      next_surf_dist = 0;
+    }
+    else
+    {
+      for (int j=0; j<3; j++)
+      {
+        intersect_pt[j] = spatialSource.r[j] + next_surf_dist*spatialSource.dir[j];
+      }
+      integrator.count_hit(facetHit);
+    }
+  }
+  EntityHandle otherFacet;
+  double other_dir[3] = {1,0,1}; 
+  history.reset();
+  DAG->ray_fire(vol_h, spatialSource.r, other_dir, next_surf, next_surf_dist, &history, 0, 1);
+  history.get_last_intersection(otherFacet);
+  integrator.count_hit(otherFacet);
+  EXPECT_EQ(integrator.nRays[otherFacet], 1);
+
+  history.reset();
+  DAG->ray_fire(vol_h, spatialSource.r, spatialSource.dir, next_surf, next_surf_dist, &history, 0, 1);
+  history.get_last_intersection(facetHit);
+  integrator.count_hit(facetHit);
+  EXPECT_EQ(integrator.nRays[facetHit], 101);
+
+
 }
 
 double * vecNorm(double vector[3]){
