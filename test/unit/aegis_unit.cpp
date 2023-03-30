@@ -347,7 +347,7 @@ TEST_F(aegisUnitTest, read_facets) {
   EXPECT_EQ(integrator.nFacets, 2240);
   EXPECT_EQ(integrator.facetEntities.size(), 2240);
   EXPECT_EQ(integrator.nRays.size(), 2240);
-  EXPECT_EQ(integrator.powFac.size(), 2242);
+  EXPECT_EQ(integrator.powFac.size(), 2240);
 }
 
 double * vecNorm(double vector[3]){

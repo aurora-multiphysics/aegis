@@ -42,6 +42,14 @@ pointSource::pointSource(double xyz[3])
   }
 }
 
+void pointSource::set_dir(double newDir[3])
+{
+  dir[0] = newDir[0];
+  dir[1] = newDir[1];
+  dir[2] = newDir[2];
+}
+
+
 // sample a random direction isotropically from point 
 void pointSource::get_isotropic_dir()
 {
