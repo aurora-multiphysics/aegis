@@ -8,7 +8,8 @@
 #include <vector>
 #include <cmath>
 #include "equData.h"
-
+#include "integrator.h"
+ 
 using namespace moab;
 
 using moab::DagMC;
@@ -21,21 +22,13 @@ static const char scaled_fixed_end[] = "scaled_fixed_end.h5m";
 static const char smardda_intersect[] ="smardda-intersect.txt";
 static const char ray_qry_exps[] = "exps00000200.qry";
 static const char sduct[] = "sduct.h5m";
+static const char hashtag_mesh[] = "hashtag_mesh.h5m";
 
 class aegisUnitTest: public ::testing::Test {
  protected:
   virtual void SetUp() {}
   virtual void TearDown() {}
 };
-
-
-// Static DAGMC version call
-// TEST(aegisUnitTest, loadfile) {
-
-//  DAG = new DagMC();
-//  DAG->load_file(input_file); // open test dag file
-//  DAG->init_OBBTree(); // initialise OBBTree 
-//  } 
 
 
 
@@ -335,10 +328,27 @@ TEST_F(aegisUnitTest, eqdsk_read) {
   EXPECT_FLOAT_EQ(EquData.zbdry[39], 0.986207476);
   EXPECT_FLOAT_EQ(EquData.rlim[27], 557.200115);
   EXPECT_FLOAT_EQ(EquData.zlim[1], -149.995359);
-
 }
 
+TEST_F(aegisUnitTest, read_facets) {
+  DAG = new DagMC();
+  DAG->load_file(hashtag_mesh); // open big pipe file 
+  DAG->init_OBBTree();
+  moab::Range Surfs, Vols, Facets;
+  DAG->setup_geometry(Surfs, Vols);
+  DAG->moab_instance()->get_entities_by_type(0, MBTRI, Facets);
 
+  // Test if DAGMC is reading the correct number of triangle facets
+  EXPECT_EQ(Facets.size(), 2240);
+
+  surfaceIntegrator integrator(Facets);
+
+  // Ensure all integrator attributes which handle facets are all the correct size
+  EXPECT_EQ(integrator.nFacets, 2240);
+  EXPECT_EQ(integrator.facetEntities.size(), 2240);
+  EXPECT_EQ(integrator.nRays.size(), 2240);
+  EXPECT_EQ(integrator.powFac.size(), 2242);
+}
 
 double * vecNorm(double vector[3]){
   static double normalised_vector[3];
