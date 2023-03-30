@@ -9,9 +9,7 @@ RUN cd /$WORKDIR && \
     cd temp && \
     git clone https://github.com/Waqar-ukaea/aegis.git && \
     cd aegis && \
-    mkdir bld && \
-    cd bld && \
-    cmake ../ -DDAGMC_DIR=/$WORKDIR/dagmc_bld/DAGMC/lib/cmake/dagmc/ && \
+    cmake -DDAGMC_DIR=/$WORKDIR/dagmc_bld/DAGMC/lib/cmake/dagmc/ && \
 
     make && \
     make test
