@@ -27,6 +27,7 @@
 #include "equData.h"
 #include "source.h"
 #include "integrator.h"
+#include "postfm.h"
 #include "alglib/interpolation.h"
 
 using namespace moab;
@@ -316,8 +317,15 @@ int main() {
 
     EquData.init_interp_splines();
     EquData.gnuplot_out();
+    EquData.set_rsig();
+    EquData.centre();
 
-
+    std::vector<double> testVec = {2,1,1};
+    std::vector<double> outputVec;
+    std::string direction;
+    outputVec = polar_to_flux(testVec, direction, EquData);
+    
+    std::cout << outputVec[0] << " " << outputVec[1] << " " << outputVec[2] << std::endl;
   }
   
   else // No runcase specified
