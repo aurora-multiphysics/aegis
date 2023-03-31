@@ -56,7 +56,7 @@ void equData::read_eqdsk(std::string filename)
     LOG_WARNING << "Domain centre in Z zmid " << zmid;
     LOG_WARNING << "Plasma parameters from EFIT:";
     LOG_WARNING << "B at rcentre " << bcentr;
-    LOG_WARNING << "Flux at centre ssimag1 " << psimag1;
+    LOG_WARNING << "Flux at centre ssimag1 " << psimag1; // psiaxis in SMARDDA
     LOG_WARNING << "Flux at boundary ssibry1 "<< psibdry1;
     LOG_WARNING << "Plasma centre in R rmaxis " << rmaxis;
     LOG_WARNING << "Plasma centre in Z zmaxis " << zmaxis;
@@ -123,6 +123,10 @@ void equData::read_eqdsk(std::string filename)
     {
       LOG_FATAL << "Error reading limiter data from eqdsk";
     }
+
+    psiqbdry = psibdry1;
+    psiaxis = psimag1;
+    set_rsig();
 }
 
 // Read 1D array from eqdsk
@@ -329,5 +333,127 @@ void equData::gnuplot_out()
     }
     psiRZ_out << std::endl;
   }
+
+}
+
+void equData::set_rsig()
+{
+  if (psiqbdry-psiaxis < 0)
+  {
+    rsig = -1.0;
+  }
+  else
+  {
+    rsig = 1.0;
+  }
+
+  LOG_INFO << "Value of rsig (psiqbdry-psiaxis) = " << rsig;
+}
+
+void equData::centre()
+{
+  int igr; // R position index of global extremum
+  int igz; // Z position index of global extremum
+  int soutr = 10; // maximum number of outer searches
+  int sinr = 10; // maximum number of inner searches
+  int isr; // R search (increment) direction 
+  int isz; // Z search (increment) direction
+  int ir; // current R position as index
+  int iz; // current Z position as index
+  double zpp; // current value of psi
+  double zpg; // value of psi at global extremum
+
+
+  // using central index as guess (See beq_centre for other cases for initial guess)
+  igr = (rmax-rmin)/(2*dr);
+  igz = (zmax-zmin)/(2*dz); 
+  
+  //set initially positive search directions for increasing psi
+  isr = 1;
+  isz = 1;
+
+  for (int j=1; j<=soutr; j++)
+  {
+    ir = igr;
+    iz = igz;
+    zpg = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1));
+
+    // search in r
+    // change direction if necessary
+    ir = igr+isr;
+    zpp = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1)*dz);
+    if ((zpp-zpg)*rsig < 0)
+    {
+      igr = ir;
+      zpg = zpp;
+    }
+    else
+    {
+      isr = -1;
+      ir = igr;
+    }
+
+    for (int i=1; i<=sinr; i++)
+    {
+      ir = ir+isr;
+      zpp = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1)*dz);
+      if ((zpp-zpg)*rsig <0)
+      {
+        igr = ir;
+        zpg = zpp;
+      }
+      else
+      {
+        break;
+      }
+    }
+
+    // search in Z
+    // change direction if necessary
+
+    iz = igz+isz;
+    zpp = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1)*dz);
+    if ((zpp-zpg)*rsig < 0)
+    {
+      igz = iz;
+      zpg = zpp;
+    }
+    else
+    {
+      isz = -1;
+      iz = igz;
+    }
+
+    for (int i=1; i<=sinr; i++)
+    {
+      iz = iz+isz;
+      zpp = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1)*dz);
+      if ((zpp-zpg)*rsig < 0)
+      {
+        igz = iz;
+        zpg = zpp;
+      }
+      else
+      {
+        break;
+      }
+    }
+
+    // check global minimum
+    zpp = spline2dcalc(psiSpline, rmin+(igr-2)*dr, zmin+(igz-1)*dz);
+    if ((zpp-zpg)*rsig < 0 ) {continue;}
+    zpp = spline2dcalc(psiSpline, rmin+igr*dr, zmin+(igz-1)*dz);
+    if ((zpp-zpg)*rsig < 0 ) {continue;}
+    zpp = spline2dcalc(psiSpline, rmin+(igr-1)*dr, zmin+(igz-2)*dz);
+    if ((zpp-zpg)*rsig < 0) {continue;}
+    zpp = spline2dcalc(psiSpline, rmin+(igr-1)*dr, zmin+igz*dz);
+    if ((zpp-zpg)*rsig < 0) {continue;}
+    break;
+  }
+  rcen = rmin+(igr-1)*dr;
+  zcen = zmin+(igz-1)*dz;
+
+  LOG_WARNING << "Rcen value calculated from equData.centre() = " << rcen;
+  LOG_WARNING << "Zcen value calculated from equData.centre() = " << zcen;
 
 }

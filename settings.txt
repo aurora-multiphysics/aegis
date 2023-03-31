@@ -1,5 +1,5 @@
 geo_input h5m/hashtag_mesh.h5m
 ray_qry exps/exps00010000.qry
-runcase specific
+runcase eqdsk
 eqdsk_file eqdsk/EQ3.eqdsk 
 source_power 100.0

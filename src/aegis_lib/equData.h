@@ -6,7 +6,12 @@
 #include <fstream>
 #include "alglib/interpolation.h"
 
+
+
 class equData{
+  private:
+  double rsig; // sign of dpsi/dr value
+
   public:
 
   // File streams
@@ -26,7 +31,7 @@ class equData{
   int nz; // nh-1 (used for finite difference)
 
 
-  // Floating point data
+  // eqdsk Floating point data
   double rdim; // EFIT Horizontal dimension in metre of computational box
   double zdim; // EFIT Vertical dimension in metre of computational box
   double rcentr; // EFIT Radial dimension at centre of plasma
@@ -41,6 +46,13 @@ class equData{
   double psimag2; // EFIT poloidal flux at the magnetic axis (Wb/rad) IGNORED BY SMARDDA
   double psibdry2; // EFIT poloidal flux at the boundary (Wb/rad) IGNORED BY SMARDDA
   double xdum; // empty dummy variables in data
+
+  // attributes from SMARDDA
+  double psiaxis;
+  double psiqbdry;
+  double rcen; // rcen calculated from centre()
+  double zcen; // zcen calculated from centre()
+
 
   double rmin; // min R value in equillibrium data
   double zmin; // min Z value in equillibrium data
@@ -79,6 +91,8 @@ class equData{
   void write_eqdsk_out();
   int eqdsk_line_out(std::ofstream &file, double element, int counter);
   void eqdsk_write_array(std::ofstream &file, std::vector<double> array, int counter);
+  void centre();
+  void set_rsig();
   void init_interp_splines();
   void gnuplot_out();
 };
