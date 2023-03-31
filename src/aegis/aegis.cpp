@@ -27,7 +27,7 @@
 #include "equData.h"
 #include "source.h"
 #include "integrator.h"
-#include "postfm.h"
+#include "coordtfm.h"
 #include "alglib/interpolation.h"
 
 using namespace moab;

@@ -3,7 +3,7 @@
 #include <cmath>
 #include <string>
 
-#include "postfm.h"
+#include "coordtfm.h"
 #include "equData.h" 
 #include "alglib/interpolation.h"
 
