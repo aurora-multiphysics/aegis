@@ -31,6 +31,7 @@
 #include "alglib/interpolation.h"
 
 using namespace moab;
+using namespace coordTfm;
 
 using moab::DagMC;
 using moab::OrientedBoxTreeTool;
@@ -323,7 +324,7 @@ int main() {
     std::vector<double> testVec = {2,1,1};
     std::vector<double> outputVec;
     std::string direction;
-    outputVec = polar_to_flux(testVec, direction, EquData);
+    outputVec = coordTfm::polar_to_flux(testVec, direction, EquData);
     
     std::cout << outputVec[0] << " " << outputVec[1] << " " << outputVec[2] << std::endl;
   }

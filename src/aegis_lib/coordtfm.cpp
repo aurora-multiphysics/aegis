@@ -8,7 +8,7 @@
 #include "alglib/interpolation.h"
 
 
-std::vector<double> cartesian_to_polar_toroidal(std::vector<double> inputVector,
+std::vector<double> coordTfm::cartesian_to_polar_toroidal(std::vector<double> inputVector,
                                                    std::string direction)
 {
   std::vector<double> outputVector;
@@ -48,7 +48,7 @@ std::vector<double> cartesian_to_polar_toroidal(std::vector<double> inputVector,
   return outputVector;
 }
 
-std::vector<double> polar_to_flux(std::vector<double> inputVector, std::string direction,
+std::vector<double> coordTfm::polar_to_flux(std::vector<double> inputVector, std::string direction,
                                   equData& EquData)
 {
   std::vector<double> outputVector;
