@@ -10,7 +10,7 @@
 namespace coordTfm
 {
 
-std::vector<double> cartesian_to_polar_toroidal(std::vector<double> inputVector,
+std::vector<double> cart_to_polar(std::vector<double> inputVector,
                                                    std::string direction);
 
 // Coordinate system transforms

@@ -10,6 +10,7 @@
 #include "equData.h"
 #include "integrator.h"
 #include "source.h"
+#include "coordtfm.h"
  
 using namespace moab;
 
@@ -405,7 +406,40 @@ TEST_F(aegisUnitTest, count_ray_facet_hits){
   history.get_last_intersection(facetHit);
   integrator.count_hit(facetHit);
   EXPECT_EQ(integrator.nRays[facetHit], 101);
+}
 
+TEST_F(aegisUnitTest, cart_polar_coord_transform){
+  std::vector<double> input = {2.4, 5.3, -2.0};
+  std::vector<double> output;
+  std::string direction;
+  output.reserve(3);
+
+  output = coordTfm::cart_to_polar(input, direction);
+
+  EXPECT_FLOAT_EQ(output[0], 5.8180752);
+  EXPECT_FLOAT_EQ(output[1], -2);
+  EXPECT_FLOAT_EQ(output[2], -1.1455913);
+
+}
+
+TEST_F(aegisUnitTest, polar_flux_coord_transform){
+
+  equData EquData;
+  EquData.read_eqdsk("test.eqdsk");
+  EquData.init_interp_splines();
+  EquData.set_rsig();
+  EquData.centre();
+
+  std::vector<double> input = {2.4, 5.3, -2.0};
+  std::vector<double> output;
+  std::string direction;
+  output.reserve(3);
+
+  output = coordTfm::polar_to_flux(input, direction, EquData);
+
+  EXPECT_FLOAT_EQ(output[0], -2.34389385);
+  EXPECT_FLOAT_EQ(output[1], 2.14721228);
+  EXPECT_FLOAT_EQ(output[2], -2);
 
 }
 

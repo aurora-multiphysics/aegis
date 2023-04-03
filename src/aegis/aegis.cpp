@@ -321,12 +321,13 @@ int main() {
     EquData.set_rsig();
     EquData.centre();
 
-    std::vector<double> testVec = {2,1,1};
+    std::vector<double> testVec = {2.4, 5.3, -2.0};
     std::vector<double> outputVec;
     std::string direction;
+
     outputVec = coordTfm::polar_to_flux(testVec, direction, EquData);
-    
-    std::cout << outputVec[0] << " " << outputVec[1] << " " << outputVec[2] << std::endl;
+    //outputVec = coordTfm::cart_to_polar(testVec, direction);
+    std::cout << std::setprecision(9) << outputVec[0] << " " << outputVec[1] << " " << outputVec[2] << std::endl;
   }
   
   else // No runcase specified

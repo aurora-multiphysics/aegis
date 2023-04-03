@@ -8,7 +8,7 @@
 #include "alglib/interpolation.h"
 
 
-std::vector<double> coordTfm::cartesian_to_polar_toroidal(std::vector<double> inputVector,
+std::vector<double> coordTfm::cart_to_polar(std::vector<double> inputVector,
                                                    std::string direction)
 {
   std::vector<double> outputVector;
