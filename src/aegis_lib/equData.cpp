@@ -129,7 +129,7 @@ void equData::read_eqdsk(std::string filename)
     set_rsig();
 }
 
-// Read 1D array from eqdsk
+// Read 1D array from eqdsk (PRIVATE)
 std::vector<double> equData::read_array(int n, std::string varName)
 {
   std::vector<double> work1d(n); // working vector of doubles of size n
@@ -142,7 +142,7 @@ std::vector<double> equData::read_array(int n, std::string varName)
   return work1d;
 }
 
-// Read 2D array from eqdsk
+// Read 2D array from eqdsk (PRIVATE)
 std::vector<std::vector<double>> equData::read_2darray(int nx, int ny, std::string varName)
 {
   std::vector<std::vector<double>> work2d(nw, std::vector<double>(nh));
@@ -236,7 +236,7 @@ void equData::write_eqdsk_out()
   }
 }
 
-// Write singular line out in EQDSK format
+// Write singular line out in EQDSK format (PRIVATE) 
 int equData::eqdsk_line_out(std::ofstream &file, double element, int counter)
     {
       if (counter == 5)
@@ -256,7 +256,7 @@ int equData::eqdsk_line_out(std::ofstream &file, double element, int counter)
       return counter;
     }
 
-// Write out eqdsk array
+// Write out eqdsk arrays (PRIVATE)
 void equData::eqdsk_write_array(std::ofstream &file, std::vector<double> array, int counter)
 {
   double element;
@@ -267,7 +267,7 @@ void equData::eqdsk_write_array(std::ofstream &file, std::vector<double> array, 
   }
 }
 
-// Initialise the 1D arrays and spline functions
+// Initialise the 1D arrays and 2d spline functions
 void equData::init_interp_splines()
 {
   rmin = rgrid;
@@ -317,8 +317,7 @@ void equData::init_interp_splines()
 
 } 
 
-
-
+// Write out psi(R,Z) data for gnuplotting
 void equData::gnuplot_out()
 {
   std::ofstream psiRZ_out;
@@ -336,7 +335,8 @@ void equData::gnuplot_out()
 
 }
 
-void equData::set_rsig()
+// Set sign to determine if psi decreasing or increasing away from centre
+void equData::set_rsig() 
 {
   if (psiqbdry-psiaxis < 0)
   {
@@ -350,6 +350,7 @@ void equData::set_rsig()
   LOG_INFO << "Value of rsig (psiqbdry-psiaxis) = " << rsig;
 }
 
+// Find central psi extrema
 void equData::centre()
 {
   int igr; // R position index of global extremum
@@ -455,5 +456,35 @@ void equData::centre()
 
   LOG_WARNING << "Rcen value calculated from equData.centre() = " << rcen;
   LOG_WARNING << "Zcen value calculated from equData.centre() = " << zcen;
+
+}
+
+// Create 2d spline structures for R(psi,theta) and Z(psi,theta)
+void equData::rz_splines()
+{
+  int iext; // maximum allowed number of knots for spline in r
+  int iknot; // actual number of knots for splinie in r
+  int intheta; // actual number of angles defining R,Z(psi,theta)
+  int intv; // interval in which spline inverse found 
+  double zsig; // sign of dpsi/dr value (same as rsig)
+  int isig; // zero if psi decreases outward, else unity
+  double zdsrmin; // floor to Delta r_i
+  double cpsi; // constant for estimating Delta r_i
+  double theta; // theta_j
+  double tmin; // minimum theta for R,Z(psi,theta)
+  double dpdr; // dpsi/dr
+  double dpdz; // dpsi/dz
+  double sr; // r
+  double costheta; // cos(theta_j)
+  double sintheta; // sin(theta_j)
+  double re; // R_i
+  double ze; // Z_i
+  double dpdsr; // {dspi/dr}_{i}
+  double dsr; // Delta r_i
+  double dpdsrl; // {dspi/dr}_{i-1}
+  double psi1; // psi
+  double psi2; // psi
+  
+  
 
 }

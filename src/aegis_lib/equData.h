@@ -10,7 +10,27 @@
 
 class equData{
   private:
+  // Variables 
+
   double rsig; // sign of dpsi/dr value
+
+  // Methods
+
+  // Read 1D array from eqdsk
+  std::vector<double> read_array(int n, std::string varName);
+
+  // Read 2D array from eqdsk
+  std::vector<std::vector<double>> read_2darray(int nx, int ny, std::string varName);
+
+  // Write singular line out in EQDSK format
+  int eqdsk_line_out(std::ofstream &file, double element, int counter);
+
+  // Write out eqdsk arrays
+  void eqdsk_write_array(std::ofstream &file, std::vector<double> array, int counter);
+
+  // Set sign to determine if psi decreasing or increasing away from centre
+  void set_rsig();
+
 
   public:
 
@@ -18,7 +38,6 @@ class equData{
   std::ifstream eqdsk_file;
   std::ofstream eqdsk_out;
 
-  // Header string
   std::string header; // string containing header information
 
   // Integer data
@@ -85,16 +104,24 @@ class equData{
   alglib::spline2dinterpolant psiSpline; // 2d spline interpolant for Psi(R,Z)
 
   // Methods
+
+  // Read eqdsk file
   void read_eqdsk(std::string filename);
-  std::vector<double> read_array(int n, std::string varName);
-  std::vector<std::vector<double>> read_2darray(int nx, int ny, std::string varName);
+
+  // Write out eqdsk data back out in eqdsk format
   void write_eqdsk_out();
-  int eqdsk_line_out(std::ofstream &file, double element, int counter);
-  void eqdsk_write_array(std::ofstream &file, std::vector<double> array, int counter);
-  void centre();
-  void set_rsig();
+
+  // Initialise the 1D arrays and 2d spline functions
   void init_interp_splines();
+
+  // Write out psi(R,Z) data for gnuplotting
   void gnuplot_out();
+
+  // Find central psi extrema
+  void centre();
+
+  // Create 2d spline structures for R(psi,theta) and Z(psi,theta)
+  void rz_splines();
 };
 
 #endif

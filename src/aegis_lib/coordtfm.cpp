@@ -64,7 +64,7 @@ std::vector<double> coordTfm::polar_to_flux(std::vector<double> inputVector, std
     psi = inputVector[0];
     theta = inputVector[1];
     zeta = inputVector[2];
-
+    
     
   }
   else // fowards transform (polar -> flux coords)

@@ -427,7 +427,6 @@ TEST_F(aegisUnitTest, polar_flux_coord_transform){
   equData EquData;
   EquData.read_eqdsk("test.eqdsk");
   EquData.init_interp_splines();
-  EquData.set_rsig();
   EquData.centre();
 
   std::vector<double> input = {2.4, 5.3, -2.0};
