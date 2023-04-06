@@ -358,7 +358,26 @@ int main() {
 
     outputVec = coordTfm::polar_to_flux(testVec, direction, EquData);
     //outputVec = coordTfm::cart_to_polar(testVec, direction);
-    std::cout << std::setprecision(9) << outputVec[0] << " " << outputVec[1] << " " << outputVec[2] << std::endl;
+    std::vector<double> bField; 
+    bField = EquData.b_field(testVec, "cartesian");
+    std::ofstream BField_out;
+    BField_out.open("BField_RZ.gnu");
+    double bMag;
+
+    for (int j=0; j<EquData.nh; j++)
+    { 
+      for (int i=0; i<EquData.nw; i++)
+      {
+        testVec[0] = EquData.r_grid[i];
+        testVec[1] = EquData.z_grid[j];
+        bField = EquData.b_field(testVec, "polar");
+        bMag = sqrt(pow(bField[0], 2) + pow(bField[1], 2) + pow(bField[2], 2));
+        BField_out << i << " " << j << " " << EquData.r_grid[i] << " " << EquData.z_grid[j] 
+                   << " " << bMag << std::endl;
+      }
+      BField_out << std::endl;
+    }
+
   }
 
   else // No runcase specified

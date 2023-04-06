@@ -2,16 +2,17 @@
 #include <iostream>
 #include <iomanip>
 #include <assert.h>
-#include <math.h>
+#include <cmath>
 #include <time.h>
 #include <fstream>
 #include <sstream>
 #include <vector>
+
+
 #include "simpleLogger.h"
 #include "equData.h"
-
-
 #include "alglib/interpolation.h"
+#include "coordtfm.h"
 
 // Read eqdsk file
 void equData::read_eqdsk(std::string filename)
@@ -124,9 +125,38 @@ void equData::read_eqdsk(std::string filename)
       LOG_FATAL << "Error reading limiter data from eqdsk";
     }
 
+    // set equData attributes
+    rmin = rgrid;
+    zmin = zmid - zdim/2;
+    rmax = rgrid+rdim;
+    zmax = zmid + zdim/2;
+    nr = nw-1; // why does smardda do this?
+    nz = nh-1;
+    dr = (rmax-rmin)/nr;
+    dz = (zmax-zmin)/nz;
     psiqbdry = psibdry1;
     psiaxis = psimag1;
+    psinorm = fabs(psiqbdry-psiaxis)/2;
     set_rsig();
+    dpsi = fabs(rsig*(psiqbdry-psiaxis)/nw);
+
+    LOG_WARNING << "DPSI =  " << dpsi;
+    LOG_WARNING << "PSIQBDRY = " << psiqbdry;
+    LOG_WARNING << "PSIAXIS = " << psiaxis;
+    LOG_WARNING << "RSIG = " << rsig;
+    LOG_WARNING << "RMIN = " << rmin;
+    LOG_WARNING << "RMAX = " << rmax;
+    LOG_WARNING << "ZMIN = " << zmin;
+    LOG_WARNING << "ZMAX = " << zmax;
+    LOG_WARNING << "dR = " << dr;
+    LOG_WARNING << "dZ = " << dz;
+    LOG_WARNING << "PSINORM = " << psinorm;
+
+
+
+    // scale for psibig (TODO)
+    // if psibig 
+    // scale by 2pi
 }
 
 // Read 1D array from eqdsk (PRIVATE)
@@ -270,29 +300,25 @@ void equData::eqdsk_write_array(std::ofstream &file, std::vector<double> array, 
 // Initialise the 1D arrays and 2d spline functions
 void equData::init_interp_splines()
 {
-  rmin = rgrid;
-  zmin = zmid - zdim/2;
-  rmax = rgrid+rdim;
-  zmax = zmid + zdim/2;
-  nr = nw-1;
-  nz = nh-1;
-  dr = (rmax-rmin)/nr;
-  dz = (zmax-zmin)/nz;
+
   double r_pts[nw];
   double z_pts[nh];
   r_pts[0] = rmin;
   z_pts[0] = zmin;
-
+  
+  
+// loop over Z creating spline knots
   for (int i=0; i<nw; i++)
   {
     r_pts[i+1] = r_pts[i]+dr;
   }
-
+// loop over Z creating spline knots
   for (int i=0; i<nh; i++)
   {
     z_pts[i+1] = z_pts[i]+dz;
   }
 
+// loop over (R,Z) creating for spline knots
   double psi_pts[nw*nh];
   int count = 0;
   for (int i=0; i<nw; i++)
@@ -304,16 +330,42 @@ void equData::init_interp_splines()
     }
   }
 
-  // set 1d arrays for R grid, Z grid and Psi grid
+  double f_pts[nw];
+  double psi_1dpts[nw];
+  std::copy(fpol.begin(), fpol.end(), f_pts);
+
+
+  // loop over R to create 1d knots of psi 
+  psi_1dpts[0] = psiaxis;
+  dpsi = rsig*dpsi; // set correct sign of dpsi depending on if increase/decrease outwards
+  for (int i=0; i<nh; i++)
+  {
+    psi_1dpts[i+1] = psi_1dpts[i]+dpsi;
+  }
+
+  
+
+  // set 1d arrays for R grid, Z grid and Psi grids
   r_grid.setcontent(nw, r_pts);
   z_grid.setcontent(nh, z_pts);
   psi_grid.setcontent(count, psi_pts);
+  psi_1dgrid.setcontent(nw, psi_1dpts);
+  f_grid.setcontent(nw, f_pts);
 
-  // Construct the spline interpolant to be used later 
+
+  // Construct the spline interpolant for psi(R,Z) 
   alglib::spline2dbuildbilinearv(r_grid, nw, z_grid, nh, psi_grid, 1, psiSpline);
   
+  // Construct the spline interpolant for I aka f(psi)
+  alglib::spline1dbuildlinear(psi_1dgrid ,f_grid, fSpline);
+
   // Alglib::spline2ddiff function can return a value of spline at (R,Z) as well as derivatives. 
   // I.e no need to have a separate spline for each derivative dPsidR and dPsidZ 
+
+
+
+  // create 1d spline for f(psi) aka fpol
+  //alglib::spline1dbuildlinear(f_grid,)
 
 } 
 
@@ -336,6 +388,7 @@ void equData::gnuplot_out()
 }
 
 // Set sign to determine if psi decreasing or increasing away from centre
+// (+1 -> Increase outwards, -1 -> Decrease outwards)
 void equData::set_rsig() 
 {
   if (psiqbdry-psiaxis < 0)
@@ -485,6 +538,47 @@ void equData::rz_splines()
   double psi1; // psi
   double psi2; // psi
   
-  
+}
 
+// Caculate B field vector (in toroidal polars) at given position
+std::vector<double> equData::b_field(std::vector<double> position,
+                                     std::string startingFrom)
+{
+  std::vector<double> bVector(3); // B in toroidal polars
+  double zr; // local R from position vector supplied
+  double zz; // local Z from position vector supplied
+  double zpsi; // local psi returned from spline calc
+  double zdpdr; // local dpsi/dr from spline calc
+  double zdpdz; // local dpsi/dz from spline calc
+  double zf; // local f(psi) = RB_T (not sure what this means, copied comment from SMARDDA)
+  double null;
+
+  // if position vector is already in polars skip coord transform and calculate B
+  if (startingFrom == "polar")
+  {
+    zr = position[0];
+    zz = position[1];
+  }
+  // otherwise transform from cartesian -> polar before calculating B
+  else
+  {
+    std::vector<double> polarPosition;
+    polarPosition = coordTfm::cart_to_polar(position, "forwards");
+    zr = polarPosition[0];
+    zz = polarPosition[1];
+  }
+
+  // evaluate psi and psi derivs
+  alglib::spline2ddiff(psiSpline, zr, zz, zpsi, zdpdr, zdpdz, null); 
+
+  // evaluate I aka f at psi 
+  zf = alglib::spline1dcalc(fSpline, zpsi);
+
+  // calculate B in toroidal polars
+  bVector[0] = -zdpdz/zr;
+  bVector[1] = zdpdr/zr;
+  bVector[2] = zf/zr;
+
+  // return the calculated B vector 
+  return bVector;
 }

@@ -48,8 +48,8 @@ std::vector<double> coordTfm::cart_to_polar(std::vector<double> inputVector,
   return outputVector;
 }
 
-std::vector<double> coordTfm::polar_to_flux(std::vector<double> inputVector, std::string direction,
-                                  equData& EquData)
+std::vector<double> coordTfm::polar_to_flux(std::vector<double> inputVector, 
+                                            std::string direction, equData& EquData)
 {
   std::vector<double> outputVector;
   outputVector.reserve(3);

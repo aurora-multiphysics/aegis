@@ -12,8 +12,6 @@ class equData{
   private:
   // Variables 
 
-  double rsig; // sign of dpsi/dr value
-
   // Methods
 
   // Read 1D array from eqdsk
@@ -38,19 +36,13 @@ class equData{
   std::ifstream eqdsk_file;
   std::ofstream eqdsk_out;
 
-  std::string header; // string containing header information
-
-  // Integer data
+  // eqdsk data
+  std::string header; // string containing eqdsk header information
   int nw; // Number of horizontal R points in grid
   int nh; // Number of vertical Z points in grid
   int nbdry; // Number of boundary points
   int nlim; // Number of limiter points
 
-  int nr; // nw-1 (used for finite difference)
-  int nz; // nh-1 (used for finite difference)
-
-
-  // eqdsk Floating point data
   double rdim; // EFIT Horizontal dimension in metre of computational box
   double zdim; // EFIT Vertical dimension in metre of computational box
   double rcentr; // EFIT Radial dimension at centre of plasma
@@ -66,30 +58,11 @@ class equData{
   double psibdry2; // EFIT poloidal flux at the boundary (Wb/rad) IGNORED BY SMARDDA
   double xdum; // empty dummy variables in data
 
-  // attributes from SMARDDA
-  double psiaxis;
-  double psiqbdry;
-  double rcen; // rcen calculated from centre()
-  double zcen; // zcen calculated from centre()
-
-
-  double rmin; // min R value in equillibrium data
-  double zmin; // min Z value in equillibrium data
-  double rmax; // max R value in equillibrium data
-  double zmax; // max Z value in equillibrium data
-
-  double dr; // step size in R (rmax-rmin)
-  double dz; // step size in Z (zmax-zmin)
-
-
-  // 1D array data
-  std::vector<double> fpol; // fpol size(nw)
+  std::vector<double> fpol; // fpol size(nw) f(psi) in SMARDDA
   std::vector<double> pres; // pres size(nw)
   std::vector<double> ffprime; // ffprime(nw)
   std::vector<double> pprime; // pprime(nw)
-
-  alglib::real_1d_array r_grid, z_grid, psi_grid;
-
+  std::vector<std::vector<double>> psi; // psi(R,Z) size(nw*nh)
   std::vector<double> qpsi; // qpsi(nw)
   std::vector<double> rbdry; // Boundary points in R
   std::vector<double> zbdry; // Boundary points in Z
@@ -97,11 +70,39 @@ class equData{
   std::vector<double> zlim; // Limiter points in Z  
 
 
-  // 2D array data
-  std::vector<std::vector<double>> psi; // psi(R,Z) size(nw*nh)
+  // attributes from SMARDDA
+  int nr; // nw-1 (used for finite difference)
+  int nz; // nh-1 (used for finite difference)
 
-  // Splines
+  double psiaxis; // centre flux?
+  double psiqbdry; // bdry flux?
+  double psinorm; // normalised psi (fabs(psiqbdry-psiaxis)/2)
+  double dpsi; // 1d psi finite difference
+  double rcen; // rcen calculated from centre()
+  double zcen; // zcen calculated from centre()
+  double rsig; // sign of dpsi/dr value (+1 -> Increase outwards, -1 -> Decrease outwards)
+
+
+  double rmin; // min R value in equillibrium data
+  double zmin; // min Z value in equillibrium data
+  double rmax; // max R value in equillibrium data
+  double zmax; // max Z value in equillibrium data
+
+  double dr; // step size in R (rmax-rmin)/nr
+  double dz; // step size in Z (zmax-zmin)/nz
+
+  // alglib grids
+  alglib::real_1d_array r_grid; // 1D grid R[nw] with spacing = dr (KNOTS)
+  alglib::real_1d_array z_grid; // 1D grid Z[nh] with spacing = dz (KNOTS)
+  alglib::real_1d_array psi_1dgrid; // 1D grid psi[nw] with spacing = dpsi (KNOTS)
+  alglib::real_1d_array psi_grid; // 2D grid psi(R,Z) (FUNCTION VALUES)
+  alglib::real_1d_array f_grid; // 1D grid for I(psi) (FUNCTION VALUES)
+ 
+
+
+  // alglib splines
   alglib::spline2dinterpolant psiSpline; // 2d spline interpolant for Psi(R,Z)
+  alglib::spline1dinterpolant fSpline; // 1d spline interpolant for f(psi) or I(psi)
 
   // Methods
 
@@ -122,6 +123,12 @@ class equData{
 
   // Create 2d spline structures for R(psi,theta) and Z(psi,theta)
   void rz_splines();
+
+  // Caculate B field vector (in toroidal polars) at given position
+  // set string to "polar" if position vector already in polars
+  std::vector<double> b_field(std::vector<double> position, 
+                              std::string startingFrom);
+
 };
 
 #endif
