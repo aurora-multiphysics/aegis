@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <vector>
 #include <fstream>
+#include <cmath>
 #include "alglib/interpolation.h"
+
 
 
 
@@ -73,6 +75,8 @@ class equData{
   // attributes from SMARDDA
   int nr; // nw-1 (used for finite difference)
   int nz; // nh-1 (used for finite difference)
+  int ntheta = 32; // N_{theta} for theta mesh generation
+  int npsi = 32; // N_{psi} for psi mesh generation
 
   double psiaxis; // centre flux?
   double psiqbdry; // bdry flux?
@@ -87,9 +91,12 @@ class equData{
   double zmin; // min Z value in equillibrium data
   double rmax; // max R value in equillibrium data
   double zmax; // max Z value in equillibrium data
+  double thetamin = M_PI_4 ; // min value of theta, default pi/4
+  double thetamax = 3*M_PI_4; // max value of theta, default 3*pi/4
 
   double dr; // step size in R (rmax-rmin)/nr
   double dz; // step size in Z (zmax-zmin)/nz
+  double dtheta = (thetamax-thetamin)/ntheta; // step size in theta (thetamax-thetamin)ntheta
 
   // alglib grids
   alglib::real_1d_array r_grid; // 1D grid R[nw] with spacing = dr (KNOTS)
@@ -102,7 +109,7 @@ class equData{
 
   // alglib splines
   alglib::spline2dinterpolant psiSpline; // 2d spline interpolant for Psi(R,Z)
-  alglib::spline1dinterpolant fSpline; // 1d spline interpolant for f(psi) or I(psi)
+  alglib::spline1dinterpolant fSpline; // 1d spline interpolant for f(psi) or I(psi) toroidal component
 
   // Methods
 
@@ -120,6 +127,9 @@ class equData{
 
   // Find central psi extrema
   void centre();
+
+  // calculate r_min and r_max as functions of theta_j
+  void r_extrema();
 
   // Create 2d spline structures for R(psi,theta) and Z(psi,theta)
   void rz_splines();

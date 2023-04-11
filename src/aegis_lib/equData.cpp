@@ -353,10 +353,10 @@ void equData::init_interp_splines()
   f_grid.setcontent(nw, f_pts);
 
 
-  // Construct the spline interpolant for psi(R,Z) 
+  // Construct the spline interpolant for flux function psi(R,Z) 
   alglib::spline2dbuildbilinearv(r_grid, nw, z_grid, nh, psi_grid, 1, psiSpline);
   
-  // Construct the spline interpolant for I aka f(psi)
+  // Construct the spline interpolant for toroidal component flux function I(psi) aka f(psi) 
   alglib::spline1dbuildlinear(psi_1dgrid ,f_grid, fSpline);
 
   // Alglib::spline2ddiff function can return a value of spline at (R,Z) as well as derivatives. 
@@ -512,6 +512,85 @@ void equData::centre()
 
 }
 
+void equData::r_extrema()
+{
+  int nrsrsamp; // number of samples in r
+  double zpsi; // psi
+  double zdpdr; // dpsi/dr
+  double zdpdz; // dpsi/dz
+  double ztheta; // theta_j
+  double zsrr; // estimate for maximum |R-R_c| in domain
+  double zszz; // estimate for maximum |Z-Z_c| in domain
+  double zsrmin; // estimate for starting r
+  double zsrmax; // estimate for maximum r in domain
+  double zcostheta; // cos(theta_j)
+  double zsintheta; // sin(theta_j)
+  double re; // R_i
+  double ze; // Z_i
+  double zdpdsr; // {dspi/dr}_{i}
+  double zsr; // r_i
+  double zdsr; // Delta r_i
+  double zdpdsrl; // (dspi/dr)_{i-1}
+  double zrpmin; // largest r giving psi < psi_{min}
+  double zrpmax; // smallest r giving psi > psi_{max} 
+  int isr; // flag that value psi < psi_{min} has been found
+  int idsplet; // flag that (dpsi/dr)_{i-1} set
+  int im; // number of angles in largest interval of acceptable theta
+  int il; // marks lower bound of current interval of acceptable theta
+  int ilm; // marks lower bound of largest interval of acceptable theta
+  std::vector<double> work1(ntheta+1); // 1d work array
+
+  std::fill(work1.begin(), work1.end(), 0); // fill working array with zeroes
+
+
+  zsrr = std::max(fabs(rmax-rcen), fabs(rmin-rcen));
+  zszz = std::max(fabs(zmax-zcen), fabs(zmin-zcen));
+  zsrmax = sqrt(pow(zsrr,2) + pow(zszz, 2));
+  nrsrsamp = nr+nz;
+  zdsr = zsrmax/nrsrsamp; 
+  zsrmin = zsrmax/10;
+  dtheta = (thetamax-thetamin)/ntheta;
+
+  // loop over angle
+  for (int j=1; j<=ntheta+1; j++)
+  {
+    ztheta = thetamin + j*dtheta;
+    zcostheta = cos(ztheta);
+    zsintheta = sin(ztheta);
+
+    // loop over distance from centre. Start a little away from origin
+    zsr = zsrmin;
+    isr = 0;
+    idsplet = 0;
+
+    for (int i=1; i<=nrsrsamp; i++)
+    {
+      re = rcen + zsr*zcostheta;
+      if (re>=rmax || re<=rmin)
+      {
+        LOG_WARNING << "Rejecting direction-extremum not found. Rejecting in R";
+        work1[j] = 2;
+        break;
+      }
+      ze = zcen + zsr*zsintheta;
+      if (ze>=zmax || ze<=zmin)
+      {
+        LOG_WARNING << "Rejecting direction-extremum not found. Rejecting in Z";
+        work1[j] = 2;
+        break;
+      }
+      zpsi = alglib::spline2dcalc(psiSpline, re, ze);
+    }
+  }
+
+  if (rsig>0) // i.e if psiaxis < psiqbdry meaning psi increases outwards
+  {
+    if (zpsi<psimin)
+  }
+
+}
+
+
 // Create 2d spline structures for R(psi,theta) and Z(psi,theta)
 void equData::rz_splines()
 {
@@ -523,21 +602,35 @@ void equData::rz_splines()
   int isig; // zero if psi decreases outward, else unity
   double zdsrmin; // floor to Delta r_i
   double cpsi; // constant for estimating Delta r_i
-  double theta; // theta_j
+  double ztheta; // theta_j
   double tmin; // minimum theta for R,Z(psi,theta)
-  double dpdr; // dpsi/dr
-  double dpdz; // dpsi/dz
-  double sr; // r
-  double costheta; // cos(theta_j)
-  double sintheta; // sin(theta_j)
+  double zdpdr; // dpsi/dr
+  double zdpdz; // dpsi/dz
+  double zsr; // r
+  double zcostheta; // cos(theta_j)
+  double zsintheta; // sin(theta_j)
   double re; // R_i
   double ze; // Z_i
-  double dpdsr; // {dspi/dr}_{i}
-  double dsr; // Delta r_i
-  double dpdsrl; // {dspi/dr}_{i-1}
-  double psi1; // psi
-  double psi2; // psi
+  double zdpdsr; // {dspi/dr}_{i}
+  double zdsr; // Delta r_i
+  double zdpdsrl; // {dspi/dr}_{i-1}
+  double zpsi; // psi
+  double zpsi_i; // psi_i
   
+
+  // loop over angle
+
+  int counter = 0;
+  for (int j=0; j<ntheta; j++)
+  { 
+    counter += 1; 
+    ztheta = thetamin + j*dtheta;
+    zcostheta = cos(ztheta);
+    zsintheta = sin(ztheta);
+
+
+  }
+
 }
 
 // Caculate B field vector (in toroidal polars) at given position
@@ -551,7 +644,7 @@ std::vector<double> equData::b_field(std::vector<double> position,
   double zdpdr; // local dpsi/dr from spline calc
   double zdpdz; // local dpsi/dz from spline calc
   double zf; // local f(psi) = RB_T (not sure what this means, copied comment from SMARDDA)
-  double null;
+  double null; // second derivative of psi not needed
 
   // if position vector is already in polars skip coord transform and calculate B
   if (startingFrom == "polar")
@@ -568,16 +661,16 @@ std::vector<double> equData::b_field(std::vector<double> position,
     zz = polarPosition[1];
   }
 
-  // evaluate psi and psi derivs
+  // evaluate psi and psi derivs at given (R,Z) coords
   alglib::spline2ddiff(psiSpline, zr, zz, zpsi, zdpdr, zdpdz, null); 
 
-  // evaluate I aka f at psi 
+  // evaluate I aka f at psi (I aka f is the flux function) 
   zf = alglib::spline1dcalc(fSpline, zpsi);
 
-  // calculate B in toroidal polars
-  bVector[0] = -zdpdz/zr;
-  bVector[1] = zdpdr/zr;
-  bVector[2] = zf/zr;
+  // calculate B in cylindrical toroidal polars
+  bVector[0] = -zdpdz/zr; // B_R
+  bVector[1] = zdpdr/zr; // B_Z
+  bVector[2] = zf/zr; // B_T - toroidal component of field directed along phi
 
   // return the calculated B vector 
   return bVector;
