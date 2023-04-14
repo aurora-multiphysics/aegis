@@ -585,7 +585,7 @@ void equData::r_extrema()
 
   if (rsig>0) // i.e if psiaxis < psiqbdry meaning psi increases outwards
   {
-    if (zpsi<psimin)
+    //if (zpsi<psimin)
   }
 
 }
