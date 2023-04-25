@@ -338,7 +338,8 @@ int main() {
 
   // --------------------------------------------------------------------------------------------------------
 
-  else if (settings.runcase=="eqdsk"){
+  else if (settings.runcase=="eqdsk")
+  {
     std::cout << "------------------------------------------------------" << std::endl;
     std::cout << "--------------------READING EQDSK---------------------" << std::endl;
     std::cout << "------------------------------------------------------" << std::endl;
@@ -352,68 +353,11 @@ int main() {
     EquData.gnuplot_out();
     EquData.centre();
 
-    std::vector<double> testVec = {2.4, 5.3, -2.0};
-    std::vector<double> outputVec;
-    std::string direction;
+    bool plotRZ = true;
+    bool plotXYZ = true;
+    EquData.write_bfield(plotRZ, plotXYZ);
 
-    outputVec = coordTfm::polar_to_flux(testVec, direction, EquData);
-    //outputVec = coordTfm::cart_to_polar(testVec, direction);
-    std::vector<double> bField;
-    bField = EquData.b_field(testVec, "cartesian");
-    std::ofstream BField_out_rz;
-    std::ofstream BField_out_xyz;
-    BField_out_xyz.open("BField_xyz.txt");
-    BField_out_rz.open("BField_RZ.txt");
-    std::vector<double> magVector;
-    std::vector<double> cartMag, cartB;
-    magVector = {0,0,0};
-
-    double rmax = EquData.r_grid[EquData.nw-1];
-    double zmax = EquData.z_grid[EquData.nh-1];
-    double rmin = EquData.r_grid[0];
-    double zmin = EquData.z_grid[0];
-
-    int rSamples = 100;
-    int zSamples = 100;
-    int phiSamples = 100;
-    
-    double dr = (rmax-rmin)/rSamples;
-    double dz = (zmax-zmin)/zSamples;
-    double dphi = 2*M_PI/phiSamples;
-
-    for (int k=0; k<phiSamples; k++)
-    {
-      for (int j=0; j<EquData.nh; j++)
-      {
-        for (int i=0; i<EquData.nw; i++)
-        {
-          magVector[0] = EquData.r_grid[i];
-          magVector[1] = EquData.z_grid[j];
-          cartMag = coordTfm::cart_to_polar(magVector, "backwards");
-          bField = EquData.b_field(magVector, "polar");
-          cartB = coordTfm::cart_to_polar(bField, "backwards");
-          BField_out_xyz << cartMag[0] << " " << cartMag[1] << " " << cartMag[2] << " "
-                     << cartB[0] << " " << cartB[1] << " " << cartB[2] << std::endl;
-          magVector[2] += dphi; 
-        }
-        BField_out_xyz << std::endl;
-      }
-    }
-
-    for (int j=0; j<EquData.nh; j++)
-    {
-      for (int i=0; i<EquData.nw; i++)
-      {
-        magVector[0] = EquData.r_grid[i];
-        magVector[1] = EquData.z_grid[j];
-        bField = EquData.b_field(magVector, "polar");
-        BField_out_rz << magVector[0] << " " << magVector[1] << " " 
-                      << bField[0] << " " << bField[1] << std::endl;
-      }
-      BField_out_rz << std::endl;
-    }
   }
-
   else // No runcase specified
   {
     LOG_FATAL << "No runcase specified - please set runcase parameter as either 'specific' or 'rayqry'";

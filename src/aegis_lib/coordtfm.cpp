@@ -11,8 +11,7 @@
 std::vector<double> coordTfm::cart_to_polar(std::vector<double> inputVector,
                                                    std::string direction)
 {
-  std::vector<double> outputVector;
-  outputVector.reserve(3);
+  std::vector<double> outputVector(3);
   double r; // polar r 
   double zeta; // polar zeta
   double x; // cart x 
@@ -26,6 +25,7 @@ std::vector<double> coordTfm::cart_to_polar(std::vector<double> inputVector,
     zeta = inputVector[2];
 
     x = r*cos(zeta); // calculate x
+
     y = -r*sin(zeta); // calculate y
 
     outputVector[0] = x;
@@ -51,8 +51,7 @@ std::vector<double> coordTfm::cart_to_polar(std::vector<double> inputVector,
 std::vector<double> coordTfm::polar_to_flux(std::vector<double> inputVector, 
                                             std::string direction, equData& EquData)
 {
-  std::vector<double> outputVector;
-  outputVector.reserve(3);
+  std::vector<double> outputVector(3);
   double r; // local polar r
   double z; // local polar z
   double zeta; // local polar zeta

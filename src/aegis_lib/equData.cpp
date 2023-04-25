@@ -14,6 +14,13 @@
 #include "alglib/interpolation.h"
 #include "coordtfm.h"
 
+
+// Return eqdsk data structure
+eqdskData equData::get_eqdsk_struct()
+{
+  return eqdsk; 
+}
+
 // Read eqdsk file
 void equData::read_eqdsk(std::string filename)
 {
@@ -25,8 +32,8 @@ void equData::read_eqdsk(std::string filename)
     LOG_WARNING << "eqdsk file to be read - " << filename;
 
     // Extract header information
-    std::getline(eqdsk_file, header);
-    header_ss << header;
+    std::getline(eqdsk_file, eqdsk.header);
+    header_ss << eqdsk.header;
     int number_found;
     
     while (header_ss >> temp)
@@ -44,33 +51,33 @@ void equData::read_eqdsk(std::string filename)
     LOG_WARNING << "Number of grid points in Z (nh) = " << nh;
 
     // Read first four lines of data
-    eqdsk_file >> rdim >> zdim >> rcentr >> rgrid >> zmid;
-    eqdsk_file >> rmaxis >> zmaxis >> psimag1 >> psibdry1 >> bcentr;
-    eqdsk_file >> cpasma >> psimag2 >> xdum >> rmaxis >> xdum;
-    eqdsk_file >> zmaxis >> xdum >> psibdry2 >> xdum >> xdum;
+    eqdsk_file >> eqdsk.rdim >> eqdsk.zdim >> eqdsk.rcentr >> eqdsk.rgrid >> eqdsk.zmid;
+    eqdsk_file >> eqdsk.rmaxis >> eqdsk.zmaxis >> eqdsk.psimag1 >> eqdsk.psibdry1 >> eqdsk.bcentr;
+    eqdsk_file >> eqdsk.cpasma >> eqdsk.psimag2 >> eqdsk.xdum >> eqdsk.rmaxis >> eqdsk.xdum;
+    eqdsk_file >> eqdsk.zmaxis >> eqdsk.xdum >> eqdsk.psibdry2 >> eqdsk.xdum >> eqdsk.xdum;
 
     LOG_WARNING << "Geometry parameters from EFIT:";
-    LOG_WARNING << "Domain size in R rdim " << rdim;
-    LOG_WARNING << "Domain size in Z zdim " << zdim;
-    LOG_WARNING << "R at centre " << rcentr;
-    LOG_WARNING << "Domain start in R rgrid " << rgrid;
-    LOG_WARNING << "Domain centre in Z zmid " << zmid;
+    LOG_WARNING << "Domain size in R eqdsk.rdim " << eqdsk.rdim;
+    LOG_WARNING << "Domain size in Z eqdsk.zdim " << eqdsk.zdim;
+    LOG_WARNING << "R at centre " << eqdsk.rcentr;
+    LOG_WARNING << "Domain start in R eqdsk.rgrid " << eqdsk.rgrid;
+    LOG_WARNING << "Domain centre in Z eqdsk.zmid " << eqdsk.zmid;
     LOG_WARNING << "Plasma parameters from EFIT:";
-    LOG_WARNING << "B at rcentre " << bcentr;
-    LOG_WARNING << "Flux at centre ssimag1 " << psimag1; // psiaxis in SMARDDA
-    LOG_WARNING << "Flux at boundary ssibry1 "<< psibdry1;
-    LOG_WARNING << "Plasma centre in R rmaxis " << rmaxis;
-    LOG_WARNING << "Plasma centre in Z zmaxis " << zmaxis;
-    LOG_WARNING << "Plasma current " << cpasma;
+    LOG_WARNING << "B at rcentre " << eqdsk.bcentr;
+    LOG_WARNING << "Flux at centre ssimag1 " << eqdsk.psimag1; // psiaxis in SMARDDA
+    LOG_WARNING << "Flux at boundary ssibry1 "<< eqdsk.psibdry1;
+    LOG_WARNING << "Plasma centre in R eqdsk.rmaxis " << eqdsk.rmaxis;
+    LOG_WARNING << "Plasma centre in Z eqdsk.zmaxis " << eqdsk.zmaxis;
+    LOG_WARNING << "Plasma current " << eqdsk.cpasma;
 
     // Read 1D array data
 
     if (nw > 0)
     {
-      fpol = read_array(nw, "fpol");
-      pres = read_array(nw, "pres");
-      ffprime = read_array(nw, "ffprime");
-      pprime = read_array(nw, "pprime");
+      eqdsk.fpol = read_array(nw, "eqdsk.fpol");
+      eqdsk.pres = read_array(nw, "eqdsk.pres");
+      eqdsk.ffprime = read_array(nw, "eqdsk.ffprime");
+      eqdsk.pprime = read_array(nw, "eqdsk.pprime");
     }
     else
     {
@@ -80,7 +87,7 @@ void equData::read_eqdsk(std::string filename)
     // Read Psi(R,Z) data
     if (nh > 0)
     {
-      psi = read_2darray(nw, nh, "Psi(R,Z)");
+      eqdsk.psi = read_2darray(nw, nh, "Psi(R,Z)");
     }
     else
     {
@@ -88,37 +95,37 @@ void equData::read_eqdsk(std::string filename)
     }
 
     // Read the rest of the data
-    qpsi = read_array(nw, "qpsi");
-    eqdsk_file >> nbdry >> nlim;
-    LOG_WARNING << "Number of boundary points " << nbdry;
-    LOG_WARNING << "Number of limiter points " << nlim;
+    eqdsk.qpsi = read_array(nw, "eqdsk.qpsi");
+    eqdsk_file >> eqdsk.nbdry >> eqdsk.nlim;
+    LOG_WARNING << "Number of boundary points " << eqdsk.nbdry;
+    LOG_WARNING << "Number of limiter points " << eqdsk.nlim;
 
-    if (nbdry > 0)
+    if (eqdsk.nbdry > 0)
     {
-      rbdry.resize(nbdry);
-      zbdry.resize(nbdry);
-      LOG_WARNING << "Reading rbdry and zbdry...";
-      for(int i=0; i<nbdry; i++) // Read in n elements into vector from file
+      eqdsk.rbdry.resize(eqdsk.nbdry);
+      eqdsk.zbdry.resize(eqdsk.nbdry);
+      LOG_WARNING << "Reading eqdsk.rbdry and eqdsk.zbdry...";
+      for(int i=0; i<eqdsk.nbdry; i++) // Read in n elements into vector from file
       {
-        eqdsk_file >> rbdry[i] >> zbdry[i];
+        eqdsk_file >> eqdsk.rbdry[i] >> eqdsk.zbdry[i];
       }
-      LOG_WARNING << "Number of rbdry/zbdry values read " << nbdry;
+      LOG_WARNING << "Number of eqdsk.rbdry/eqdsk.zbdry values read " << eqdsk.nbdry;
     }
     else
     {
       LOG_FATAL << "Error reading boundary data from eqdsk";
     }
 
-    if (nlim > 0)
+    if (eqdsk.nlim > 0)
     {
-      LOG_WARNING << "Reading rlim and zlim...";
-      rlim.resize(nlim);
-      zlim.resize(nlim);
-      for (int i=0; i<nlim; i++)
+      LOG_WARNING << "Reading eqdsk.rlim and eqdsk.zlim...";
+      eqdsk.rlim.resize(eqdsk.nlim);
+      eqdsk.zlim.resize(eqdsk.nlim);
+      for (int i=0; i<eqdsk.nlim; i++)
       {
-        eqdsk_file >> rlim[i] >> zlim[i];
+        eqdsk_file >> eqdsk.rlim[i] >> eqdsk.zlim[i];
       } 
-      LOG_WARNING << "Number of rlim/zlim values read " << nlim;
+      LOG_WARNING << "Number of eqdsk.rlim/eqdsk.zlim values read " << eqdsk.nlim;
     }
     else
     {
@@ -126,16 +133,16 @@ void equData::read_eqdsk(std::string filename)
     }
 
     // set equData attributes
-    rmin = rgrid;
-    zmin = zmid - zdim/2;
-    rmax = rgrid+rdim;
-    zmax = zmid + zdim/2;
+    rmin = eqdsk.rgrid;
+    zmin = eqdsk.zmid - eqdsk.zdim/2;
+    rmax = eqdsk.rgrid+eqdsk.rdim;
+    zmax = eqdsk.zmid + eqdsk.zdim/2;
     nr = nw-1; // why does smardda do this?
     nz = nh-1;
     dr = (rmax-rmin)/nr;
     dz = (zmax-zmin)/nz;
-    psiqbdry = psibdry1;
-    psiaxis = psimag1;
+    psiqbdry = eqdsk.psibdry1;
+    psiaxis = eqdsk.psimag1;
     psinorm = fabs(psiqbdry-psiaxis)/2;
     set_rsig();
     dpsi = fabs(rsig*(psiqbdry-psiaxis)/nw);
@@ -199,11 +206,11 @@ void equData::write_eqdsk_out()
   int counter=0;
 
   // Write out header information
-  eqdsk_out << header << std::endl;
+  eqdsk_out << eqdsk.header << std::endl;
 
   // Write out initial four lines of floats
-  double parameters[20] = {rdim, zdim, rcentr, rgrid, zmid, rmaxis, zmaxis, psimag1, psibdry1, 
-                bcentr, cpasma, psimag2, xdum, rmaxis, xdum, zmaxis, xdum, psibdry2, xdum, xdum};
+  double parameters[20] = {eqdsk.rdim, eqdsk.zdim, eqdsk.rcentr, eqdsk.rgrid, eqdsk.zmid, eqdsk.rmaxis, eqdsk.zmaxis, eqdsk.psimag1, eqdsk.psibdry1, 
+                eqdsk.bcentr, eqdsk.cpasma, eqdsk.psimag2, eqdsk.xdum, eqdsk.rmaxis, eqdsk.xdum, eqdsk.zmaxis, eqdsk.xdum, eqdsk.psibdry2, eqdsk.xdum, eqdsk.xdum};
 
   for (int i=0; i<20; i++)
   {
@@ -212,17 +219,17 @@ void equData::write_eqdsk_out()
   }
 
   // Write out data
-  eqdsk_write_array(eqdsk_out, fpol, counter); // write fpol array
-  eqdsk_write_array(eqdsk_out, pres, counter); // write pres array 
-  eqdsk_write_array(eqdsk_out, ffprime, counter); // write ffprime array
-  eqdsk_write_array(eqdsk_out, pprime, counter); // write pprime array 
+  eqdsk_write_array(eqdsk_out, eqdsk.fpol, counter); // write eqdsk.fpol array
+  eqdsk_write_array(eqdsk_out, eqdsk.pres, counter); // write eqdsk.pres array 
+  eqdsk_write_array(eqdsk_out, eqdsk.ffprime, counter); // write eqdsk.ffprime array
+  eqdsk_write_array(eqdsk_out, eqdsk.pprime, counter); // write eqdsk.pprime array 
 
   // Write out psi(R,Z)
   for (int i=0; i<nw; i++)
   {
     for(int j=0; j<nh; j++)
     {
-      element = psi[i][j];
+      element = eqdsk.psi[i][j];
       counter = eqdsk_line_out(eqdsk_out, element, counter);
     }
   }
@@ -232,17 +239,17 @@ void equData::write_eqdsk_out()
     eqdsk_out << std::endl;
   }
 
-  eqdsk_write_array(eqdsk_out, qpsi, counter); // write qpsi array
-  eqdsk_out << std::endl << "  " << nbdry << "   " << nlim << std::endl; // write nbdry and nlim
+  eqdsk_write_array(eqdsk_out, eqdsk.qpsi, counter); // write eqdsk.qpsi array
+  eqdsk_out << std::endl << "  " << eqdsk.nbdry << "   " << eqdsk.nlim << std::endl; // write eqdsk.nbdry and eqdsk.nlim
 
-  // write rbdry and zbdry
-  for (int i=0; i<nbdry; i++)
+  // write eqdsk.rbdry and eqdsk.zbdry
+  for (int i=0; i<eqdsk.nbdry; i++)
   { 
-      element = rbdry[i];
+      element = eqdsk.rbdry[i];
       counter = eqdsk_line_out(eqdsk_out, element, counter);
-      element = zbdry[i];
+      element = eqdsk.zbdry[i];
       counter = eqdsk_line_out(eqdsk_out, element, counter);
-      element = rbdry[i];
+      element = eqdsk.rbdry[i];
   }
   if (counter < 5)
   {
@@ -250,12 +257,12 @@ void equData::write_eqdsk_out()
     eqdsk_out << std::endl;
   }
 
-  // write rlim and zlim arrays
-  for (int i=0; i<nlim; i++)
+  // write eqdsk.rlim and eqdsk.zlim arrays
+  for (int i=0; i<eqdsk.nlim; i++)
   { 
-      element = rlim[i];
+      element = eqdsk.rlim[i];
       counter = eqdsk_line_out(eqdsk_out, element, counter);
-      element = zlim[i];
+      element = eqdsk.zlim[i];
       counter = eqdsk_line_out(eqdsk_out, element, counter);
   }
 
@@ -325,14 +332,14 @@ void equData::init_interp_splines()
   {
     for(int j=0; j<nh; j++)
     {
-      psi_pts[count] = psi[i][j];
+      psi_pts[count] = eqdsk.psi[i][j];
       count += 1;
     }
   }
 
   double f_pts[nw];
   double psi_1dpts[nw];
-  std::copy(fpol.begin(), fpol.end(), f_pts);
+  std::copy(eqdsk.fpol.begin(), eqdsk.fpol.end(), f_pts);
 
 
   // loop over R to create 1d knots of psi 
@@ -364,7 +371,7 @@ void equData::init_interp_splines()
 
 
 
-  // create 1d spline for f(psi) aka fpol
+  // create 1d spline for f(psi) aka eqdsk.fpol
   //alglib::spline1dbuildlinear(f_grid,)
 
 } 
@@ -674,4 +681,101 @@ std::vector<double> equData::b_field(std::vector<double> position,
 
   // return the calculated B vector 
   return bVector;
+}
+
+std::vector<double> equData::b_field_cart(std::vector<double> polarBVector, double phi)
+{
+  std::vector<double> cartBVector(3);
+  double zbx; // cartesian Bx component
+  double zby; // cartesian By component
+  double zbz; // Bz component
+  double zbr; // polar Br component
+  double zbt; // polar toroidal Bt component
+
+  zbr = polarBVector[0];
+  zbz = polarBVector[1];
+  zbt = -polarBVector[2];
+
+  zbx = zbr*cos(-phi) - zbt*sin(-phi);
+  zby = zbr*sin(-phi) + zbt*cos(-phi);
+
+  cartBVector[0] = zbx;
+  cartBVector[1] = zby;
+  cartBVector[2] = zbz; 
+
+  return cartBVector;
+}
+
+void equData::write_bfield(bool plotRZ, bool plotXYZ)
+{
+  std::vector<double> polarPos(3); // cartesian position P(x,y,z)
+  std::vector<double> polarB(3); // polar toroidal magnetic field B(Br, Bz, Bphi)
+  
+  if (plotRZ) // write out polar toroidal P(r,z) and B(Br,Bz)
+  {
+    std::ofstream BField_out_rz;
+    BField_out_rz.open("BField_rz.txt");
+   // BField_out_rz << "rPos" << " " << "zPos" << " " << "Br" << " " << "Bz" << std::endl;
+   // BField_out_rz << std::setprecision(6) << std::fixed;
+
+    for (int j=0; j<nh; j++)
+    {
+      for (int i=0; i<nw; i++)
+      {
+        polarPos[0] = r_grid[i];
+        polarPos[1] = z_grid[j];
+        polarB = b_field(polarPos, "polar");
+        BField_out_rz << polarPos[0] << " " << polarPos[1] << " " 
+                      << polarB[0] << " " << polarB[1] << std::endl;
+      }
+      BField_out_rz << std::endl;
+    }
+  }
+
+  if (plotXYZ) // write out cartesian P(x,y,z) and cartesian B(Bx,By,Bz)
+  {
+    std::ofstream BField_out_xyz;
+    BField_out_xyz.open("BField_xyz.txt");
+   // BField_out_xyz << "xPos" << " " <<  "yPos" << " " << "zPos" << " " 
+    //               << "Bx" << " " << "By" << " " << "Bz" << std::endl;
+    BField_out_xyz << std::setprecision(6) << std::fixed;
+
+    std::vector<double> cartPos(3); // polar toroidal position P(r,z,phi)
+    std::vector<double> cartB(3); // cartesian magnetic field B(Bx, By, Bz)
+    std::string tfmDir = "backwards"; // set transform direction to polar -> cart
+    int phiSamples = 100;
+    double dphi = 2*M_PI/phiSamples;
+
+    for (int k=0; k<phiSamples; k++) // loop through phi
+    {
+      for (int j=0; j<nh; j++) // loop through z 
+      {
+        for (int i=0; i<nw; i++) // loop through r
+        {
+          polarPos[0] = r_grid[i]; // pull r position from eqdsk
+          polarPos[1] = z_grid[j]; // pull z position from eqdsk
+          // test for negative Rs
+          if (polarPos[0] < 0 ) 
+          {
+            LOG_ERROR << "Negative R Values when attempting plot magnetic field. Fixup eqdsk required";
+          }
+
+          polarB = b_field(polarPos, "polar"); // calculate B(R,Z,phi)
+          cartB = b_field_cart(polarB, polarPos[2]); // transform to B(x,y,z)
+          cartPos = coordTfm::cart_to_polar(polarPos, tfmDir); // transform position to cartesian
+
+          // write out magnetic field data for plotting
+          if (cartPos[0] > 0 )
+          {
+            BField_out_xyz << " ";
+          }
+          BField_out_xyz << cartPos[0] << " " << cartPos[1] << " " << cartPos[2] << " "
+                         << cartB[0] << " " << cartB[1] << " " << cartB[2] << " " 
+                         << polarPos[0] << " " << polarPos[1] << " " << polarPos[2] << std::endl;
+        }
+      }
+      polarPos[2] += dphi;
+      BField_out_xyz << std::endl;
+    }
+  }
 }

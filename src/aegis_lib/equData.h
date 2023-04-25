@@ -8,40 +8,11 @@
 #include "alglib/interpolation.h"
 
 
-
-
-class equData{
-  private:
-  // Variables 
-
-  // Methods
-
-  // Read 1D array from eqdsk
-  std::vector<double> read_array(int n, std::string varName);
-
-  // Read 2D array from eqdsk
-  std::vector<std::vector<double>> read_2darray(int nx, int ny, std::string varName);
-
-  // Write singular line out in EQDSK format
-  int eqdsk_line_out(std::ofstream &file, double element, int counter);
-
-  // Write out eqdsk arrays
-  void eqdsk_write_array(std::ofstream &file, std::vector<double> array, int counter);
-
-  // Set sign to determine if psi decreasing or increasing away from centre
-  void set_rsig();
-
-
-  public:
-
-  // File streams
-  std::ifstream eqdsk_file;
-  std::ofstream eqdsk_out;
-
+struct eqdskData
+{
   // eqdsk data
   std::string header; // string containing eqdsk header information
-  int nw; // Number of horizontal R points in grid
-  int nh; // Number of vertical Z points in grid
+
   int nbdry; // Number of boundary points
   int nlim; // Number of limiter points
 
@@ -70,6 +41,48 @@ class equData{
   std::vector<double> zbdry; // Boundary points in Z
   std::vector<double> rlim; // Limiter points in R  
   std::vector<double> zlim; // Limiter points in Z  
+
+};
+
+
+
+
+class equData{
+
+  eqdskData eqdsk;  
+  
+  // File streams
+  std::ifstream eqdsk_file;
+  std::ofstream eqdsk_out;
+
+
+  // Methods
+
+
+
+  // Read 1D array from eqdsk
+  std::vector<double> read_array(int n, std::string varName);
+
+  // Read 2D array from eqdsk
+  std::vector<std::vector<double>> read_2darray(int nx, int ny, std::string varName);
+
+  // Write singular line out in EQDSK format
+  int eqdsk_line_out(std::ofstream &file, double element, int counter);
+
+  // Write out eqdsk arrays
+  void eqdsk_write_array(std::ofstream &file, std::vector<double> array, int counter);
+
+  // Set sign to determine if psi decreasing or increasing away from centre
+  void set_rsig();
+
+
+  public:
+
+ 
+  
+
+  int nw; // Number of horizontal R points in grid
+  int nh; // Number of vertical Z points in grid
 
 
   // attributes from SMARDDA
@@ -112,6 +125,9 @@ class equData{
   alglib::spline1dinterpolant fSpline; // 1d spline interpolant for f(psi) or I(psi) toroidal component
 
   // Methods
+  
+  // Return eqdsk struct
+  eqdskData get_eqdsk_struct();
 
   // Read eqdsk file
   void read_eqdsk(std::string filename);
@@ -138,6 +154,12 @@ class equData{
   // set string to "polar" if position vector already in polars
   std::vector<double> b_field(std::vector<double> position, 
                               std::string startingFrom);
+  
+  // Convert B Field vectors to cartesian given polar form and value of angle 
+  std::vector<double> b_field_cart(std::vector<double> polarBVector, double phi);
+
+  // Write out positions and associated BField vectors in cartesian and/or polar toroidal
+  void write_bfield(bool plotRZ, bool plotXYZ);
 
 };
 
