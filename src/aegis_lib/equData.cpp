@@ -132,6 +132,7 @@ void equData::read_eqdsk(std::string filename)
       LOG_FATAL << "Error reading limiter data from eqdsk";
     }
 
+    //initialise rest of equData attributes
     // set equData attributes
     rmin = eqdsk.rgrid;
     zmin = eqdsk.zmid - eqdsk.zdim/2;
@@ -146,6 +147,8 @@ void equData::read_eqdsk(std::string filename)
     psinorm = fabs(psiqbdry-psiaxis)/2;
     set_rsig();
     dpsi = fabs(rsig*(psiqbdry-psiaxis)/nw);
+    ivac = eqdsk.fpol[0];
+
 
     LOG_WARNING << "DPSI =  " << dpsi;
     LOG_WARNING << "PSIQBDRY = " << psiqbdry;
@@ -158,6 +161,7 @@ void equData::read_eqdsk(std::string filename)
     LOG_WARNING << "dR = " << dr;
     LOG_WARNING << "dZ = " << dz;
     LOG_WARNING << "PSINORM = " << psinorm;
+    LOG_WARNING << "IVAC = " << ivac;
 
 
 
@@ -694,7 +698,7 @@ std::vector<double> equData::b_field_cart(std::vector<double> polarBVector, doub
 
   zbr = polarBVector[0];
   zbz = polarBVector[1];
-  zbt = -polarBVector[2];
+  zbt = polarBVector[2];
 
   zbx = zbr*cos(-phi) - zbt*sin(-phi);
   zby = zbr*sin(-phi) + zbt*cos(-phi);
@@ -735,18 +739,20 @@ void equData::write_bfield(bool plotRZ, bool plotXYZ)
   if (plotXYZ) // write out cartesian P(x,y,z) and cartesian B(Bx,By,Bz)
   {
     std::ofstream BField_out_xyz;
+    std::ofstream aegisB;
+    aegisB.open("aegis_b.txt");
     BField_out_xyz.open("BField_xyz.txt");
    // BField_out_xyz << "xPos" << " " <<  "yPos" << " " << "zPos" << " " 
     //               << "Bx" << " " << "By" << " " << "Bz" << std::endl;
-    BField_out_xyz << std::setprecision(6) << std::fixed;
+    BField_out_xyz << std::setprecision(8) << std::fixed;
+    aegisB << std::setprecision(8) << std::fixed;
 
     std::vector<double> cartPos(3); // polar toroidal position P(r,z,phi)
     std::vector<double> cartB(3); // cartesian magnetic field B(Bx, By, Bz)
-    std::string tfmDir = "backwards"; // set transform direction to polar -> cart
-    int phiSamples = 100;
+    int phiSamples = 12;
     double dphi = 2*M_PI/phiSamples;
 
-    for (int k=0; k<phiSamples; k++) // loop through phi
+    for (int k=0; k<=phiSamples; k++) // loop through phi
     {
       for (int j=0; j<nh; j++) // loop through z 
       {
@@ -759,10 +765,9 @@ void equData::write_bfield(bool plotRZ, bool plotXYZ)
           {
             LOG_ERROR << "Negative R Values when attempting plot magnetic field. Fixup eqdsk required";
           }
-
           polarB = b_field(polarPos, "polar"); // calculate B(R,Z,phi)
           cartB = b_field_cart(polarB, polarPos[2]); // transform to B(x,y,z)
-          cartPos = coordTfm::cart_to_polar(polarPos, tfmDir); // transform position to cartesian
+          cartPos = coordTfm::cart_to_polar(polarPos, "backwards"); // transform position to cartesian
 
           // write out magnetic field data for plotting
           if (cartPos[0] > 0 )
@@ -772,10 +777,33 @@ void equData::write_bfield(bool plotRZ, bool plotXYZ)
           BField_out_xyz << cartPos[0] << " " << cartPos[1] << " " << cartPos[2] << " "
                          << cartB[0] << " " << cartB[1] << " " << cartB[2] << " " 
                          << polarPos[0] << " " << polarPos[1] << " " << polarPos[2] << std::endl;
+
+          aegisB << polarB[0] << " " << polarB[1] << " " << polarB[2] << std::endl; 
+        //polarPos[2] += dphi; // Incorrect place but much faster delaunay (leads to inconsistencies)
+
         }
       }
-      polarPos[2] += dphi;
-      BField_out_xyz << std::endl;
+      polarPos[2] += dphi; // Correct place for this to be. But significantly slower delaunay 3d in paraview
+    //  BField_out_xyz << std::endl;
     }
   }
+}
+
+// get toroidal ripple term in magnetic field from external file or otherwise. By default use MAST term
+std::vector<double> equData::b_ripple(std::vector<double> pos, std::vector<double> bField)
+{
+  std::vector<double> bRipple(3); // toroidal ripple term
+  double zr; // local R
+  double zz; // local Z
+  double zphi; // local phi
+  double zh; // local H 
+  double zdhdr; // frac{partial H}{partial R}
+  double zdhdz; // frac{partial H}{partial Z}
+
+  // eventually can add in the ability to read in files but for now this will just define the MAST ripple
+
+
+  
+
+
 }

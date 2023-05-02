@@ -98,6 +98,7 @@ class equData{
   double rcen; // rcen calculated from centre()
   double zcen; // zcen calculated from centre()
   double rsig; // sign of dpsi/dr value (+1 -> Increase outwards, -1 -> Decrease outwards)
+  double ivac; // I for vaccum field
 
 
   double rmin; // min R value in equillibrium data
@@ -160,6 +161,8 @@ class equData{
 
   // Write out positions and associated BField vectors in cartesian and/or polar toroidal
   void write_bfield(bool plotRZ, bool plotXYZ);
+
+  std::vector<double> b_ripple(std::vector<double> pos, std::vector<double> bField);
 
 };
 
