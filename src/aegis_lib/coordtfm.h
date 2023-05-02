@@ -10,11 +10,11 @@
 namespace coordTfm
 {
 
-std::vector<double> cartesian_to_polar_toroidal(std::vector<double> inputVector,
-                                                   std::string direction);
+// Cartesian to polar toroidal (direction = "backwards" for polar->cartesian)
+std::vector<double> cart_to_polar(std::vector<double> inputVector,
+                                  std::string direction);
 
-// Coordinate system transforms
-
+// Polar toroidal to flux coordinates defined by psi spline
 std::vector<double> polar_to_flux(std::vector<double> inputVector, std::string direction,
                                   equData& EquData);
 

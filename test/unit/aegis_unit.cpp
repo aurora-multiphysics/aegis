@@ -10,6 +10,7 @@
 #include "equData.h"
 #include "integrator.h"
 #include "source.h"
+#include "coordtfm.h"
  
 using namespace moab;
 
@@ -290,45 +291,46 @@ TEST_F(aegisUnitTest, eqdsk_read) {
 
   equData EquData;
   EquData.read_eqdsk("test.eqdsk");
+  eqdskData eqdsk = EquData.get_eqdsk_struct();
 
   std::string header = " disr     610.00 msec    nw      nh      vde       0  65 129";
   // Test if header is correctly read
-  EXPECT_TRUE(EquData.header == header);
+  EXPECT_TRUE(eqdsk.header == header);
 
   // Test if integer values are correctly read in
 
   EXPECT_EQ(EquData.nw, 65);
   EXPECT_EQ(EquData.nh, 129);
-  EXPECT_EQ(EquData.nbdry, 89);
-  EXPECT_EQ(EquData.nlim, 57);
+  EXPECT_EQ(eqdsk.nbdry, 89);
+  EXPECT_EQ(eqdsk.nlim, 57);
 
   // Test size of arrays 
-  EXPECT_EQ(EquData.fpol.size(), 65);
-  EXPECT_EQ(EquData.pres.size(), 65);
-  EXPECT_EQ(EquData.ffprime.size(), 65);
-  EXPECT_EQ(EquData.pprime.size(), 65);
-  EXPECT_EQ(EquData.qpsi.size(), 65);
-  EXPECT_EQ(EquData.rbdry.size(), 89);
-  EXPECT_EQ(EquData.zbdry.size(), 89);
-  EXPECT_EQ(EquData.rlim.size(), 57);
-  EXPECT_EQ(EquData.zlim.size(), 57);
+  EXPECT_EQ(eqdsk.fpol.size(), 65);
+  EXPECT_EQ(eqdsk.pres.size(), 65);
+  EXPECT_EQ(eqdsk.ffprime.size(), 65);
+  EXPECT_EQ(eqdsk.pprime.size(), 65);
+  EXPECT_EQ(eqdsk.qpsi.size(), 65);
+  EXPECT_EQ(eqdsk.rbdry.size(), 89);
+  EXPECT_EQ(eqdsk.zbdry.size(), 89);
+  EXPECT_EQ(eqdsk.rlim.size(), 57);
+  EXPECT_EQ(eqdsk.zlim.size(), 57);
 
 
-  EXPECT_EQ(EquData.psi.size()*EquData.psi[0].size(), 8385);
+  EXPECT_EQ(eqdsk.psi.size()*eqdsk.psi[0].size(), 8385);
 
   // Test random elements of array
-  EXPECT_FLOAT_EQ(EquData.fpol[35], 33.2359842);
-  EXPECT_FLOAT_EQ(EquData.pres[13], 457077.309);
-  EXPECT_FLOAT_EQ(EquData.ffprime[54], 252.582128);
-  EXPECT_FLOAT_EQ(EquData.pprime[11], 1742.17328);  
-  EXPECT_FLOAT_EQ(EquData.psi[56][1], -1.39236796);
-  EXPECT_FLOAT_EQ(EquData.psi[1][24], 6.80347259);
-  EXPECT_FLOAT_EQ(EquData.psi[12][102], 2.22815321);
-  EXPECT_FLOAT_EQ(EquData.qpsi[52], 1.64743552);
-  EXPECT_FLOAT_EQ(EquData.rbdry[4], 7.9430907);  
-  EXPECT_FLOAT_EQ(EquData.zbdry[39], 0.986207476);
-  EXPECT_FLOAT_EQ(EquData.rlim[27], 557.200115);
-  EXPECT_FLOAT_EQ(EquData.zlim[1], -149.995359);
+  EXPECT_FLOAT_EQ(eqdsk.fpol[35], 33.2359842);
+  EXPECT_FLOAT_EQ(eqdsk.pres[13], 457077.309);
+  EXPECT_FLOAT_EQ(eqdsk.ffprime[54], 252.582128);
+  EXPECT_FLOAT_EQ(eqdsk.pprime[11], 1742.17328);  
+  EXPECT_FLOAT_EQ(eqdsk.psi[56][1], -1.39236796);
+  EXPECT_FLOAT_EQ(eqdsk.psi[1][24], 6.80347259);
+  EXPECT_FLOAT_EQ(eqdsk.psi[12][102], 2.22815321);
+  EXPECT_FLOAT_EQ(eqdsk.qpsi[52], 1.64743552);
+  EXPECT_FLOAT_EQ(eqdsk.rbdry[4], 7.9430907);  
+  EXPECT_FLOAT_EQ(eqdsk.zbdry[39], 0.986207476);
+  EXPECT_FLOAT_EQ(eqdsk.rlim[27], 557.200115);
+  EXPECT_FLOAT_EQ(eqdsk.zlim[1], -149.995359);
 }
 
 TEST_F(aegisUnitTest, read_facets) {
@@ -405,7 +407,39 @@ TEST_F(aegisUnitTest, count_ray_facet_hits){
   history.get_last_intersection(facetHit);
   integrator.count_hit(facetHit);
   EXPECT_EQ(integrator.nRays[facetHit], 101);
+}
 
+TEST_F(aegisUnitTest, cart_polar_coord_transform){
+  std::vector<double> input = {2.4, 5.3, -2.0};
+  std::vector<double> output;
+  std::string direction;
+  output.reserve(3);
+
+  output = coordTfm::cart_to_polar(input, direction);
+
+  EXPECT_FLOAT_EQ(output[0], 5.8180752);
+  EXPECT_FLOAT_EQ(output[1], -2);
+  EXPECT_FLOAT_EQ(output[2], -1.1455913);
+
+}
+
+TEST_F(aegisUnitTest, polar_flux_coord_transform){
+
+  equData EquData;
+  EquData.read_eqdsk("test.eqdsk");
+  EquData.init_interp_splines();
+  EquData.centre();
+
+  std::vector<double> input = {2.4, 5.3, -2.0};
+  std::vector<double> output;
+  std::string direction;
+  output.reserve(3);
+
+  output = coordTfm::polar_to_flux(input, direction, EquData);
+
+  EXPECT_FLOAT_EQ(output[0], -2.34389385);
+  EXPECT_FLOAT_EQ(output[1], 2.14721228);
+  EXPECT_FLOAT_EQ(output[2], -2);
 
 }
 
