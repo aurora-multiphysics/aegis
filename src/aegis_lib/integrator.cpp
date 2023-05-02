@@ -11,6 +11,8 @@
 // initialise list of EntityHandles and maps associated with 
 surfaceIntegrator::surfaceIntegrator(moab::Range const &Facets)
 {
+  LOG_TRACE << "-----surfaceIntegrator CONSTRUCTOR()-----";
+
   nFacets = Facets.size();
   for (auto i:Facets)
   {
