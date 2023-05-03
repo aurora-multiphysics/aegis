@@ -12,6 +12,7 @@ class settings{
     std::string source_power;
     std::string reflections;
     std::string nSample;
+    int cenopt;
     void load_settings();
 };
 

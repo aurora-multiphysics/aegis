@@ -351,7 +351,7 @@ int main() {
 
     EquData.init_interp_splines();
     EquData.gnuplot_out();
-    EquData.centre();
+    EquData.centre(settings.cenopt);
 
     bool plotRZ = true;
     bool plotXYZ = true;

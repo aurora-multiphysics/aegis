@@ -385,7 +385,7 @@ void equData::init_interp_splines()
 
 
   // Construct the spline interpolant for flux function psi(R,Z) 
-  alglib::spline2dbuildbilinearv(r_grid, nw, z_grid, nh, psi_grid, 1, psiSpline);
+  alglib::spline2dbuildbicubicv(r_grid, nw, z_grid, nh, psi_grid, 1, psiSpline);
   
   // Construct the spline interpolant for toroidal component flux function I(psi) aka f(psi) 
   alglib::spline1dbuildlinear(psi_1dgrid ,f_grid, fSpline);
@@ -438,7 +438,7 @@ void equData::set_rsig()
 }
 
 // Find central psi extrema
-void equData::centre()
+void equData::centre(int cenopt)
 {
   LOG_TRACE << "-----equData.centre-----";
   int igr; // R position index of global extremum
@@ -451,6 +451,7 @@ void equData::centre()
   int iz; // current Z position as index
   double zpp; // current value of psi
   double zpg; // value of psi at global extremum
+  
 
 
   // using central index as guess (See beq_centre for other cases for initial guess)
@@ -461,61 +462,58 @@ void equData::centre()
   isr = 1;
   isz = 1;
 
-  for (int j=1; j<=soutr; j++)
+
+  switch (cenopt)
   {
-    ir = igr;
-    iz = igz;
-    zpg = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1));
+  case 1:
+    rcen = eqdsk.rmaxis;
+    zcen = eqdsk.zmaxis;
+    LOG_INFO << "(Rcen,Zcen) values taken from eqdsk (Rmaxis,Zmaxis)";
+    LOG_WARNING << "Rcen value calculated from equData.centre() = " << rcen;
+    LOG_WARNING << "Zcen value calculated from equData.centre() = " << zcen;
+    break; // end case 1
 
-    // search in r
-    // change direction if necessary
-    ir = igr+isr;
-    zpp = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1)*dz);
-    if ((zpp-zpg)*rsig < 0)
+  case 2:
+    for (int j=1; j<=soutr; j++)
     {
-      igr = ir;
-      zpg = zpp;
-    }
-    else
-    {
-      isr = -1;
       ir = igr;
-    }
+      iz = igz;
+      zpg = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1));
 
-    for (int i=1; i<=sinr; i++)
-    {
-      ir = ir+isr;
+      // search in r
+      // change direction if necessary
+      ir = igr+isr;
       zpp = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1)*dz);
-      if ((zpp-zpg)*rsig <0)
+      if ((zpp-zpg)*rsig < 0)
       {
         igr = ir;
         zpg = zpp;
       }
       else
       {
-        break;
+        isr = -1;
+        ir = igr;
       }
-    }
 
-    // search in Z
-    // change direction if necessary
+      for (int i=1; i<=sinr; i++)
+      {
+        ir = ir+isr;
+        zpp = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1)*dz);
+        if ((zpp-zpg)*rsig <0)
+        {
+          igr = ir;
+          zpg = zpp;
+        }
+        else
+        {
+          break;
+        }
+      }
 
-    iz = igz+isz;
-    zpp = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1)*dz);
-    if ((zpp-zpg)*rsig < 0)
-    {
-      igz = iz;
-      zpg = zpp;
-    }
-    else
-    {
-      isz = -1;
-      iz = igz;
-    }
+      // search in Z
+      // change direction if necessary
 
-    for (int i=1; i<=sinr; i++)
-    {
-      iz = iz+isz;
+      iz = igz+isz;
       zpp = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1)*dz);
       if ((zpp-zpg)*rsig < 0)
       {
@@ -524,27 +522,45 @@ void equData::centre()
       }
       else
       {
-        break;
+        isz = -1;
+        iz = igz;
       }
+
+      for (int i=1; i<=sinr; i++)
+      {
+        iz = iz+isz;
+        zpp = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1)*dz);
+        if ((zpp-zpg)*rsig < 0)
+        {
+          igz = iz;
+          zpg = zpp;
+        }
+        else
+        {
+          break;
+        }
+      }
+
+      // check global minimum
+      zpp = spline2dcalc(psiSpline, rmin+(igr-2)*dr, zmin+(igz-1)*dz);
+      if ((zpp-zpg)*rsig < 0 ) {continue;}
+      zpp = spline2dcalc(psiSpline, rmin+igr*dr, zmin+(igz-1)*dz);
+      if ((zpp-zpg)*rsig < 0 ) {continue;}
+      zpp = spline2dcalc(psiSpline, rmin+(igr-1)*dr, zmin+(igz-2)*dz);
+      if ((zpp-zpg)*rsig < 0) {continue;}
+      zpp = spline2dcalc(psiSpline, rmin+(igr-1)*dr, zmin+igz*dz);
+      if ((zpp-zpg)*rsig < 0) {continue;}
+      break;
     }
+    rcen = rmin+(igr-1)*dr;
+    zcen = zmin+(igz-1)*dz;
 
-    // check global minimum
-    zpp = spline2dcalc(psiSpline, rmin+(igr-2)*dr, zmin+(igz-1)*dz);
-    if ((zpp-zpg)*rsig < 0 ) {continue;}
-    zpp = spline2dcalc(psiSpline, rmin+igr*dr, zmin+(igz-1)*dz);
-    if ((zpp-zpg)*rsig < 0 ) {continue;}
-    zpp = spline2dcalc(psiSpline, rmin+(igr-1)*dr, zmin+(igz-2)*dz);
-    if ((zpp-zpg)*rsig < 0) {continue;}
-    zpp = spline2dcalc(psiSpline, rmin+(igr-1)*dr, zmin+igz*dz);
-    if ((zpp-zpg)*rsig < 0) {continue;}
-    break;
+    LOG_INFO << "New (Rcen,Zcen) values calculated";
+    LOG_WARNING << "Rcen value calculated from equData.centre() = " << rcen;
+    LOG_WARNING << "Zcen value calculated from equData.centre() = " << zcen;
+    break; // end case 2
   }
-  rcen = rmin+(igr-1)*dr;
-  zcen = zmin+(igz-1)*dz;
 
-  LOG_WARNING << "Rcen value calculated from equData.centre() = " << rcen;
-  LOG_WARNING << "Zcen value calculated from equData.centre() = " << zcen;
-  
 }
 
 void equData::r_extrema()

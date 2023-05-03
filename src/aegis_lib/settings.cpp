@@ -19,42 +19,46 @@
         return;
       }
 
+      int valueInt;
+
       std::string param;
-      std::string value;
+      std::string valueStr;
 
       while (!in.eof())
       {
         in >> param;
-        in >> value;
+        in >> valueStr;
 
         if (param == "geo_input")
         {
-          geo_input = value; // string
+          geo_input = valueStr; // string
         }
         else if (param == "ray_qry")
         {
-          ray_qry = value; // string
+          ray_qry = valueStr; // string
         }
         else if (param == "eqdsk_file")
         {
-          eqdsk_file = value; // string
+          eqdsk_file = valueStr; // string
         }
         else if (param == "runcase")
         {
-          runcase = value; // string
+          runcase = valueStr; // string
         }
 	      else if (param == "source_power")
 	      {
-	      source_power = value; // double
+	      source_power = valueStr; // double
 	      }
 	      else if (param == "reflections")
 	      {
-	      reflections = value; // int
+	      reflections = valueStr; // int
 	      }
         else if (param == "number_of_rays_fired")
 	      {
-	      nSample = value; // int
+	      nSample = valueStr; // int
 	      }
+        else if (param == "cenopt")
+        cenopt = std::stoi(valueStr);
       }
       in.close();
     }

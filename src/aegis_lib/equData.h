@@ -78,8 +78,10 @@ class equData{
 
   public:
 
- 
-  
+  // Aegis run parameters
+  int cenopt; // option to determine how (Rcen,Zcen) is calculated 
+              // 1 - Use values from eqdsk 
+              // 2 - Calculate new values from starting search in centre of grid (currently broken) 
 
   int nw; // Number of horizontal R points in grid
   int nh; // Number of vertical Z points in grid
@@ -143,7 +145,7 @@ class equData{
   void gnuplot_out();
 
   // Find central psi extrema
-  void centre();
+  void centre(int cenopt);
 
   // calculate r_min and r_max as functions of theta_j
   void r_extrema();
