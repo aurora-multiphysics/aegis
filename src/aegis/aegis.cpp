@@ -29,8 +29,11 @@
 #include "integrator.h"
 #include "coordtfm.h"
 #include "alglib/interpolation.h"
+#include "openmc/particle.h"
+
 
 using namespace moab;
+using namespace openmc;
 using namespace coordTfm;
 
 using moab::DagMC;
@@ -56,6 +59,9 @@ int main() {
   settings settings;
   settings.load_settings();
   LOG_WARNING << "h5m Faceted Geometry file to be used = " << settings.geo_input;
+  openmc::SourceSite src; 
+  std::cout << "neutron.wgt = " << src.wgt << std::endl;
+
 
 
   static const char* input_file = settings.geo_input.c_str();
@@ -352,6 +358,7 @@ int main() {
     EquData.init_interp_splines();
     EquData.gnuplot_out();
     EquData.centre(settings.cenopt);
+    EquData.rz_splines();
 
     bool plotRZ = true;
     bool plotXYZ = true;

@@ -13,7 +13,7 @@ std::vector<double> coordTfm::cart_to_polar(std::vector<double> inputVector,
 {
   std::vector<double> outputVector(3);
   double r; // polar r 
-  double zeta; // polar zeta
+  double phi; // polar phi
   double x; // cart x 
   double y; // cart y
   double z; // cart z
@@ -22,11 +22,11 @@ std::vector<double> coordTfm::cart_to_polar(std::vector<double> inputVector,
   {
     r = inputVector[0]; 
     z = inputVector[1]; 
-    zeta = inputVector[2];
+    phi = inputVector[2];
 
-    x = r*cos(zeta); // calculate x
+    x = r*cos(phi); // calculate x
 
-    y = -r*sin(zeta); // calculate y
+    y = -r*sin(phi); // calculate y
 
     outputVector[0] = x;
     outputVector[1] = y;
@@ -39,11 +39,11 @@ std::vector<double> coordTfm::cart_to_polar(std::vector<double> inputVector,
     z = inputVector[2];
 
     r = sqrt(pow(x,2) + pow(y,2)); // calculate 
-    zeta = atan2(-y,x); // calculate zeta 
+    phi = atan2(-y,x); // calculate phi 
 
     outputVector[0] = r;
     outputVector[1] = z; 
-    outputVector[2] = zeta;
+    outputVector[2] = phi;
   } 
   return outputVector;
 }
@@ -54,7 +54,7 @@ std::vector<double> coordTfm::polar_to_flux(std::vector<double> inputVector,
   std::vector<double> outputVector(3);
   double r; // local polar r
   double z; // local polar z
-  double zeta; // local polar zeta
+  double phi; // local polar phi
   double psi; // local psi  
   double theta; // local theta 
 
@@ -62,7 +62,7 @@ std::vector<double> coordTfm::polar_to_flux(std::vector<double> inputVector,
   {
     psi = inputVector[0];
     theta = inputVector[1];
-    zeta = inputVector[2];
+    phi = inputVector[2];
     
     
   }
@@ -70,7 +70,7 @@ std::vector<double> coordTfm::polar_to_flux(std::vector<double> inputVector,
   {
     r = inputVector[0];
     z = inputVector[1];
-    zeta = inputVector[2];
+    phi = inputVector[2];
 
     psi = alglib::spline2dcalc(EquData.psiSpline, r, z); // spline interpolation of psi(R,Z)
     theta = atan2(z-EquData.zcen, r-EquData.rcen);
@@ -82,7 +82,7 @@ std::vector<double> coordTfm::polar_to_flux(std::vector<double> inputVector,
 
   outputVector[0] = psi;
   outputVector[1] = theta;
-  outputVector[2] = zeta;
+  outputVector[2] = phi;
 
   return outputVector;
 }

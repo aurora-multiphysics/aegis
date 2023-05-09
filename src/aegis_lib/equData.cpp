@@ -672,6 +672,7 @@ void equData::rz_splines()
   double zpsi_i; // psi_i
   
 
+
   // loop over angle
 
   int counter = 0;
@@ -681,6 +682,7 @@ void equData::rz_splines()
     ztheta = thetamin + j*dtheta;
     zcostheta = cos(ztheta);
     zsintheta = sin(ztheta);
+    //std::cout << "THETAMIN = " << thetamin << std::endl;
 
 
   }
@@ -754,7 +756,7 @@ std::vector<double> equData::b_field_cart(std::vector<double> polarBVector, doub
 
   return cartBVector;
 
-  
+
 }
 
 void equData::write_bfield(bool plotRZ, bool plotXYZ)
