@@ -671,7 +671,10 @@ void equData::rz_splines()
   double zpsi; // psi
   double zpsi_i; // psi_i
   
+  double ntmax = 33;
+  double ntmin = 1;
 
+  intheta = ntmax - ntmin+1;
 
   // loop over angle
 
@@ -682,7 +685,7 @@ void equData::rz_splines()
     ztheta = thetamin + j*dtheta;
     zcostheta = cos(ztheta);
     zsintheta = sin(ztheta);
-    //std::cout << "THETAMIN = " << thetamin << std::endl;
+    std::cout << "THETAMIN = " << thetamin << std::endl;
 
 
   }
@@ -717,16 +720,25 @@ std::vector<double> equData::b_field(std::vector<double> position,
     zz = polarPosition[1];
   }
 
-  // evaluate psi and psi derivs at given (R,Z) coords
-  alglib::spline2ddiff(psiSpline, zr, zz, zpsi, zdpdr, zdpdz, null); 
+  if (zr < rmin || zr > rmax || zz < zmin || zz > zmax )
+  {
+    bVector[0] = 0;
+    bVector[1] = 0;
+    bVector[2] = 0;
+  }
+  else
+  {
+    // evaluate psi and psi derivs at given (R,Z) coords
+    alglib::spline2ddiff(psiSpline, zr, zz, zpsi, zdpdr, zdpdz, null); 
 
-  // evaluate I aka f at psi (I aka f is the flux function) 
-  zf = alglib::spline1dcalc(fSpline, zpsi);
+    // evaluate I aka f at psi (I aka f is the flux function) 
+    zf = alglib::spline1dcalc(fSpline, zpsi);
 
-  // calculate B in cylindrical toroidal polars
-  bVector[0] = -zdpdz/zr; // B_R
-  bVector[1] = zdpdr/zr; // B_Z
-  bVector[2] = zf/zr; // B_T - toroidal component of field directed along phi
+    // calculate B in cylindrical toroidal polars
+    bVector[0] = -zdpdz/zr; // B_R
+    bVector[1] = zdpdr/zr; // B_Z
+    bVector[2] = zf/zr; // B_T - toroidal component of field directed along phi
+  }
 
   // return the calculated B vector 
   return bVector;

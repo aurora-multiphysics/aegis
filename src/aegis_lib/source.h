@@ -51,7 +51,7 @@ class pointSource{
   double dir[3];
   Particle neutron;
 
-  pointSource(double xyz[3]);
+  pointSource(std::vector<double> xyz);
   void set_dir(double newDir[3]);
   void get_isotropic_dir();
   void get_hemisphere_surface_dir(double surfaceNormal[3]);

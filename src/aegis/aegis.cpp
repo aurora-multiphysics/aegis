@@ -29,11 +29,8 @@
 #include "integrator.h"
 #include "coordtfm.h"
 #include "alglib/interpolation.h"
-#include "openmc/particle.h"
-
 
 using namespace moab;
-using namespace openmc;
 using namespace coordTfm;
 
 using moab::DagMC;
@@ -59,9 +56,6 @@ int main() {
   settings settings;
   settings.load_settings();
   LOG_WARNING << "h5m Faceted Geometry file to be used = " << settings.geo_input;
-  openmc::SourceSite src; 
-  std::cout << "neutron.wgt = " << src.wgt << std::endl;
-
 
 
   static const char* input_file = settings.geo_input.c_str();
@@ -249,7 +243,8 @@ int main() {
     int lostRays=0;
 
     double intersect_pt[3];
-    double pSource[3] = {0, 0, -30};
+    std::vector<double> pSource(3); 
+    pSource = {0, 0, -30};
     EntityHandle meshElement;
     double distanceMesh;
     pointSource spatialSource(pSource);
@@ -357,17 +352,83 @@ int main() {
 
     EquData.init_interp_splines();
     EquData.gnuplot_out();
-    EquData.centre(settings.cenopt);
-    EquData.rz_splines();
+    EquData.centre(1);
 
+    // attempting to create a trace through magnetic field 
+    // Currently not working
+
+    int nS = 10000;
     bool plotRZ = true;
     bool plotXYZ = true;
     EquData.write_bfield(plotRZ, plotXYZ);
+    std::vector<double> cartPosSource(3);
+    double s, ds;
+    double normB[3];
+    double norm;
+    std::ofstream trace1("trace1.txt");
+    std::ofstream trace2("trace2.txt");
+    std::ofstream trace3("trace3.txt");
+
+    double newptA[3];
+    double phi;
+    std::vector<double> Bfield;
+    std::vector<double> polarPos(3); 
+    std::vector<double> newPt(3);
+    polarPos = {EquData.rcen+1.24, EquData.zcen-1, 0};
+    cartPosSource = coordTfm::cart_to_polar(polarPos, "backwards");
+    pointSource source(cartPosSource);
+    source.get_isotropic_dir();
+    ds = 0.05;
+    DAG->next_vol(Surfs[0], vol_h, vol_h);
+
+    DAG->ray_fire(vol_h, source.r, source.dir, next_surf, next_surf_dist, &history, ds, 1);
+    for (int i=0; i<3; ++i)
+    {
+      newPt[i] = source.r[i] + source.dir[i]*ds;
+    }
+
+    Bfield = EquData.b_field(newPt, "cart");
+    polarPos = coordTfm::cart_to_polar(newPt,"forwards");
+    Bfield = EquData.b_field_cart(Bfield, polarPos[2]);
+    norm = sqrt(pow(Bfield[0],2) + pow(Bfield[1],2) + pow(Bfield[2],2));
+    normB[0] = Bfield[0]/norm;
+    normB[1] = Bfield[1]/norm; 
+    normB[2] = Bfield[2]/norm;
+
+    for (int i=0; i < nS; ++i, s+ds)
+    {
+      newptA[0] = newPt[0]; 
+      newptA[1] = newPt[1];
+      newptA[2] = newPt[2];
+      DAG->ray_fire(vol_h, newptA, normB, next_surf, next_surf_dist, &history, ds, 1);
+      for (int i=0; i<3; ++i)
+      {
+        newPt[i] = newPt[i] + normB[i]*ds;
+      }
+      trace1 << newPt[0] << " " << newPt[1] << " " << newPt[2] << std::endl;
+      Bfield = EquData.b_field(newPt, "cart");
+      if (Bfield[0] == 0)
+      {
+        break;
+      }
+      else
+      {
+        polarPos = coordTfm::cart_to_polar(newPt,"forwards");
+        Bfield = EquData.b_field_cart(Bfield, polarPos[2]);
+        norm = sqrt(pow(Bfield[0],2) + pow(Bfield[1],2) + pow(Bfield[2],2)); 
+        normB[0] = Bfield[0]/norm;
+        normB[1] = Bfield[1]/norm; 
+        normB[2] = Bfield[2]/norm;      
+      }
+    }
+//////////
+
+
 
   }
   else // No runcase specified
   {
-    LOG_FATAL << "No runcase specified - please set runcase parameter as either 'specific' or 'rayqry'";
+    LOG_FATAL << "No runcase specified - please choose from 'specific', 'rayqry' or 'eqdsk'";
   }
 
   return 0;

@@ -34,9 +34,9 @@
 // 
 
 
-pointSource::pointSource(double xyz[3])
+pointSource::pointSource(std::vector<double> xyz)
 {
-  for (int i=0; i<3; i++)
+  for (int i=0; i<xyz.size(); i++)
   {
     r[i] = xyz[i];
   }
