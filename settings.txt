@@ -1,6 +1,6 @@
-geo_input h5m/tokamak_vol.h5m
+geo_input box.h5m
 ray_qry exps/exps00010000.qry
 runcase eqdsk
-eqdsk_file eqdsk/F11.eqdsk 
+eqdsk_file eqdsk/EQ3.eqdsk 
 source_power 100.0
 cenopt 2

@@ -45,8 +45,6 @@ struct eqdskData
 };
 
 
-
-
 class equData{
 
   eqdskData eqdsk;  
@@ -155,11 +153,10 @@ class equData{
 
   // Caculate B field vector (in toroidal polars) at given position
   // set string to "polar" if position vector already in polars
-  std::vector<double> b_field(std::vector<double> position, 
-                              std::string startingFrom);
+  std::vector<double> b_field(std::vector<double> position, std::string startingFrom);
   
   // Convert B Field vectors to cartesian given polar form and value of angle 
-  std::vector<double> b_field_cart(std::vector<double> polarBVector, double phi);
+  std::vector<double> b_field_cart(std::vector<double> polarBVector, double phi, int normalise); 
 
   // Write out positions and associated BField vectors in cartesian and/or polar toroidal
   void write_bfield(bool plotRZ, bool plotXYZ);

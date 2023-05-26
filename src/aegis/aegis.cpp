@@ -67,41 +67,49 @@ int main() {
   DAG->init_OBBTree(); // initialise OBBTree
   DAG->setup_geometry(Surfs, Vols);
   //DAG->create_graveyard();
+  DAG->remove_graveyard();
   DAG->moab_instance()->get_entities_by_type(0, MBTRI, Facets);
   LOG_WARNING << "No of triangles in geometry " << Facets.size();
 
-  // moab::EntityHandle triangle_set, vertex_set;
-  // DAG->moab_instance()->create_meshset( moab::MESHSET_SET, triangle_set );
-  // DAG->moab_instance()->add_entities(triangle_set, Facets);
-  // int num_facets;
-  // DAG->moab_instance()->get_number_entities_by_handle(triangle_set, num_facets);
+  //DAG->moab_instance()->get_entities_by_dimension()
 
-  // DAG->moab_instance()->get_entities_by_type(0, MBVERTEX, Facet_vertices);
-  // LOG_WARNING << "Number of vertices in geometry " << Facet_vertices.size();
-  // DAG->moab_instance()->create_meshset( moab::MESHSET_SET, vertex_set );
-  // DAG->moab_instance()->add_entities(vertex_set, Facet_vertices);
-  // DAG->moab_instance()->get_number_entities_by_dimension(vertex_set, 1 ,num_facets);
-  // moab::Range vertAdjs;
+  moab::EntityHandle triangle_set, vertex_set;
+  DAG->moab_instance()->create_meshset( moab::MESHSET_SET, triangle_set );
+  DAG->moab_instance()->add_entities(triangle_set, Facets);
+  int num_facets;
+  DAG->moab_instance()->get_number_entities_by_handle(triangle_set, num_facets);
 
-  // moab::Range ents;
-  // DAG->moab_instance()->get_entities_by_handle(0, ents);
-  // for (auto i:Facets)
-  // {
-  //   moab::Range verts;
-  //   DAG->moab_instance()->get_adjacencies(&i, 1, 0, false, verts);
-  //   std::cout << "Tri " << DAG->moab_instance()->id_from_handle(i) << " vertex adjacencies:" << std::endl;
-  //   std::vector<double> coords(3*verts.size());
-  //   DAG->moab_instance()->get_coords(verts, &coords[0]);
-  //   std::cout << "Vertex " << DAG->get_entity_id() << std::endl;
+  DAG->moab_instance()->get_entities_by_type(0, MBVERTEX, Facet_vertices);
+  LOG_WARNING << "Number of vertices in geometry " << Facet_vertices.size();
+  std::cout << std::endl;
+  DAG->moab_instance()->create_meshset( moab::MESHSET_SET, vertex_set );
+  DAG->moab_instance()->add_entities(vertex_set, Facet_vertices);
+  DAG->moab_instance()->get_number_entities_by_dimension(vertex_set, 1 ,num_facets);
+  moab::Range vertAdjs;
 
+  moab::Range ents;
+  DAG->moab_instance()->get_entities_by_handle(0, ents);
+  for (auto i:Facets)
+  {
+    moab::Range verts;
+    DAG->moab_instance()->get_adjacencies(&i, 1, 0, false, verts);
+    //std::cout << "Tri " << DAG->moab_instance()->id_from_handle(i) << " vertex adjacencies:" << std::endl;
+    std::vector<double> coords(3*verts.size());
+    DAG->moab_instance()->get_coords(verts, &coords[0]);
+    for (int j=0; j<verts.size(); j++)
+    {
+      //std::cout << "Vertex " << DAG->moab_instance()->id_from_handle(verts[j]) << "(" <<  
+      //coords[0+j] << ", " << coords[1+j] << ", "  << coords[2+j] << ")" << std::endl;
+    }
+      //std::cout << std::endl;
 
-  //   // for (auto j:verts)
-  //   // {
-  //   //   double coords[3];
-  //   //   DAG->moab_instance()->get_coords(j, coords);
-  //   //   std::cout << "Coords of each vertex" << coords[0] << " " << coords[1] << " " << coords[2] << std::endl;
-  //   // }
-  // }
+    // for (auto j:verts)
+    // {
+    //   double coords[3];
+    //   DAG->moab_instance()->get_coords(&j, 3);
+    //   std::cout << "Coords of each vertex" << coords[0] << " " << coords[1] << " " << coords[2] << std::endl;
+    // }
+  }
 
 
 
@@ -357,7 +365,7 @@ int main() {
     // attempting to create a trace through magnetic field 
     // Currently not working
 
-    int nS = 10000;
+    
     bool plotRZ = true;
     bool plotXYZ = true;
     EquData.write_bfield(plotRZ, plotXYZ);
@@ -374,53 +382,144 @@ int main() {
     std::vector<double> Bfield;
     std::vector<double> polarPos(3); 
     std::vector<double> newPt(3);
-    polarPos = {EquData.rcen+1.24, EquData.zcen-1, 0};
-    cartPosSource = coordTfm::cart_to_polar(polarPos, "backwards");
-    pointSource source(cartPosSource);
-    source.get_isotropic_dir();
-    ds = 0.05;
-    DAG->next_vol(Surfs[0], vol_h, vol_h);
 
-    DAG->ray_fire(vol_h, source.r, source.dir, next_surf, next_surf_dist, &history, ds, 1);
-    for (int i=0; i<3; ++i)
+
+int nS;
+
+    // Plasma facing surface of HCLL first wall structure
+    moab::Range HCLLfacets; // range containing all of the triangles in the surface of interest
+     
+    EntityHandle HCLLsurf; // surface of interest
+    HCLLsurf = DAG->entity_by_id(2, 137); // front facing surface of HCLL
+
+    std::ofstream test("test.txt");
+
+    DAG->moab_instance()->list_entity(HCLLsurf); // list geometric information about surface
+    DAG->moab_instance()->get_entities_by_type(HCLLsurf, MBTRI, HCLLfacets);
+
+    std::vector<double> triA(3), triB(3), triC(3);
+    std::vector<double> randTri;
+    ds = 0.01;
+    nS = 100000;
+    int iteration_count = 0; 
+    int trace_count = 0;
+    for (auto i:HCLLfacets)
     {
-      newPt[i] = source.r[i] + source.dir[i]*ds;
-    }
+      DAG->next_vol(Surfs[0], vol_h, vol_h);
+      iteration_count +=1;
+      moab::Range HCLLverts;
+      DAG->moab_instance()->get_adjacencies(&i, 1, 0, false, HCLLverts);
+      std::vector<double> HCLLcoords(9);
+      DAG->moab_instance()->get_coords(HCLLverts, &HCLLcoords[0]);
+     
+      for (int j=0; j<3; j++)
+      {
+        triA[j] = HCLLcoords[j];
+        triB[j] = HCLLcoords[j+3];
+        triC[j] = HCLLcoords[j+6];
+      }
 
-    Bfield = EquData.b_field(newPt, "cart");
-    polarPos = coordTfm::cart_to_polar(newPt,"forwards");
-    Bfield = EquData.b_field_cart(Bfield, polarPos[2]);
-    norm = sqrt(pow(Bfield[0],2) + pow(Bfield[1],2) + pow(Bfield[2],2));
-    normB[0] = Bfield[0]/norm;
-    normB[1] = Bfield[1]/norm; 
-    normB[2] = Bfield[2]/norm;
+      triSource Tri(triA, triB, triC);
+      randTri = Tri.get_random_pt();
 
-    for (int i=0; i < nS; ++i, s+ds)
-    {
-      newptA[0] = newPt[0]; 
-      newptA[1] = newPt[1];
-      newptA[2] = newPt[2];
-      DAG->ray_fire(vol_h, newptA, normB, next_surf, next_surf_dist, &history, ds, 1);
+      double triStart[3];
+
+      
+
+      trace1 << randTri[0] << " " << randTri[1] << " " << randTri[2] << std::endl;
+      trace3 << randTri[0] << " " << randTri[1] << " " << randTri[2] << std::endl;
+
+      triStart[0] = randTri[0];
+      triStart[1] = randTri[1];
+      triStart[2] = randTri[2];
+
+      Bfield = EquData.b_field(randTri, "cart");
+
+      if (Bfield[0] == 0 && Bfield[1] == 0 && Bfield[2] == 0)
+      {
+        LOG_INFO << "Position of triangle start not in magnetic field. Skipping to next triangle";
+        continue;
+      }
+
+      polarPos = coordTfm::cart_to_polar(randTri,"forwards");
+      Bfield = EquData.b_field_cart(Bfield, polarPos[2], 0);
+      norm = -sqrt(pow(Bfield[0],2) + pow(Bfield[1],2) + pow(Bfield[2],2));
+      normB[0] = Bfield[0]/norm;
+      normB[1] = Bfield[1]/norm; 
+      normB[2] = Bfield[2]/norm;
+
+      // DAG->ray_fire(vol_h, triStart, normB, next_surf, next_surf_dist, &history, ds, 1);
+      // std::cout << Bfield << std::endl;
+
+      DAG->ray_fire(vol_h, triStart, normB, next_surf, next_surf_dist, &history, ds, 1);
+      history.rollback_last_intersection();
+
+      if (next_surf != 0)
+        {
+          std::cout << "surface hit: " << next_surf << std::endl; 
+          DAG->next_vol(next_surf, vol_h, vol_h);
+          //history.reset();
+          continue;
+        }
+
       for (int i=0; i<3; ++i)
       {
-        newPt[i] = newPt[i] + normB[i]*ds;
+        newPt[i] = triStart[i] + normB[i]*ds;
       }
+
       trace1 << newPt[0] << " " << newPt[1] << " " << newPt[2] << std::endl;
-      Bfield = EquData.b_field(newPt, "cart");
-      if (Bfield[0] == 0)
+
+      for (int i=0; i < nS; ++i, s+ds)
       {
-        break;
+        newptA[0] = newPt[0]; 
+        newptA[1] = newPt[1];
+        newptA[2] = newPt[2];
+        DAG->ray_fire(vol_h, newptA, normB, next_surf, next_surf_dist, &history, ds, 1);
+        history.rollback_last_intersection();
+
+        
+        for (int i=0; i<3; ++i)
+        {
+          newPt[i] = newPt[i] + normB[i]*ds;
+        }
+
+        trace1 << newPt[0] << " " << newPt[1] << " " << newPt[2] << std::endl;
+
+        if (next_surf != 0)
+        {
+          std::cout << "surface hit: " << next_surf << std::endl; 
+          DAG->next_vol(next_surf, vol_h, vol_h);
+          //history.reset();
+          break;
+        }
+        
+        
+
+        
+        Bfield = EquData.b_field(newPt, "cart");
+
+        if (Bfield[0] == 0)
+        {
+          LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";
+          break;
+        }
+        else
+        {
+          polarPos = coordTfm::cart_to_polar(newPt,"forwards");
+          Bfield = EquData.b_field_cart(Bfield, polarPos[2], 0);
+          norm = -sqrt(pow(Bfield[0],2) + pow(Bfield[1],2) + pow(Bfield[2],2)); 
+          normB[0] = Bfield[0]/norm;
+          normB[1] = Bfield[1]/norm; 
+          normB[2] = Bfield[2]/norm;      
+        }
       }
-      else
-      {
-        polarPos = coordTfm::cart_to_polar(newPt,"forwards");
-        Bfield = EquData.b_field_cart(Bfield, polarPos[2]);
-        norm = sqrt(pow(Bfield[0],2) + pow(Bfield[1],2) + pow(Bfield[2],2)); 
-        normB[0] = Bfield[0]/norm;
-        normB[1] = Bfield[1]/norm; 
-        normB[2] = Bfield[2]/norm;      
-      }
+     
+
+      
     }
+    //  std::cout << "trace_count = " << trace_count << std::endl;
+
+
 //////////
 
 

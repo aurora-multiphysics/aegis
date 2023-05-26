@@ -746,7 +746,7 @@ std::vector<double> equData::b_field(std::vector<double> position,
   
 }
 
-std::vector<double> equData::b_field_cart(std::vector<double> polarBVector, double phi)
+std::vector<double> equData::b_field_cart(std::vector<double> polarBVector, double phi, int normalise)
 {
   std::vector<double> cartBVector(3);
   double zbx; // cartesian Bx component
@@ -766,10 +766,19 @@ std::vector<double> equData::b_field_cart(std::vector<double> polarBVector, doub
   cartBVector[1] = zby;
   cartBVector[2] = zbz; 
 
+  if (normalise == 1)
+  {
+    double norm;
+    norm = sqrt(pow(cartBVector[0],2) + pow(cartBVector[1],2) + pow(cartBVector[2],2));
+    cartBVector[0] = cartBVector[0]/norm;
+    cartBVector[1] = cartBVector[1]/norm; 
+    cartBVector[2] = cartBVector[2]/norm;
+  }
+
   return cartBVector;
-
-
 }
+
+
 
 void equData::write_bfield(bool plotRZ, bool plotXYZ)
 {
@@ -828,7 +837,7 @@ void equData::write_bfield(bool plotRZ, bool plotXYZ)
             LOG_ERROR << "Negative R Values when attempting plot magnetic field. Fixup eqdsk required";
           }
           polarB = b_field(polarPos, "polar"); // calculate B(R,Z,phi)
-          cartB = b_field_cart(polarB, polarPos[2]); // transform to B(x,y,z)
+          cartB = b_field_cart(polarB, polarPos[2], 0); // transform to B(x,y,z)
           cartPos = coordTfm::cart_to_polar(polarPos, "backwards"); // transform position to cartesian
 
           // write out magnetic field data for plotting

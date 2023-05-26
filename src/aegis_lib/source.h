@@ -36,20 +36,12 @@
 
 
 
-class Particle{
-  public:
-  std::string nameType; // i.e neutron
-  double weight; 
-  double dir[3]; // direction
-  double pos[3]; // position
-  double energy;
-};
+
 
 class pointSource{
   public:
   double r[3];
   double dir[3];
-  Particle neutron;
 
   pointSource(std::vector<double> xyz);
   void set_dir(double newDir[3]);
@@ -62,7 +54,6 @@ class sphereSource{
   public:
   double sample[3]; //sampled position
   double origin[3]; // origin of sphere
-  Particle neutron;
   double r; // radius of sphere
 };
 
@@ -72,11 +63,24 @@ class boxSource{
   double pB[3];
   double dir[3];
   double pR[3];
-  Particle neutron;
   boxSource(double xyz3[3], double xyz4[3]);
   void get_pt();
   void get_dir();
 
+};
+
+class triSource
+{
+
+  private:
+  std::vector<double> xyzA;
+  std::vector<double> xyzB;
+  std::vector<double> xyzC;
+  double D;
+
+  public:
+  triSource(std::vector<double> xyz1, std::vector<double> xyz2, std::vector<double> xyz3);
+  std::vector<double> get_random_pt();
 };
 
 #endif
