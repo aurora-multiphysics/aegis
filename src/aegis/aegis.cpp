@@ -29,6 +29,7 @@
 #include "integrator.h"
 #include "coordtfm.h"
 #include "alglib/interpolation.h"
+#include "particleTrack.h"
 
 using namespace moab;
 using namespace coordTfm;
@@ -113,7 +114,7 @@ int main() {
 
 
 
-  DAG->write_mesh("dag.out", 1);
+  //DAG->write_mesh("dag.out", 1);
   EntityHandle prev_surf; // previous surface id
   EntityHandle next_surf; // surface id
   double next_surf_dist=0.0; // distance to the next surface ray will intersect
@@ -164,7 +165,7 @@ int main() {
       ray_input.close();
 
       //now you can do the whatever processing you want on the vector
-      int j=0;
+      int j=0;DAG->write_mesh("dag.out", 1);
       int k;
       int qrymax = rayqry.size();
       double dir_array[rayqry.size()][3];
@@ -326,17 +327,8 @@ int main() {
     LOG_WARNING << "Number of rays lost = " << lostRays;
     LOG_WARNING << "Number of rays launched = " << nSample;
     LOG_WARNING << "Number of ray-facet intersections = " << integrator.raysHit;
-    int_sorted_map nRays_sorted = integrator.sort_map(integrator.nRays);
 
-
-    for (auto const &pair: nRays_sorted)
-    {
-      if (pair.second > 0)
-      {
-        LOG_WARNING << "EntityHandle: " << pair.first << "[" << pair.second << "] rays hit" << std::endl;
-      }
-    }
-
+    integrator.facet_values(integrator.nRays);
 
 
 
@@ -383,19 +375,21 @@ int main() {
     std::vector<double> polarPos(3); 
     std::vector<double> newPt(3);
 
+    ////////// Particle tracking
 
-int nS;
-
+    int nS;
     // Plasma facing surface of HCLL first wall structure
-    moab::Range HCLLfacets; // range containing all of the triangles in the surface of interest
+    moab::Range targetFacets; // range containing all of the triangles in the surface of interest
      
-    EntityHandle HCLLsurf; // surface of interest
-    HCLLsurf = DAG->entity_by_id(2, 137); // front facing surface of HCLL
+    // can specify particular surfaces of interest 
+    EntityHandle targetSurf; // surface of interest
+    targetSurf = DAG->entity_by_id(2, 479); // front facing surface of HCLL
 
-    std::ofstream test("test.txt");
 
-    DAG->moab_instance()->list_entity(HCLLsurf); // list geometric information about surface
-    DAG->moab_instance()->get_entities_by_type(HCLLsurf, MBTRI, HCLLfacets);
+    DAG->moab_instance()->list_entity(targetSurf); // list geometric information about surface
+    DAG->moab_instance()->get_entities_by_type(targetSurf, MBTRI, targetFacets);
+    surfaceIntegrator integrator(targetFacets);
+    EntityHandle hit;
 
     std::vector<double> triA(3), triB(3), triC(3);
     std::vector<double> randTri;
@@ -403,7 +397,10 @@ int nS;
     nS = 100000;
     int iteration_count = 0; 
     int trace_count = 0;
-    for (auto i:HCLLfacets)
+
+    int zSign;
+    int terminationType;
+    for (auto i:targetFacets)
     {
       DAG->next_vol(Surfs[0], vol_h, vol_h);
       iteration_count +=1;
@@ -425,6 +422,7 @@ int nS;
       double triStart[3];
 
       
+      
 
       trace1 << randTri[0] << " " << randTri[1] << " " << randTri[2] << std::endl;
       trace3 << randTri[0] << " " << randTri[1] << " " << randTri[2] << std::endl;
@@ -432,6 +430,17 @@ int nS;
       triStart[0] = randTri[0];
       triStart[1] = randTri[1];
       triStart[2] = randTri[2];
+
+      if (triStart[2] > 0) 
+      {
+        zSign = 1;
+        terminationType = 2;
+      }
+      else 
+      {
+        zSign = -1;
+        terminationType = 2;
+      }
 
       Bfield = EquData.b_field(randTri, "cart");
 
@@ -452,22 +461,20 @@ int nS;
       // std::cout << Bfield << std::endl;
 
       DAG->ray_fire(vol_h, triStart, normB, next_surf, next_surf_dist, &history, ds, 1);
-      history.rollback_last_intersection();
-
       if (next_surf != 0)
         {
-          std::cout << "surface hit: " << next_surf << std::endl; 
           DAG->next_vol(next_surf, vol_h, vol_h);
+          history.get_last_intersection(hit);
+          integrator.count_hit(hit);
           //history.reset();
           continue;
         }
-
       for (int i=0; i<3; ++i)
       {
         newPt[i] = triStart[i] + normB[i]*ds;
       }
-
       trace1 << newPt[0] << " " << newPt[1] << " " << newPt[2] << std::endl;
+      history.rollback_last_intersection();
 
       for (int i=0; i < nS; ++i, s+ds)
       {
@@ -475,9 +482,6 @@ int nS;
         newptA[1] = newPt[1];
         newptA[2] = newPt[2];
         DAG->ray_fire(vol_h, newptA, normB, next_surf, next_surf_dist, &history, ds, 1);
-        history.rollback_last_intersection();
-
-        
         for (int i=0; i<3; ++i)
         {
           newPt[i] = newPt[i] + normB[i]*ds;
@@ -487,13 +491,13 @@ int nS;
 
         if (next_surf != 0)
         {
-          std::cout << "surface hit: " << next_surf << std::endl; 
           DAG->next_vol(next_surf, vol_h, vol_h);
+          history.get_last_intersection(hit);
+          integrator.count_hit(hit);
           //history.reset();
           break;
         }
-        
-        
+        history.rollback_last_intersection();
 
         
         Bfield = EquData.b_field(newPt, "cart");
@@ -512,12 +516,31 @@ int nS;
           normB[1] = Bfield[1]/norm; 
           normB[2] = Bfield[2]/norm;      
         }
-      }
-     
 
-      
+
+        if (zSign == 1)
+        {
+          if (newPt[2] < EquData.zcen) // break when crossing zcen
+          {
+            break;
+          } 
+        }
+        else if (zSign == -1)
+        {
+          if (newPt[2] > EquData.zcen)
+          {
+            break;
+          }
+        }
+      }
+            
+
+
     }
-    //  std::cout << "trace_count = " << trace_count << std::endl;
+
+    LOG_WARNING << "Number of rays launched = " << targetFacets.size();
+    LOG_WARNING << "Number of ray-facet intersections = " << integrator.raysHit;
+    integrator.facet_values(integrator.nRays);
 
 
 //////////

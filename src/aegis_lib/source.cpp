@@ -5,6 +5,8 @@
 #include <math.h>
 #include "source.h"
 
+
+
 //create_source()
 
 // OpenMC has function IndependantSource() that generates an independant source
@@ -163,4 +165,10 @@ std::vector<double> triSource::get_random_pt()
     randomPt[i] = xyzA[i] + randomA*(xyzB[i] - xyzA[i]) + randomB*(xyzC[i] - xyzA[i]);
   }
   return randomPt;
+}
+
+void triSource::dagmcInstance(moab::DagMC* DAG)
+{
+  DAGInstance = DAG;
+  DAGInstance->write_mesh("dag.out", 1);
 }

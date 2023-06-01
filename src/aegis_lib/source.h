@@ -5,6 +5,10 @@
 #include <iostream>
 #include <cctype>
 #include <random>
+#include "DagMC.hpp"
+#include "moab/Core.hpp"
+#include "moab/Interface.hpp"
+#include <moab/OrientedBoxTreeTool.hpp>
 
 //create_source()
 
@@ -35,7 +39,9 @@
 // 
 
 
-
+using moab::DagMC;
+using moab::OrientedBoxTreeTool;
+moab::DagMC* DAGInstance;
 
 
 class pointSource{
@@ -80,6 +86,7 @@ class triSource
 
   public:
   triSource(std::vector<double> xyz1, std::vector<double> xyz2, std::vector<double> xyz3);
+  void dagmcInstance(moab::DagMC* DAG); 
   std::vector<double> get_random_pt();
 };
 

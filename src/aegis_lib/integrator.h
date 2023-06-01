@@ -13,6 +13,7 @@
 #include <variant>
 
 
+
 using namespace moab;
 
 
@@ -33,11 +34,13 @@ struct comp
 typedef std::set<std::pair<EntityHandle, int>, comp> int_sorted_map;
 typedef std::set<std::pair<EntityHandle, double>, comp> dbl_sorted_map;
 
+
 // integrator .h file
 
 class surfaceIntegrator 
 {
   public:
+
   int raysTotal=0; // Total number of rays fired into geometry
   int raysHit=0; // Number of rays hit
   int nFacets=0; // Number of facets in geometry
@@ -52,8 +55,14 @@ class surfaceIntegrator
 
   void ray_reflect_dir(double const prev_dir[3], double const surface_normal[3], // get reflected dir
                          double reflected_dir[3]); 
-  int_sorted_map sort_map(std::unordered_map<EntityHandle, int> const &map); // return sorted map of ints (as set<pair>)
-  dbl_sorted_map sort_map(std::unordered_map<EntityHandle, double> const &map); // return sorted map of doubles (as set<pair)
+  
+  // return sorted map of entityhandles against chosen value
+  void facet_values(std::unordered_map<EntityHandle, int> const &facetValueMap);
+  void facet_values(std::unordered_map<EntityHandle, double> const &map);
+
+/// TODO - Create a class that holds the unordered map and a string for the name of the map
+///      - Potentially also any other variables that may be useful (i.e units for power values) 
+
 };
 
 #endif
