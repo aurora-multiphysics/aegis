@@ -563,7 +563,8 @@ void equData::centre(int cenopt)
 
 }
 
-void equData::r_extrema()
+// ***TODO***
+void equData::r_extrema() 
 {
   LOG_TRACE << "-----equData.r_extrema()-----";
   int nrsrsamp; // number of samples in r
@@ -586,7 +587,7 @@ void equData::r_extrema()
   double zrpmin; // largest r giving psi < psi_{min}
   double zrpmax; // smallest r giving psi > psi_{max} 
   int isr; // flag that value psi < psi_{min} has been found
-  int idsplet; // flag that (dpsi/dr)_{i-1} set
+  int idplset; // flag that (dpsi/dr)_{i-1} set
   int im; // number of angles in largest interval of acceptable theta
   int il; // marks lower bound of current interval of acceptable theta
   int ilm; // marks lower bound of largest interval of acceptable theta
@@ -613,7 +614,7 @@ void equData::r_extrema()
     // loop over distance from centre. Start a little away from origin
     zsr = zsrmin;
     isr = 0;
-    idsplet = 0;
+    idplset = 0;
 
     for (int i=1; i<=nrsrsamp; i++)
     {
@@ -640,11 +641,10 @@ void equData::r_extrema()
     //if (zpsi<psimin)
   }
 
-  
 }
 
 
-// Create 2d spline structures for R(psi,theta) and Z(psi,theta)
+// Create 2d spline structures for R(psi,theta) and Z(psi,theta) ***TODO***
 void equData::rz_splines()
 {
   LOG_TRACE << "-----equData.rz_splines()-----";
@@ -702,7 +702,7 @@ std::vector<double> equData::b_field(std::vector<double> position,
   double zpsi; // local psi returned from spline calc
   double zdpdr; // local dpsi/dr from spline calc
   double zdpdz; // local dpsi/dz from spline calc
-  double zf; // local f(psi) = RB_T (not sure what this means, copied comment from SMARDDA)
+  double zf; // local f(psi) = RB_T toroidal component of B
   double null; // second derivative of psi not needed
 
   // if position vector is already in polars skip coord transform and calculate B
@@ -880,3 +880,264 @@ std::vector<double> equData::b_ripple(std::vector<double> pos, std::vector<doubl
 
   
 }
+
+
+
+
+void equData::boundary_rb()
+{
+  // mostly copied from r_extrema()
+
+  LOG_TRACE << "-----equData.boundary_rb()-----";
+  std::string functionName = ".boundary_rb(): "; 
+  int nrsrsamp; // number of samples in r
+
+  double zddpdz; // second derivative of psi not needed from spline2ddiff
+
+  double zpsi; // psi
+  double zpsiinr; // estimate for inner limit of psi
+  double zpsioutr; // estimate for outer limit of psi
+  double zdpdr; // dpsi/dr
+  double zdpdz; // dpsi/dz
+  double ztheta; // theta_j
+  double zsrr; // estimate for maximum |R-R_c| in domain
+  double zszz; // estimate for maximum |Z-Z_c| in domain
+  double zsrmin; // estimate for starting r
+  double zsrmax; // estimate for maximum r in domain
+  double zsrinr; // smallest r in range
+  double zsroutr; // largest r in range
+  double zsrsta; // estimate for starting r
+  double zcostheta; // cos(theta_j)
+  double zsintheta; // sin(theta_j)
+  double re; // R_i
+  double ze; // Z_i
+  double zdpdsr; // {dspi/dr}_{i}
+  double zsr; // r_i
+  double zdsr; // Delta r_i
+  double zdpdsrl; // (dspi/dr)_{i-1}
+  double zrpmin; // largest r giving psi < psi_{min}
+  double zrpmax; // smallest r giving psi > psi_{max} 
+  int isr; // flag that value psi < psi_{min} has been found
+  int idplset; // flag that (dpsi/dr)_{i-1} set
+  int im; // number of angles in largest interval of acceptable theta
+  int il; // marks lower bound of current interval of acceptable theta
+  int ilm; // marks lower bound of largest interval of acceptable theta
+
+
+
+  //ztheta = M_PI; // either pick inboard 
+  ztheta = 0.0; // or outboard
+
+  zpsiinr = (psiqbdry+psiaxis)/2;
+  zsrr = std::max(fabs(rmax-rcen), fabs(rmin-rcen));
+  zszz = std::max(fabs(zmax-zcen), fabs(zmin-zcen));
+  zsrmax = sqrt(pow(zsrr,2) + pow(zszz, 2));
+  nrsrsamp = nr+nz;
+  zdsr = zsrmax/nrsrsamp; 
+  zsrsta = zsrmax/10;
+  zpsioutr = zpsiinr;
+
+
+  zcostheta = cos(ztheta);
+  zsintheta = sin(ztheta);
+
+  // loop over distance from centre. Start a little away from origin
+  zsr = zsrsta;
+  zsrinr = zsr;
+  isr = 0;
+  idplset = 0;
+
+  for (int i=1; i<=nrsrsamp; i++)
+  {
+    re = rcen + zsr*zcostheta;
+    if (re>=rmax || re<=rmin)
+    {
+      // extremal R reached
+      break;
+    }
+    ze = zcen + zsr*zsintheta;
+    if (ze>=zmax || ze<=zmin)
+    {
+      // extremal Z reached
+      break;
+    }
+    zpsi = alglib::spline2dcalc(psiSpline, re, ze);
+  
+
+    if (rsig>0) // psiaxis < psiqbdry (psi increasing outwards)
+    {
+      if ((zpsi-zpsiinr)*rsig<0) 
+      {
+        // record while psi < psi-inner
+        isr = i;
+        zsrinr = zsr;
+      }
+      else
+      {
+        if (isr==0)
+        {
+          // sr sta is too large, reduce
+          zsr = 4*zsr/5;
+          continue;
+        }
+      }
+    }
+    else // psiaxis > psiqbdry (psi decreasing outwards)
+    {
+      if ((zpsi-zpsiinr)*rsig<0)
+      {
+        // record while psi > psi-inner
+        isr = i;
+        zsrinr = zsr;
+      }
+      else
+      {
+        if (isr==0)
+        {
+          // sr sta is too large, reduce
+          zsr = 4*zsr/5;
+          continue;
+        }
+      }
+    }
+
+    // check monotone
+    alglib::spline2ddiff(psiSpline, re, ze, zpsi, zdpdr, zdpdz, zddpdz); 
+    zdpdsr = zdpdr*zcostheta + zdpdz*zsintheta;
+    if (idplset==1)
+    {
+      if (zdpdsrl*zdpdsr<=0)
+      {
+        // extremum in psi reached
+        // try to use monotone range
+        break;
+      }
+    }
+    zsr = zsr+zdsr;
+    zdpdsrl = zdpdsr;
+    idplset = 1;
+    zsroutr = zsr;
+    zpsioutr = zpsi;
+  } 
+
+
+  if ((zpsiinr-zpsioutr)*rsig >=0)
+  {
+    LOG_FATAL << className << functionName << "No suitable psi range exists";
+  }
+
+  zsrmin = zsrinr;
+  zsrmax = zsroutr;
+
+  // end of r_extrema() equivalent code
+
+
+  int iext=4*npsi; // maximum allowed number of knots for spline in r
+  int iknot; // actual number of knots for spline in r
+  double cpsi; // constant for estimating delta r_i 
+  double zdsrmin; // floor to delta r_i 
+  std::vector <double> wvextn(iext); // 1D work array extended size for nodes
+  std::vector <double> wvext(iext); // 1D work array extended size for samples
+  std::vector <double> wvextd(iext); // 1D work array extended size for derivatives
+
+
+  cpsi = fabs(zpsioutr-zpsiinr)/(2*npsi);
+  zdsrmin = (zsrmax-zsrmin)/(4*npsi);
+
+  zsr = zsrmin;
+ 
+  // loop over r to define 1-D splines as a function of r
+  for (int i=1; i<=iext; i++)
+  {
+    re = rcen + zsr*zcostheta;
+    ze = zcen + zsr*zsintheta;
+    alglib::spline2ddiff(psiSpline, re, ze, zpsi, zdpdr, zdpdz, zddpdz);
+    zdpdsr = zdpdr*zcostheta + zdpdz*zsintheta;
+
+    if (i>1 && zdpdsrl*zdpdsr<=0)
+    {
+      // should only be small non-monotone region, try to ignore
+      LOG_ERROR << className << functionName << "Lack of monotincity";
+      // fix up
+      zdpdsr = zdpdsrl;
+    }
+    wvextn[i] = zsr;
+    wvext[i] = zpsi;
+    wvextd[i] = zdpdsr;
+    iknot = i;
+    zdsr = fabs(cpsi/zdpdsr);
+    zsr = zsr + std::max(std::min(zdsr, 3*zdsrmin), zdsrmin);
+    if (i>1 && (zsr-zsrmax>0))
+    {
+      break;
+    }
+    zdpdsrl = zdpdsr;
+  }
+
+  // LOG_FATAL << className << functionName << "Too many nodes";
+  
+  int intv; // interval in which spline inverse found
+
+  for (int j=1; j<=iknot-1; j++)
+  {
+    intv = j;
+    if ((wvext[j]-psiqbdry)*(wvext[j+1]-psiqbdry) <= 0) {break;}
+  }
+  zsr = wvextn[intv];
+
+
+  zpsi = psiqbdry;
+  re = rcen + zsr*zcostheta;
+  ze = zcen + zsr*zsintheta;
+  alglib::spline2ddiff(psiSpline, re, ze, zpsi, zdpdr, zdpdz, zddpdz);
+
+  // store R_m and B_pm
+
+  rbdry = re;
+  bpbdry = (1/re)*sqrt(std::max(0.0, (pow(zdpdr,2) + pow(zdpdz, 2))));
+
+  double zbr; // radial Bfield component
+  double zbz; // vertical Bfield component
+  double zbt; // toroidal Bfield component
+  double zf; // toroidal component of B
+  double cylj; // cylindrical current
+
+  zf = alglib::spline1dcalc(fSpline, zpsi);
+  btotbdry = sqrt(std::max(0.0, pow(bpbdry, 2) + pow((zf/re), 2)));
+
+  LOG_WARNING << className << functionName << "Reference Boundary values";
+  LOG_WARNING << "psiqbdry (psi_m) " << psiqbdry;
+  LOG_WARNING << "rbdry (R_m) " << rbdry;
+  LOG_WARNING << "zbdry (Z_m) " << ze;
+  LOG_WARNING << "bpbdry (B_pm) " << bpbdry;
+  LOG_WARNING << "btotbdry (B_m) " << btotbdry;
+
+  cylj = fabs(zsr*bpbdry/2e-7);
+  LOG_WARNING << "Estimated cylindrical current " << cylj;
+
+  zbr = -(1/re)*zdpdz;
+  zbz = (1/re)*zdpdr;
+  zbt = zf/re;
+
+  LOG_WARNING << "Radial BField component " << zbr;
+  LOG_WARNING << "Vertical BField component " << zbz;
+  LOG_WARNING << "Toroidal BField component " << zbt;
+}
+
+
+
+// void equData::set_omp()
+// {
+//   // Ensure equData::centre() has been called first so R,Z values of centre known
+//   if (rcen == 0 && zcen == 0)
+//   {
+//     LOG_ERROR << "Values RCEN and ZCEN are not set. Ensure these are set before attempting to 
+//                   define outer-midplane";
+//   }
+  
+//   else
+//   {
+//     std::vector  
+//   }
+
+// }
