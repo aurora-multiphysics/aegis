@@ -41,6 +41,7 @@ moab::DagMC* DAG;
 void next_pt(double prev_pt[3], double origin[3], double next_surf_dist,
                           double dir[3], std::ofstream &ray_intersect);
 double dot_product(double vector_a[], double vector_b[]);
+double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
 void reflect(double dir[3], double prev_dir[3], EntityHandle next_surf);
 double * vecNorm(double vector[3]);
 
@@ -383,7 +384,7 @@ int main() {
      
     // can specify particular surfaces of interest 
     EntityHandle targetSurf; // surface of interest
-    targetSurf = DAG->entity_by_id(2, 479); // front facing surface of HCLL
+    targetSurf = DAG->entity_by_id(2, 2143); // front facing surface of HCLL
 
 
     DAG->moab_instance()->list_entity(targetSurf); // list geometric information about surface
@@ -393,6 +394,8 @@ int main() {
 
     std::vector<double> triA(3), triB(3), triC(3);
     std::vector<double> randTri;
+    double fieldDir[3];
+    double Bn; // B.n at surface of geometry 
     ds = 0.01;
     nS = 100000;
     int iteration_count = 0; 
@@ -417,7 +420,7 @@ int main() {
       }
 
       triSource Tri(triA, triB, triC);
-      randTri = Tri.get_random_pt();
+      randTri = Tri.random_pt();
 
       double triStart[3];
 
@@ -452,15 +455,30 @@ int main() {
 
       polarPos = coordTfm::cart_to_polar(randTri,"forwards");
       Bfield = EquData.b_field_cart(Bfield, polarPos[2], 0);
-      norm = -sqrt(pow(Bfield[0],2) + pow(Bfield[1],2) + pow(Bfield[2],2));
+      norm = sqrt(pow(Bfield[0],2) + pow(Bfield[1],2) + pow(Bfield[2],2));
       normB[0] = Bfield[0]/norm;
       normB[1] = Bfield[1]/norm; 
       normB[2] = Bfield[2]/norm;
 
+      Bn = dot_product(Bfield,Tri.normal);
+      if (Bn < 0)
+      {
+        fieldDir[0] = -normB[0];
+        fieldDir[1] = -normB[1];
+        fieldDir[2] = -normB[2];
+
+      }
+      else if (Bn > 0)
+      {
+        fieldDir[0] = normB[0];
+        fieldDir[1] = normB[1];
+        fieldDir[2] = normB[2];
+      }
+
       // DAG->ray_fire(vol_h, triStart, normB, next_surf, next_surf_dist, &history, ds, 1);
       // std::cout << Bfield << std::endl;
 
-      DAG->ray_fire(vol_h, triStart, normB, next_surf, next_surf_dist, &history, ds, 1);
+      DAG->ray_fire(vol_h, triStart, fieldDir, next_surf, next_surf_dist, &history, ds, 1);
       if (next_surf != 0)
         {
           DAG->next_vol(next_surf, vol_h, vol_h);
@@ -471,7 +489,7 @@ int main() {
         }
       for (int i=0; i<3; ++i)
       {
-        newPt[i] = triStart[i] + normB[i]*ds;
+        newPt[i] = triStart[i] + fieldDir[i]*ds;
       }
       trace1 << newPt[0] << " " << newPt[1] << " " << newPt[2] << std::endl;
       history.rollback_last_intersection();
@@ -481,10 +499,10 @@ int main() {
         newptA[0] = newPt[0]; 
         newptA[1] = newPt[1];
         newptA[2] = newPt[2];
-        DAG->ray_fire(vol_h, newptA, normB, next_surf, next_surf_dist, &history, ds, 1);
+        DAG->ray_fire(vol_h, newptA, fieldDir, next_surf, next_surf_dist, &history, ds, 1);
         for (int i=0; i<3; ++i)
         {
-          newPt[i] = newPt[i] + normB[i]*ds;
+          newPt[i] = newPt[i] + fieldDir[i]*ds;
         }
 
         trace1 << newPt[0] << " " << newPt[1] << " " << newPt[2] << std::endl;
@@ -511,10 +529,24 @@ int main() {
         {
           polarPos = coordTfm::cart_to_polar(newPt,"forwards");
           Bfield = EquData.b_field_cart(Bfield, polarPos[2], 0);
-          norm = -sqrt(pow(Bfield[0],2) + pow(Bfield[1],2) + pow(Bfield[2],2)); 
+          norm = sqrt(pow(Bfield[0],2) + pow(Bfield[1],2) + pow(Bfield[2],2)); 
           normB[0] = Bfield[0]/norm;
           normB[1] = Bfield[1]/norm; 
-          normB[2] = Bfield[2]/norm;      
+          normB[2] = Bfield[2]/norm;
+
+          if (Bn < 0)
+          {
+            fieldDir[0] = -normB[0];
+            fieldDir[1] = -normB[1];
+            fieldDir[2] = -normB[2];
+
+          }
+          else if (Bn > 0)
+          {
+            fieldDir[0] = normB[0];
+            fieldDir[1] = normB[1];
+            fieldDir[2] = normB[2];
+          }    
         }
 
 
@@ -606,3 +638,11 @@ double dot_product(double vector_a[], double vector_b[]){
    product = product + vector_a[i] * vector_b[i];
    return product;
 }
+
+double dot_product(std::vector<double> vector_a, std::vector<double> vector_b){
+   double product = 0;
+   for (int i = 0; i < 3; i++)
+   product = product + vector_a[i] * vector_b[i];
+   return product;
+}
+

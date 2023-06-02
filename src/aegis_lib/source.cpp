@@ -142,9 +142,10 @@ triSource::triSource(std::vector<double> xyz1, std::vector<double> xyz2, std::ve
 
   // recover constant D in plane equation
   D = -(normalVec[0]*xyzA[0] + normalVec[1]*xyzA[1] + normalVec[2]*xyzA[2]);
+  normal = normalVec;
 }
 
-std::vector<double> triSource::get_random_pt()
+std::vector<double> triSource::random_pt()
 {
   std::random_device dev;
   std::mt19937 rng(dev());
@@ -166,6 +167,9 @@ std::vector<double> triSource::get_random_pt()
   }
   return randomPt;
 }
+
+
+
 
 void triSource::dagmcInstance(moab::DagMC* DAG)
 {

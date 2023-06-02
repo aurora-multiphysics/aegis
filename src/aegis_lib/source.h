@@ -85,9 +85,10 @@ class triSource
   double D;
 
   public:
+  std::vector<double> normal;
   triSource(std::vector<double> xyz1, std::vector<double> xyz2, std::vector<double> xyz3);
   void dagmcInstance(moab::DagMC* DAG); 
-  std::vector<double> get_random_pt();
+  std::vector<double> random_pt();
 };
 
 #endif

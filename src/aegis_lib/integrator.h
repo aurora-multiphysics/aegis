@@ -5,12 +5,13 @@
 #include <cctype>
 #include <vector>
 #include <map>
+#include <set>
+#include <variant>
 #include <unordered_map>
 #include <moab/Core.hpp>
 #include "moab/Interface.hpp"
 #include <moab/OrientedBoxTreeTool.hpp>
-#include <set>
-#include <variant>
+#include "equData.h"
 
 
 
@@ -52,6 +53,7 @@ class surfaceIntegrator
   // Methods
   surfaceIntegrator(moab::Range const &Facets); // constructor
   void count_hit(EntityHandle facet_hit); // count hits belonging to each facet
+  void store_heat_flux(EntityHandle facet, double psi, equData EquData); // store the power associated with a particular facet
 
   void ray_reflect_dir(double const prev_dir[3], double const surface_normal[3], // get reflected dir
                          double reflected_dir[3]); 
