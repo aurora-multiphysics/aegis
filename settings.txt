@@ -1,6 +1,6 @@
 geo_input hcll_up.h5m
 ray_qry exps/exps00010000.qry
 runcase eqdsk
-eqdsk_file eqdsk/EQ3.eqdsk 
+eqdsk_file eqdsk/test.eqdsk 
 source_power 100.0
 cenopt 2

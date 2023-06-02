@@ -424,25 +424,25 @@ TEST_F(aegisUnitTest, cart_polar_coord_transform){
 
 }
 
-// TEST_F(aegisUnitTest, polar_flux_coord_transform){
+TEST_F(aegisUnitTest, polar_flux_coord_transform){
 
-//   equData EquData;
-//   EquData.read_eqdsk("test.eqdsk");
-//   EquData.init_interp_splines();
-//   EquData.centre(1);
+  equData EquData;
+  EquData.read_eqdsk("test.eqdsk");
+  EquData.init_interp_splines();
+  EquData.centre(1);
 
-//   std::vector<double> input = {2.4, 5.3, -2.0};
-//   std::vector<double> output;
-//   std::string direction;
-//   output.reserve(3);
+  std::vector<double> input = {2.4, 5.3, -2.0};
+  std::vector<double> output;
+  std::string direction;
+  output.reserve(3);
 
-//   output = coordTfm::polar_to_flux(input, direction, EquData);
+  output = coordTfm::polar_to_flux(input, direction, EquData);
 
-//   EXPECT_FLOAT_EQ(output[0], -2.34389385);
-//   EXPECT_FLOAT_EQ(output[1], 2.14721228);
-//   EXPECT_FLOAT_EQ(output[2], -2);
+  EXPECT_FLOAT_EQ(output[0], -2.5001357);
+  EXPECT_FLOAT_EQ(output[1], 2.1932724);
+  EXPECT_FLOAT_EQ(output[2], -2);
 
-// }
+}
 
 double * vecNorm(double vector[3]){
   static double normalised_vector[3];
