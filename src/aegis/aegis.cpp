@@ -354,6 +354,7 @@ int main() {
     EquData.init_interp_splines();
     EquData.gnuplot_out();
     EquData.centre(1);
+    EquData.boundary_rb();
 
     // attempting to create a trace through magnetic field 
     // Currently not working

@@ -48,6 +48,7 @@ struct eqdskData
 class equData{
 
   eqdskData eqdsk;  
+  std::string className = "equData";
   
   // File streams
   std::ifstream eqdsk_file;
@@ -110,7 +111,12 @@ class equData{
 
   double dr; // step size in R (rmax-rmin)/nr
   double dz; // step size in Z (zmax-zmin)/nz
-  double dtheta = (thetamax-thetamin)/ntheta; // step size in theta (thetamax-thetamin)ntheta
+  double dtheta = (thetamax-thetamin)/ntheta;
+  
+  // Quantities needed for power depoisiton calculation
+  double rbdry; // R_m (R value at midplane)
+  double bpbdry; // B_pm (poloidal component of B at midplane)
+  double btotbdry; // B_m total B at reference boundary (midplane?) 
 
   // alglib grids
   alglib::real_1d_array r_grid; // 1D grid R[nw] with spacing = dr (KNOTS)
@@ -163,6 +169,7 @@ class equData{
 
   std::vector<double> b_ripple(std::vector<double> pos, std::vector<double> bField);
 
+  void boundary_rb();
 };
 
 #endif
