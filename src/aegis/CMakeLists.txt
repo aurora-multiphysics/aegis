@@ -14,4 +14,4 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}-lib)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${Boost_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} PUBLIC dagmc-shared uwuw-shared )
 target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
-
+target_link_libraries(${PROJECT_NAME} PUBLIC ~/openmc/openmc/openmc/lib/libopenmc.so)

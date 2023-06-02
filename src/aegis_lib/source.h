@@ -5,6 +5,10 @@
 #include <iostream>
 #include <cctype>
 #include <random>
+#include "DagMC.hpp"
+#include "moab/Core.hpp"
+#include "moab/Interface.hpp"
+#include <moab/OrientedBoxTreeTool.hpp>
 
 //create_source()
 
@@ -35,23 +39,17 @@
 // 
 
 
+using moab::DagMC;
+using moab::OrientedBoxTreeTool;
+moab::DagMC* DAGInstance;
 
-class Particle{
-  public:
-  std::string nameType; // i.e neutron
-  double weight; 
-  double dir[3]; // direction
-  double pos[3]; // position
-  double energy;
-};
 
 class pointSource{
   public:
   double r[3];
   double dir[3];
-  Particle neutron;
 
-  pointSource(double xyz[3]);
+  pointSource(std::vector<double> xyz);
   void set_dir(double newDir[3]);
   void get_isotropic_dir();
   void get_hemisphere_surface_dir(double surfaceNormal[3]);
@@ -62,7 +60,6 @@ class sphereSource{
   public:
   double sample[3]; //sampled position
   double origin[3]; // origin of sphere
-  Particle neutron;
   double r; // radius of sphere
 };
 
@@ -72,11 +69,26 @@ class boxSource{
   double pB[3];
   double dir[3];
   double pR[3];
-  Particle neutron;
   boxSource(double xyz3[3], double xyz4[3]);
   void get_pt();
   void get_dir();
 
+};
+
+class triSource
+{
+
+  private:
+  std::vector<double> xyzA;
+  std::vector<double> xyzB;
+  std::vector<double> xyzC;
+  double D;
+
+  public:
+  std::vector<double> normal;
+  triSource(std::vector<double> xyz1, std::vector<double> xyz2, std::vector<double> xyz3);
+  void dagmcInstance(moab::DagMC* DAG); 
+  std::vector<double> random_pt();
 };
 
 #endif

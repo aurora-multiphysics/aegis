@@ -23,7 +23,8 @@ eqdskData equData::get_eqdsk_struct()
 
 // Read eqdsk file
 void equData::read_eqdsk(std::string filename)
-{
+{ 
+    LOG_TRACE << "-----equData.read_eqdsk()-----";
     eqdsk_file.open(filename);
     std::stringstream header_ss;
     std::string temp;
@@ -168,11 +169,15 @@ void equData::read_eqdsk(std::string filename)
     // scale for psibig (TODO)
     // if psibig 
     // scale by 2pi
+
+    
 }
 
 // Read 1D array from eqdsk (PRIVATE)
 std::vector<double> equData::read_array(int n, std::string varName)
 {
+  LOG_TRACE << "-----equData.read_array()-----";
+
   std::vector<double> work1d(n); // working vector of doubles of size n
   LOG_WARNING << "Reading " << varName << " values...";
   for(int i=0; i<nw; i++) // Read in n elements into vector from file
@@ -181,11 +186,15 @@ std::vector<double> equData::read_array(int n, std::string varName)
   }
   LOG_WARNING << "Number of " << varName << " values read = " << n;
   return work1d;
+
+ 
 }
 
 // Read 2D array from eqdsk (PRIVATE)
 std::vector<std::vector<double>> equData::read_2darray(int nx, int ny, std::string varName)
 {
+  LOG_TRACE << "-----equData.read_2darray()-----";
+
   std::vector<std::vector<double>> work2d(nw, std::vector<double>(nh));
   LOG_WARNING << "Reading " << varName << " values...";
   for (int i=0; i<nx; i++)
@@ -198,11 +207,14 @@ std::vector<std::vector<double>> equData::read_2darray(int nx, int ny, std::stri
   }
   LOG_WARNING << "Number of " << varName << " values read = " << nx*ny;
   return work2d;
+
+  
 }
 
 // Write out eqdsk data back out in eqdsk format
 void equData::write_eqdsk_out()
 {
+  LOG_TRACE << "-----equData.write_eqdsk_out()-----";
   std::ofstream eqdsk_out("eqdsk.out");
   eqdsk_out << std::setprecision(9) << std::scientific;
   eqdsk_out << std::setiosflags(std::ios::uppercase);
@@ -275,11 +287,14 @@ void equData::write_eqdsk_out()
     counter = 0;
     eqdsk_out << std::endl;
   }
+
+  
 }
 
 // Write singular line out in EQDSK format (PRIVATE) 
 int equData::eqdsk_line_out(std::ofstream &file, double element, int counter)
     {
+      LOG_TRACE << "-----equData.eqdsk_line_out()-----";
       if (counter == 5)
       {
         file << std::endl;
@@ -294,24 +309,29 @@ int equData::eqdsk_line_out(std::ofstream &file, double element, int counter)
         file << element;
       }
       counter +=1;
+
+     
+
       return counter;
     }
 
 // Write out eqdsk arrays (PRIVATE)
 void equData::eqdsk_write_array(std::ofstream &file, std::vector<double> array, int counter)
 {
+  LOG_TRACE << "-----equData.eqdsk_write_array()-----";
   double element;
   for(int i=0; i<nw; i++)
   {
     element = array[i];
     counter = eqdsk_line_out(file, element, counter);
   }
+  
 }
 
 // Initialise the 1D arrays and 2d spline functions
 void equData::init_interp_splines()
 {
-
+  LOG_TRACE << "-----equData.init_interp_splines()-----";
   double r_pts[nw];
   double z_pts[nh];
   r_pts[0] = rmin;
@@ -365,7 +385,7 @@ void equData::init_interp_splines()
 
 
   // Construct the spline interpolant for flux function psi(R,Z) 
-  alglib::spline2dbuildbilinearv(r_grid, nw, z_grid, nh, psi_grid, 1, psiSpline);
+  alglib::spline2dbuildbicubicv(r_grid, nw, z_grid, nh, psi_grid, 1, psiSpline);
   
   // Construct the spline interpolant for toroidal component flux function I(psi) aka f(psi) 
   alglib::spline1dbuildlinear(psi_1dgrid ,f_grid, fSpline);
@@ -377,12 +397,13 @@ void equData::init_interp_splines()
 
   // create 1d spline for f(psi) aka eqdsk.fpol
   //alglib::spline1dbuildlinear(f_grid,)
-
+  
 } 
 
 // Write out psi(R,Z) data for gnuplotting
 void equData::gnuplot_out()
 {
+  LOG_TRACE << "-----equData.gnuplot_out()-----";
   std::ofstream psiRZ_out;
   psiRZ_out.open("psi_RZ.gnu"); 
 
@@ -395,13 +416,14 @@ void equData::gnuplot_out()
     }
     psiRZ_out << std::endl;
   }
-
+  
 }
 
 // Set sign to determine if psi decreasing or increasing away from centre
 // (+1 -> Increase outwards, -1 -> Decrease outwards)
 void equData::set_rsig() 
 {
+  LOG_TRACE << "-----equData.set_rsig()-----";
   if (psiqbdry-psiaxis < 0)
   {
     rsig = -1.0;
@@ -411,12 +433,14 @@ void equData::set_rsig()
     rsig = 1.0;
   }
 
-  LOG_INFO << "Value of rsig (psiqbdry-psiaxis) = " << rsig;
+  LOG_WARNING << "Value of rsig (psiqbdry-psiaxis) = " << rsig;
+  
 }
 
 // Find central psi extrema
-void equData::centre()
+void equData::centre(int cenopt)
 {
+  LOG_TRACE << "-----equData.centre-----";
   int igr; // R position index of global extremum
   int igz; // Z position index of global extremum
   int soutr = 10; // maximum number of outer searches
@@ -427,6 +451,7 @@ void equData::centre()
   int iz; // current Z position as index
   double zpp; // current value of psi
   double zpg; // value of psi at global extremum
+  
 
 
   // using central index as guess (See beq_centre for other cases for initial guess)
@@ -437,61 +462,58 @@ void equData::centre()
   isr = 1;
   isz = 1;
 
-  for (int j=1; j<=soutr; j++)
+
+  switch (cenopt)
   {
-    ir = igr;
-    iz = igz;
-    zpg = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1));
+  case 1:
+    rcen = eqdsk.rmaxis;
+    zcen = eqdsk.zmaxis;
+    LOG_INFO << "(Rcen,Zcen) values taken from eqdsk (Rmaxis,Zmaxis)";
+    LOG_WARNING << "Rcen value calculated from equData.centre() = " << rcen;
+    LOG_WARNING << "Zcen value calculated from equData.centre() = " << zcen;
+    break; // end case 1
 
-    // search in r
-    // change direction if necessary
-    ir = igr+isr;
-    zpp = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1)*dz);
-    if ((zpp-zpg)*rsig < 0)
+  case 2:
+    for (int j=1; j<=soutr; j++)
     {
-      igr = ir;
-      zpg = zpp;
-    }
-    else
-    {
-      isr = -1;
       ir = igr;
-    }
+      iz = igz;
+      zpg = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1));
 
-    for (int i=1; i<=sinr; i++)
-    {
-      ir = ir+isr;
+      // search in r
+      // change direction if necessary
+      ir = igr+isr;
       zpp = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1)*dz);
-      if ((zpp-zpg)*rsig <0)
+      if ((zpp-zpg)*rsig < 0)
       {
         igr = ir;
         zpg = zpp;
       }
       else
       {
-        break;
+        isr = -1;
+        ir = igr;
       }
-    }
 
-    // search in Z
-    // change direction if necessary
+      for (int i=1; i<=sinr; i++)
+      {
+        ir = ir+isr;
+        zpp = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1)*dz);
+        if ((zpp-zpg)*rsig <0)
+        {
+          igr = ir;
+          zpg = zpp;
+        }
+        else
+        {
+          break;
+        }
+      }
 
-    iz = igz+isz;
-    zpp = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1)*dz);
-    if ((zpp-zpg)*rsig < 0)
-    {
-      igz = iz;
-      zpg = zpp;
-    }
-    else
-    {
-      isz = -1;
-      iz = igz;
-    }
+      // search in Z
+      // change direction if necessary
 
-    for (int i=1; i<=sinr; i++)
-    {
-      iz = iz+isz;
+      iz = igz+isz;
       zpp = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1)*dz);
       if ((zpp-zpg)*rsig < 0)
       {
@@ -500,31 +522,50 @@ void equData::centre()
       }
       else
       {
-        break;
+        isz = -1;
+        iz = igz;
       }
+
+      for (int i=1; i<=sinr; i++)
+      {
+        iz = iz+isz;
+        zpp = spline2dcalc(psiSpline, rmin+(ir-1)*dr, zmin+(iz-1)*dz);
+        if ((zpp-zpg)*rsig < 0)
+        {
+          igz = iz;
+          zpg = zpp;
+        }
+        else
+        {
+          break;
+        }
+      }
+
+      // check global minimum
+      zpp = spline2dcalc(psiSpline, rmin+(igr-2)*dr, zmin+(igz-1)*dz);
+      if ((zpp-zpg)*rsig < 0 ) {continue;}
+      zpp = spline2dcalc(psiSpline, rmin+igr*dr, zmin+(igz-1)*dz);
+      if ((zpp-zpg)*rsig < 0 ) {continue;}
+      zpp = spline2dcalc(psiSpline, rmin+(igr-1)*dr, zmin+(igz-2)*dz);
+      if ((zpp-zpg)*rsig < 0) {continue;}
+      zpp = spline2dcalc(psiSpline, rmin+(igr-1)*dr, zmin+igz*dz);
+      if ((zpp-zpg)*rsig < 0) {continue;}
+      break;
     }
+    rcen = rmin+(igr-1)*dr;
+    zcen = zmin+(igz-1)*dz;
 
-    // check global minimum
-    zpp = spline2dcalc(psiSpline, rmin+(igr-2)*dr, zmin+(igz-1)*dz);
-    if ((zpp-zpg)*rsig < 0 ) {continue;}
-    zpp = spline2dcalc(psiSpline, rmin+igr*dr, zmin+(igz-1)*dz);
-    if ((zpp-zpg)*rsig < 0 ) {continue;}
-    zpp = spline2dcalc(psiSpline, rmin+(igr-1)*dr, zmin+(igz-2)*dz);
-    if ((zpp-zpg)*rsig < 0) {continue;}
-    zpp = spline2dcalc(psiSpline, rmin+(igr-1)*dr, zmin+igz*dz);
-    if ((zpp-zpg)*rsig < 0) {continue;}
-    break;
+    LOG_INFO << "New (Rcen,Zcen) values calculated";
+    LOG_WARNING << "Rcen value calculated from equData.centre() = " << rcen;
+    LOG_WARNING << "Zcen value calculated from equData.centre() = " << zcen;
+    break; // end case 2
   }
-  rcen = rmin+(igr-1)*dr;
-  zcen = zmin+(igz-1)*dz;
-
-  LOG_WARNING << "Rcen value calculated from equData.centre() = " << rcen;
-  LOG_WARNING << "Zcen value calculated from equData.centre() = " << zcen;
 
 }
 
 void equData::r_extrema()
 {
+  LOG_TRACE << "-----equData.r_extrema()-----";
   int nrsrsamp; // number of samples in r
   double zpsi; // psi
   double zdpdr; // dpsi/dr
@@ -599,12 +640,14 @@ void equData::r_extrema()
     //if (zpsi<psimin)
   }
 
+  
 }
 
 
 // Create 2d spline structures for R(psi,theta) and Z(psi,theta)
 void equData::rz_splines()
 {
+  LOG_TRACE << "-----equData.rz_splines()-----";
   int iext; // maximum allowed number of knots for spline in r
   int iknot; // actual number of knots for splinie in r
   int intheta; // actual number of angles defining R,Z(psi,theta)
@@ -628,6 +671,10 @@ void equData::rz_splines()
   double zpsi; // psi
   double zpsi_i; // psi_i
   
+  double ntmax = 33;
+  double ntmin = 1;
+
+  intheta = ntmax - ntmin+1;
 
   // loop over angle
 
@@ -638,10 +685,11 @@ void equData::rz_splines()
     ztheta = thetamin + j*dtheta;
     zcostheta = cos(ztheta);
     zsintheta = sin(ztheta);
+    std::cout << "THETAMIN = " << thetamin << std::endl;
 
 
   }
-
+  
 }
 
 // Caculate B field vector (in toroidal polars) at given position
@@ -672,22 +720,33 @@ std::vector<double> equData::b_field(std::vector<double> position,
     zz = polarPosition[1];
   }
 
-  // evaluate psi and psi derivs at given (R,Z) coords
-  alglib::spline2ddiff(psiSpline, zr, zz, zpsi, zdpdr, zdpdz, null); 
+  if (zr < rmin || zr > rmax || zz < zmin || zz > zmax )
+  {
+    bVector[0] = 0;
+    bVector[1] = 0;
+    bVector[2] = 0;
+  }
+  else
+  {
+    // evaluate psi and psi derivs at given (R,Z) coords
+    alglib::spline2ddiff(psiSpline, zr, zz, zpsi, zdpdr, zdpdz, null); 
 
-  // evaluate I aka f at psi (I aka f is the flux function) 
-  zf = alglib::spline1dcalc(fSpline, zpsi);
+    // evaluate I aka f at psi (I aka f is the flux function) 
+    zf = alglib::spline1dcalc(fSpline, zpsi);
 
-  // calculate B in cylindrical toroidal polars
-  bVector[0] = -zdpdz/zr; // B_R
-  bVector[1] = zdpdr/zr; // B_Z
-  bVector[2] = zf/zr; // B_T - toroidal component of field directed along phi
+    // calculate B in cylindrical toroidal polars
+    bVector[0] = -zdpdz/zr; // B_R
+    bVector[1] = zdpdr/zr; // B_Z
+    bVector[2] = zf/zr; // B_T - toroidal component of field directed along phi
+  }
 
   // return the calculated B vector 
   return bVector;
+
+  
 }
 
-std::vector<double> equData::b_field_cart(std::vector<double> polarBVector, double phi)
+std::vector<double> equData::b_field_cart(std::vector<double> polarBVector, double phi, int normalise)
 {
   std::vector<double> cartBVector(3);
   double zbx; // cartesian Bx component
@@ -707,11 +766,23 @@ std::vector<double> equData::b_field_cart(std::vector<double> polarBVector, doub
   cartBVector[1] = zby;
   cartBVector[2] = zbz; 
 
+  if (normalise == 1)
+  {
+    double norm;
+    norm = sqrt(pow(cartBVector[0],2) + pow(cartBVector[1],2) + pow(cartBVector[2],2));
+    cartBVector[0] = cartBVector[0]/norm;
+    cartBVector[1] = cartBVector[1]/norm; 
+    cartBVector[2] = cartBVector[2]/norm;
+  }
+
   return cartBVector;
 }
 
+
+
 void equData::write_bfield(bool plotRZ, bool plotXYZ)
 {
+  LOG_TRACE << "-----equData.b_field_write()-----";
   std::vector<double> polarPos(3); // cartesian position P(x,y,z)
   std::vector<double> polarB(3); // polar toroidal magnetic field B(Br, Bz, Bphi)
   
@@ -766,7 +837,7 @@ void equData::write_bfield(bool plotRZ, bool plotXYZ)
             LOG_ERROR << "Negative R Values when attempting plot magnetic field. Fixup eqdsk required";
           }
           polarB = b_field(polarPos, "polar"); // calculate B(R,Z,phi)
-          cartB = b_field_cart(polarB, polarPos[2]); // transform to B(x,y,z)
+          cartB = b_field_cart(polarB, polarPos[2], 0); // transform to B(x,y,z)
           cartPos = coordTfm::cart_to_polar(polarPos, "backwards"); // transform position to cartesian
 
           // write out magnetic field data for plotting
@@ -787,11 +858,13 @@ void equData::write_bfield(bool plotRZ, bool plotXYZ)
     //  BField_out_xyz << std::endl;
     }
   }
+  
 }
 
 // get toroidal ripple term in magnetic field from external file or otherwise. By default use MAST term
 std::vector<double> equData::b_ripple(std::vector<double> pos, std::vector<double> bField)
 {
+  LOG_TRACE << "-----equData.b_ripple()-----";
   std::vector<double> bRipple(3); // toroidal ripple term
   double zr; // local R
   double zz; // local Z
@@ -805,5 +878,5 @@ std::vector<double> equData::b_ripple(std::vector<double> pos, std::vector<doubl
 
   
 
-
+  
 }

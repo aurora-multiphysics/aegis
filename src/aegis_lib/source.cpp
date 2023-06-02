@@ -5,6 +5,8 @@
 #include <math.h>
 #include "source.h"
 
+
+
 //create_source()
 
 // OpenMC has function IndependantSource() that generates an independant source
@@ -34,9 +36,9 @@
 // 
 
 
-pointSource::pointSource(double xyz[3])
+pointSource::pointSource(std::vector<double> xyz)
 {
-  for (int i=0; i<3; i++)
+  for (int i=0; i<xyz.size(); i++)
   {
     r[i] = xyz[i];
   }
@@ -87,6 +89,8 @@ boxSource::boxSource(double xyz1[3], double xyz2[3])
   }  
 }
 
+
+
 void boxSource::get_pt()
 {
   std::random_device dev;
@@ -112,4 +116,63 @@ void boxSource::get_dir()
   dir[2] = cos(phi);
 }
 
+/////////
 
+// define plane via cartesian plane equation ax + by + cz + d = 0
+triSource::triSource(std::vector<double> xyz1, std::vector<double> xyz2, std::vector<double> xyz3)
+{
+  xyzA = xyz1;
+  xyzB = xyz2;
+  xyzC = xyz3;
+
+  std::vector<double> line1(3), line2(3);
+  for (int i=0; i<3; i++)
+  {
+    line1[i] = xyzB[i] - xyzA[i];
+    line2[i] = xyzC[i] - xyzA[i];
+  }
+
+  std::vector<double> normalVec(3);
+
+
+  // recover vector normal to plane 
+  normalVec[0] = line1[1]*line2[2] - line1[2]*line2[1];
+  normalVec[1] = -(line1[0]*line2[2] - line1[2]*line2[0]);
+  normalVec[2] = line1[0]*line2[1] - line1[1]*line2[0];
+
+  // recover constant D in plane equation
+  D = -(normalVec[0]*xyzA[0] + normalVec[1]*xyzA[1] + normalVec[2]*xyzA[2]);
+  normal = normalVec;
+}
+
+std::vector<double> triSource::random_pt()
+{
+  std::random_device dev;
+  std::mt19937 rng(dev());
+  std::uniform_real_distribution<double> dist(0,1);
+  double randomA = dist(rng);
+  double randomB = dist(rng);
+
+  if ((randomA + randomB) > 1) 
+  {
+    randomA = 1 - randomA;
+    randomB = 1 - randomB;
+  }
+
+  std::vector<double> randomPt(3);
+
+  for(int i=0; i<3; i++)
+  {
+    randomPt[i] = xyzA[i] + randomA*(xyzB[i] - xyzA[i]) + randomB*(xyzC[i] - xyzA[i]);
+  }
+  return randomPt;
+}
+
+
+
+
+void triSource::dagmcInstance(moab::DagMC* DAG)
+{
+  DAGInstance = DAG;
+  DAGInstance->write_mesh("dag.out", 1);
+}

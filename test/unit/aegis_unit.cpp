@@ -364,7 +364,8 @@ TEST_F(aegisUnitTest, count_ray_facet_hits){
   DAG->moab_instance()->get_entities_by_type(0, MBTRI, Facets);
   surfaceIntegrator integrator(Facets);
   double pDir[3] = {0, 0, 1};
-  double pSource[3] = {0, 25, -5};
+  std::vector<double> pSource(3);
+  pSource = {0, 25, -5};
   pointSource spatialSource(pSource);
   spatialSource.set_dir(pDir);
   int nsample = 100;
@@ -428,7 +429,7 @@ TEST_F(aegisUnitTest, polar_flux_coord_transform){
   equData EquData;
   EquData.read_eqdsk("test.eqdsk");
   EquData.init_interp_splines();
-  EquData.centre();
+  EquData.centre(1);
 
   std::vector<double> input = {2.4, 5.3, -2.0};
   std::vector<double> output;

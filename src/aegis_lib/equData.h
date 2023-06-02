@@ -45,8 +45,6 @@ struct eqdskData
 };
 
 
-
-
 class equData{
 
   eqdskData eqdsk;  
@@ -78,8 +76,10 @@ class equData{
 
   public:
 
- 
-  
+  // Aegis run parameters
+  int cenopt; // option to determine how (Rcen,Zcen) is calculated 
+              // 1 - Use values from eqdsk 
+              // 2 - Calculate new values from starting search in centre of grid (currently broken) 
 
   int nw; // Number of horizontal R points in grid
   int nh; // Number of vertical Z points in grid
@@ -143,7 +143,7 @@ class equData{
   void gnuplot_out();
 
   // Find central psi extrema
-  void centre();
+  void centre(int cenopt);
 
   // calculate r_min and r_max as functions of theta_j
   void r_extrema();
@@ -153,11 +153,10 @@ class equData{
 
   // Caculate B field vector (in toroidal polars) at given position
   // set string to "polar" if position vector already in polars
-  std::vector<double> b_field(std::vector<double> position, 
-                              std::string startingFrom);
+  std::vector<double> b_field(std::vector<double> position, std::string startingFrom);
   
   // Convert B Field vectors to cartesian given polar form and value of angle 
-  std::vector<double> b_field_cart(std::vector<double> polarBVector, double phi);
+  std::vector<double> b_field_cart(std::vector<double> polarBVector, double phi, int normalise); 
 
   // Write out positions and associated BField vectors in cartesian and/or polar toroidal
   void write_bfield(bool plotRZ, bool plotXYZ);

@@ -3,7 +3,7 @@
 #include <moab/Core.hpp>
 #include "moab/Interface.hpp"
 #include <moab/OrientedBoxTreeTool.hpp>
-
+#include "simpleLogger.h"
 
 
 
@@ -11,7 +11,10 @@
 // initialise list of EntityHandles and maps associated with 
 surfaceIntegrator::surfaceIntegrator(moab::Range const &Facets)
 {
+  LOG_TRACE << "-----surfaceIntegrator CONSTRUCTOR()-----";
+
   nFacets = Facets.size();
+
   for (auto i:Facets)
   {
     facetEntities.push_back(i);
@@ -41,14 +44,28 @@ void surfaceIntegrator::ray_reflect_dir(double const prev_dir[3], double const s
   }
 }
 
-int_sorted_map surfaceIntegrator::sort_map(std::unordered_map<moab::EntityHandle, int> const &map)
+// return sorted map of EntityHandles against ints 
+void surfaceIntegrator::facet_values(std::unordered_map<moab::EntityHandle, int> const &map)
 {
-  int_sorted_map sorted_map(map.begin(), map.end());
-  return sorted_map;
+    int_sorted_map sortedMap(map.begin(), map.end());
+    for (auto const &pair: sortedMap)
+    {
+      if (pair.second > 0)
+      {
+        std::cout << "EntityHandle: " << pair.first << "[" << pair.second << "] rays hit" << std::endl;
+      }
+    }
 }
 
-dbl_sorted_map surfaceIntegrator::sort_map(std::unordered_map<moab::EntityHandle, double> const &map)
+// return sorted map of EntityHandles against doubles 
+void surfaceIntegrator::facet_values(std::unordered_map<moab::EntityHandle, double> const &map)
 {
-  dbl_sorted_map sorted_map(map.begin(), map.end());
-  return sorted_map;
+    dbl_sorted_map sortedMap(map.begin(), map.end());
+    for (auto const &pair: sortedMap)
+    {
+      if (pair.second > 0)
+      {
+        std::cout << "EntityHandle: " << pair.first << "[" << pair.second << "] rays hit" << std::endl;
+      }
+    }
 }

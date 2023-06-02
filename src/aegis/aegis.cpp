@@ -29,6 +29,7 @@
 #include "integrator.h"
 #include "coordtfm.h"
 #include "alglib/interpolation.h"
+#include "particleTrack.h"
 
 using namespace moab;
 using namespace coordTfm;
@@ -40,6 +41,7 @@ moab::DagMC* DAG;
 void next_pt(double prev_pt[3], double origin[3], double next_surf_dist,
                           double dir[3], std::ofstream &ray_intersect);
 double dot_product(double vector_a[], double vector_b[]);
+double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
 void reflect(double dir[3], double prev_dir[3], EntityHandle next_surf);
 double * vecNorm(double vector[3]);
 
@@ -67,45 +69,53 @@ int main() {
   DAG->init_OBBTree(); // initialise OBBTree
   DAG->setup_geometry(Surfs, Vols);
   //DAG->create_graveyard();
+  DAG->remove_graveyard();
   DAG->moab_instance()->get_entities_by_type(0, MBTRI, Facets);
   LOG_WARNING << "No of triangles in geometry " << Facets.size();
 
-  // moab::EntityHandle triangle_set, vertex_set;
-  // DAG->moab_instance()->create_meshset( moab::MESHSET_SET, triangle_set );
-  // DAG->moab_instance()->add_entities(triangle_set, Facets);
-  // int num_facets;
-  // DAG->moab_instance()->get_number_entities_by_handle(triangle_set, num_facets);
+  //DAG->moab_instance()->get_entities_by_dimension()
 
-  // DAG->moab_instance()->get_entities_by_type(0, MBVERTEX, Facet_vertices);
-  // LOG_WARNING << "Number of vertices in geometry " << Facet_vertices.size();
-  // DAG->moab_instance()->create_meshset( moab::MESHSET_SET, vertex_set );
-  // DAG->moab_instance()->add_entities(vertex_set, Facet_vertices);
-  // DAG->moab_instance()->get_number_entities_by_dimension(vertex_set, 1 ,num_facets);
-  // moab::Range vertAdjs;
+  moab::EntityHandle triangle_set, vertex_set;
+  DAG->moab_instance()->create_meshset( moab::MESHSET_SET, triangle_set );
+  DAG->moab_instance()->add_entities(triangle_set, Facets);
+  int num_facets;
+  DAG->moab_instance()->get_number_entities_by_handle(triangle_set, num_facets);
 
-  // moab::Range ents;
-  // DAG->moab_instance()->get_entities_by_handle(0, ents);
-  // for (auto i:Facets)
-  // {
-  //   moab::Range verts;
-  //   DAG->moab_instance()->get_adjacencies(&i, 1, 0, false, verts);
-  //   std::cout << "Tri " << DAG->moab_instance()->id_from_handle(i) << " vertex adjacencies:" << std::endl;
-  //   std::vector<double> coords(3*verts.size());
-  //   DAG->moab_instance()->get_coords(verts, &coords[0]);
-  //   std::cout << "Vertex " << DAG->get_entity_id() << std::endl;
+  DAG->moab_instance()->get_entities_by_type(0, MBVERTEX, Facet_vertices);
+  LOG_WARNING << "Number of vertices in geometry " << Facet_vertices.size();
+  std::cout << std::endl;
+  DAG->moab_instance()->create_meshset( moab::MESHSET_SET, vertex_set );
+  DAG->moab_instance()->add_entities(vertex_set, Facet_vertices);
+  DAG->moab_instance()->get_number_entities_by_dimension(vertex_set, 1 ,num_facets);
+  moab::Range vertAdjs;
+
+  moab::Range ents;
+  DAG->moab_instance()->get_entities_by_handle(0, ents);
+  for (auto i:Facets)
+  {
+    moab::Range verts;
+    DAG->moab_instance()->get_adjacencies(&i, 1, 0, false, verts);
+    //std::cout << "Tri " << DAG->moab_instance()->id_from_handle(i) << " vertex adjacencies:" << std::endl;
+    std::vector<double> coords(3*verts.size());
+    DAG->moab_instance()->get_coords(verts, &coords[0]);
+    for (int j=0; j<verts.size(); j++)
+    {
+      //std::cout << "Vertex " << DAG->moab_instance()->id_from_handle(verts[j]) << "(" <<  
+      //coords[0+j] << ", " << coords[1+j] << ", "  << coords[2+j] << ")" << std::endl;
+    }
+      //std::cout << std::endl;
+
+    // for (auto j:verts)
+    // {
+    //   double coords[3];
+    //   DAG->moab_instance()->get_coords(&j, 3);
+    //   std::cout << "Coords of each vertex" << coords[0] << " " << coords[1] << " " << coords[2] << std::endl;
+    // }
+  }
 
 
-  //   // for (auto j:verts)
-  //   // {
-  //   //   double coords[3];
-  //   //   DAG->moab_instance()->get_coords(j, coords);
-  //   //   std::cout << "Coords of each vertex" << coords[0] << " " << coords[1] << " " << coords[2] << std::endl;
-  //   // }
-  // }
 
-
-
-  DAG->write_mesh("dag.out", 1);
+  //DAG->write_mesh("dag.out", 1);
   EntityHandle prev_surf; // previous surface id
   EntityHandle next_surf; // surface id
   double next_surf_dist=0.0; // distance to the next surface ray will intersect
@@ -156,7 +166,7 @@ int main() {
       ray_input.close();
 
       //now you can do the whatever processing you want on the vector
-      int j=0;
+      int j=0;DAG->write_mesh("dag.out", 1);
       int k;
       int qrymax = rayqry.size();
       double dir_array[rayqry.size()][3];
@@ -243,7 +253,8 @@ int main() {
     int lostRays=0;
 
     double intersect_pt[3];
-    double pSource[3] = {0, 0, -30};
+    std::vector<double> pSource(3); 
+    pSource = {0, 0, -30};
     EntityHandle meshElement;
     double distanceMesh;
     pointSource spatialSource(pSource);
@@ -317,17 +328,8 @@ int main() {
     LOG_WARNING << "Number of rays lost = " << lostRays;
     LOG_WARNING << "Number of rays launched = " << nSample;
     LOG_WARNING << "Number of ray-facet intersections = " << integrator.raysHit;
-    int_sorted_map nRays_sorted = integrator.sort_map(integrator.nRays);
 
-
-    for (auto const &pair: nRays_sorted)
-    {
-      if (pair.second > 0)
-      {
-        LOG_WARNING << "EntityHandle: " << pair.first << "[" << pair.second << "] rays hit" << std::endl;
-      }
-    }
-
+    integrator.facet_values(integrator.nRays);
 
 
 
@@ -351,16 +353,236 @@ int main() {
 
     EquData.init_interp_splines();
     EquData.gnuplot_out();
-    EquData.centre();
+    EquData.centre(1);
 
+    // attempting to create a trace through magnetic field 
+    // Currently not working
+
+    
     bool plotRZ = true;
     bool plotXYZ = true;
     EquData.write_bfield(plotRZ, plotXYZ);
+    std::vector<double> cartPosSource(3);
+    double s, ds;
+    double normB[3];
+    double norm;
+    std::ofstream trace1("trace1.txt");
+    std::ofstream trace2("trace2.txt");
+    std::ofstream trace3("trace3.txt");
+
+    double newptA[3];
+    double phi;
+    std::vector<double> Bfield;
+    std::vector<double> polarPos(3); 
+    std::vector<double> newPt(3);
+
+    ////////// Particle tracking
+
+    int nS;
+    // Plasma facing surface of HCLL first wall structure
+    moab::Range targetFacets; // range containing all of the triangles in the surface of interest
+     
+    // can specify particular surfaces of interest 
+    EntityHandle targetSurf; // surface of interest
+    targetSurf = DAG->entity_by_id(2, 2143); // front facing surface of HCLL
+
+
+    DAG->moab_instance()->list_entity(targetSurf); // list geometric information about surface
+    DAG->moab_instance()->get_entities_by_type(targetSurf, MBTRI, targetFacets);
+    surfaceIntegrator integrator(targetFacets);
+    EntityHandle hit;
+
+    std::vector<double> triA(3), triB(3), triC(3);
+    std::vector<double> randTri;
+    double fieldDir[3];
+    double Bn; // B.n at surface of geometry 
+    ds = 0.01;
+    nS = 100000;
+    int iteration_count = 0; 
+    int trace_count = 0;
+
+    int zSign;
+    int terminationType;
+    for (auto i:targetFacets)
+    {
+      DAG->next_vol(Surfs[0], vol_h, vol_h);
+      iteration_count +=1;
+      moab::Range HCLLverts;
+      DAG->moab_instance()->get_adjacencies(&i, 1, 0, false, HCLLverts);
+      std::vector<double> HCLLcoords(9);
+      DAG->moab_instance()->get_coords(HCLLverts, &HCLLcoords[0]);
+     
+      for (int j=0; j<3; j++)
+      {
+        triA[j] = HCLLcoords[j];
+        triB[j] = HCLLcoords[j+3];
+        triC[j] = HCLLcoords[j+6];
+      }
+
+      triSource Tri(triA, triB, triC);
+      randTri = Tri.random_pt();
+
+      double triStart[3];
+
+      
+      
+
+      trace1 << randTri[0] << " " << randTri[1] << " " << randTri[2] << std::endl;
+      trace3 << randTri[0] << " " << randTri[1] << " " << randTri[2] << std::endl;
+
+      triStart[0] = randTri[0];
+      triStart[1] = randTri[1];
+      triStart[2] = randTri[2];
+
+      if (triStart[2] > 0) 
+      {
+        zSign = 1;
+        terminationType = 2;
+      }
+      else 
+      {
+        zSign = -1;
+        terminationType = 2;
+      }
+
+      Bfield = EquData.b_field(randTri, "cart");
+
+      if (Bfield[0] == 0 && Bfield[1] == 0 && Bfield[2] == 0)
+      {
+        LOG_INFO << "Position of triangle start not in magnetic field. Skipping to next triangle";
+        continue;
+      }
+
+      polarPos = coordTfm::cart_to_polar(randTri,"forwards");
+      Bfield = EquData.b_field_cart(Bfield, polarPos[2], 0);
+      norm = sqrt(pow(Bfield[0],2) + pow(Bfield[1],2) + pow(Bfield[2],2));
+      normB[0] = Bfield[0]/norm;
+      normB[1] = Bfield[1]/norm; 
+      normB[2] = Bfield[2]/norm;
+
+      Bn = dot_product(Bfield,Tri.normal);
+      if (Bn < 0)
+      {
+        fieldDir[0] = -normB[0];
+        fieldDir[1] = -normB[1];
+        fieldDir[2] = -normB[2];
+
+      }
+      else if (Bn > 0)
+      {
+        fieldDir[0] = normB[0];
+        fieldDir[1] = normB[1];
+        fieldDir[2] = normB[2];
+      }
+
+      // DAG->ray_fire(vol_h, triStart, normB, next_surf, next_surf_dist, &history, ds, 1);
+      // std::cout << Bfield << std::endl;
+
+      DAG->ray_fire(vol_h, triStart, fieldDir, next_surf, next_surf_dist, &history, ds, 1);
+      if (next_surf != 0)
+        {
+          DAG->next_vol(next_surf, vol_h, vol_h);
+          history.get_last_intersection(hit);
+          integrator.count_hit(hit);
+          //history.reset();
+          continue;
+        }
+      for (int i=0; i<3; ++i)
+      {
+        newPt[i] = triStart[i] + fieldDir[i]*ds;
+      }
+      trace1 << newPt[0] << " " << newPt[1] << " " << newPt[2] << std::endl;
+      history.rollback_last_intersection();
+
+      for (int i=0; i < nS; ++i, s+ds)
+      {
+        newptA[0] = newPt[0]; 
+        newptA[1] = newPt[1];
+        newptA[2] = newPt[2];
+        DAG->ray_fire(vol_h, newptA, fieldDir, next_surf, next_surf_dist, &history, ds, 1);
+        for (int i=0; i<3; ++i)
+        {
+          newPt[i] = newPt[i] + fieldDir[i]*ds;
+        }
+
+        trace1 << newPt[0] << " " << newPt[1] << " " << newPt[2] << std::endl;
+
+        if (next_surf != 0)
+        {
+          DAG->next_vol(next_surf, vol_h, vol_h);
+          history.get_last_intersection(hit);
+          integrator.count_hit(hit);
+          //history.reset();
+          break;
+        }
+        history.rollback_last_intersection();
+
+        
+        Bfield = EquData.b_field(newPt, "cart");
+
+        if (Bfield[0] == 0)
+        {
+          LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";
+          break;
+        }
+        else
+        {
+          polarPos = coordTfm::cart_to_polar(newPt,"forwards");
+          Bfield = EquData.b_field_cart(Bfield, polarPos[2], 0);
+          norm = sqrt(pow(Bfield[0],2) + pow(Bfield[1],2) + pow(Bfield[2],2)); 
+          normB[0] = Bfield[0]/norm;
+          normB[1] = Bfield[1]/norm; 
+          normB[2] = Bfield[2]/norm;
+
+          if (Bn < 0)
+          {
+            fieldDir[0] = -normB[0];
+            fieldDir[1] = -normB[1];
+            fieldDir[2] = -normB[2];
+
+          }
+          else if (Bn > 0)
+          {
+            fieldDir[0] = normB[0];
+            fieldDir[1] = normB[1];
+            fieldDir[2] = normB[2];
+          }    
+        }
+
+
+        if (zSign == 1)
+        {
+          if (newPt[2] < EquData.zcen) // break when crossing zcen
+          {
+            break;
+          } 
+        }
+        else if (zSign == -1)
+        {
+          if (newPt[2] > EquData.zcen)
+          {
+            break;
+          }
+        }
+      }
+            
+
+
+    }
+
+    LOG_WARNING << "Number of rays launched = " << targetFacets.size();
+    LOG_WARNING << "Number of ray-facet intersections = " << integrator.raysHit;
+    integrator.facet_values(integrator.nRays);
+
+
+//////////
+
+
 
   }
   else // No runcase specified
   {
-    LOG_FATAL << "No runcase specified - please set runcase parameter as either 'specific' or 'rayqry'";
+    LOG_FATAL << "No runcase specified - please choose from 'specific', 'rayqry' or 'eqdsk'";
   }
 
   return 0;
@@ -416,3 +638,11 @@ double dot_product(double vector_a[], double vector_b[]){
    product = product + vector_a[i] * vector_b[i];
    return product;
 }
+
+double dot_product(std::vector<double> vector_a, std::vector<double> vector_b){
+   double product = 0;
+   for (int i = 0; i < 3; i++)
+   product = product + vector_a[i] * vector_b[i];
+   return product;
+}
+
