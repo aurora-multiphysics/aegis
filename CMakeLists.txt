@@ -47,7 +47,7 @@ message(STATUS "Found DAGMC config in: ${DAGMC_DIR}")
 message(STATUS "DAGMC_INCLUDE_DIRS is set to: ${DAGMC_INCLUDE_DIRS}")
 message(STATUS "DAGMC_LIBRARIES is set to: ${DAGMC_LIBRARIES}")
 
-find_library(libopenmc.so ~/openmc/openmc/openmc/lib/)
+#find_library(libopenmc.so ~/openmc/openmc/openmc/lib/)
 
 
 enable_testing()
