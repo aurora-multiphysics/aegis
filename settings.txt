@@ -1,4 +1,4 @@
-geo_input hcll_up.h5m
+geo_input hcll.h5m
 ray_qry exps/exps00010000.qry
 runcase eqdsk
 eqdsk_file eqdsk/test.eqdsk 

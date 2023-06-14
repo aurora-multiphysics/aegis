@@ -43,9 +43,10 @@ class surfaceIntegrator
   public:
 
   int raysTotal=0; // Total number of rays fired into geometry
-  int raysHit=0; // Number of rays hit
+  int raysHit=0; // Number of rays hit shadowing
+  int raysLost=0;
+  int raysHeatDep=0;
   int nFacets=0; // Number of facets in geometry
-  int raysLost;
   std::vector<EntityHandle> facetEntities; // list of all entity handles in geometry
   std::unordered_map<EntityHandle, int> nRays; // Number of rays intersected with a given surface EntityHandle
   std::unordered_map<EntityHandle, double> powFac; // power assigned to each facet
@@ -53,13 +54,14 @@ class surfaceIntegrator
   // Methods
   surfaceIntegrator(moab::Range const &Facets); // constructor
   void count_hit(EntityHandle facet_hit); // count hits belonging to each facet
-  void store_heat_flux(EntityHandle facet, double psi, equData EquData); // store the power associated with a particular facet
+  void count_lost_ray();
+  void store_heat_flux(EntityHandle facet, double heatflux); // store the power associated with a particular facet
 
   void ray_reflect_dir(double const prev_dir[3], double const surface_normal[3], // get reflected dir
                          double reflected_dir[3]); 
   
   // return sorted map of entityhandles against chosen value
-  void facet_values(std::unordered_map<EntityHandle, int> const &facetValueMap);
+  void facet_values(std::unordered_map<EntityHandle, int> const &map);
   void facet_values(std::unordered_map<EntityHandle, double> const &map);
 
 /// TODO - Create a class that holds the unordered map and a string for the name of the map

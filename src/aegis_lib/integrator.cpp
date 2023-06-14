@@ -30,6 +30,17 @@ void surfaceIntegrator::count_hit(EntityHandle facet_hit)
   raysHit +=1;
 }
 
+void surfaceIntegrator::count_lost_ray()
+{
+  raysLost += 1;
+}
+
+void surfaceIntegrator::store_heat_flux(EntityHandle facet, double heatflux)
+{
+  powFac[facet] += heatflux; // tally accumulated heatflux on facet
+  raysHeatDep += 1; 
+}
+
 
 void surfaceIntegrator::ray_reflect_dir(double const prev_dir[3], double const surface_normal[3], 
                                         double reflected_dir[3])
@@ -60,12 +71,16 @@ void surfaceIntegrator::facet_values(std::unordered_map<moab::EntityHandle, int>
 // return sorted map of EntityHandles against doubles 
 void surfaceIntegrator::facet_values(std::unordered_map<moab::EntityHandle, double> const &map)
 {
+    std::cout << std::endl;
+    std::cout << "Heat flux deposited per facet" << std::endl;
+    std::cout << std::endl;
+
     dbl_sorted_map sortedMap(map.begin(), map.end());
     for (auto const &pair: sortedMap)
     {
       if (pair.second > 0)
       {
-        std::cout << "EntityHandle: " << pair.first << "[" << pair.second << "] rays hit" << std::endl;
+        std::cout << "EntityHandle:" << pair.first << " [" << pair.second << "] W/m^2" << std::endl;
       }
     }
 }

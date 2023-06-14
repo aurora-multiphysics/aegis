@@ -114,9 +114,11 @@ class equData{
   double dtheta = (thetamax-thetamin)/ntheta;
   
   // Quantities needed for power depoisiton calculation
-  double rbdry; // R_m (R value at midplane)
+  double rbdry; // R_m (R value at omp)
+  double zbdry; // Z_m (Z value at omp)
   double bpbdry; // B_pm (poloidal component of B at midplane)
   double btotbdry; // B_m total B at reference boundary (midplane?) 
+  double psibdry; // psi at omp calculated from splines nad golden search
 
   // alglib grids
   alglib::real_1d_array r_grid; // 1D grid R[nw] with spacing = dr (KNOTS)
@@ -169,7 +171,10 @@ class equData{
 
   std::vector<double> b_ripple(std::vector<double> pos, std::vector<double> bField);
 
+  // Determine Rm and Bpm (R and Bpol at omp)
   void boundary_rb();
+
+  double omp_power_dep(double psi, double Psol, double lambda_q, double bn);
 };
 
 #endif

@@ -137,7 +137,7 @@ triSource::triSource(std::vector<double> xyz1, std::vector<double> xyz2, std::ve
 
   // recover vector normal to plane 
   normalVec[0] = line1[1]*line2[2] - line1[2]*line2[1];
-  normalVec[1] = -(line1[0]*line2[2] - line1[2]*line2[0]);
+  normalVec[1] = line1[2]*line2[0] - line1[0]*line2[2];
   normalVec[2] = line1[0]*line2[1] - line1[1]*line2[0];
 
   // recover constant D in plane equation
