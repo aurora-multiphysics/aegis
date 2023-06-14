@@ -1087,13 +1087,19 @@ void equData::boundary_rb()
 
 
   zpsi = psiqbdry;
+  LOG_WARNING << "psiqbdry from EQDSK = " << zpsi;
   re = rcen + zsr*zcostheta;
   ze = zcen + zsr*zsintheta;
   alglib::spline2ddiff(psiSpline, re, ze, zpsi, zdpdr, zdpdz, zddpdz);
+  psibdry = zpsi;
+
+  LOG_WARNING << "psibdry calculated from splines = " << zpsi;
+
 
   // store R_m and B_pm
 
   rbdry = re;
+  zbdry = ze;
   bpbdry = (1/re)*sqrt(std::max(0.0, (pow(zdpdr,2) + pow(zdpdz, 2))));
 
   double zbr; // radial Bfield component
@@ -1124,7 +1130,20 @@ void equData::boundary_rb()
   LOG_WARNING << "Toroidal BField component " << zbt;
 }
 
+double equData::omp_power_dep(double psi, double Psol, double lambda_q, double bn)
+{
+  double heatFlux;
+  double exponential, pConstant;
+  double zpsim = psibdry;
+  double zbpm = bpbdry;
+  double zrm = rbdry;
 
+  pConstant = Psol/(4*M_PI*zrm*lambda_q*zbpm);
+  exponential = exp(-(psi-zpsim)/(zrm*zbpm*lambda_q));
+
+  heatFlux = fabs((pConstant*bn)*exponential);
+  return heatFlux;
+}
 
 // void equData::set_omp()
 // {

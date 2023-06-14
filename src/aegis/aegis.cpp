@@ -385,7 +385,7 @@ int main() {
      
     // can specify particular surfaces of interest 
     EntityHandle targetSurf; // surface of interest
-    targetSurf = DAG->entity_by_id(2, 2143); // front facing surface of HCLL
+    targetSurf = DAG->entity_by_id(2, 479); // front facing surface of HCLL
 
 
     DAG->moab_instance()->list_entity(targetSurf); // list geometric information about surface
@@ -397,35 +397,38 @@ int main() {
     std::vector<double> randTri;
     double fieldDir[3];
     double Bn; // B.n at surface of geometry 
-    ds = 0.01;
-    nS = 100000;
+    ds = 0.005;
+    nS = 1000000;
     int iteration_count = 0; 
     int trace_count = 0;
-
+    double coords[9];
     int zSign;
     int terminationType;
     for (auto i:targetFacets)
     {
-      DAG->next_vol(Surfs[0], vol_h, vol_h);
+      DAG->next_vol(targetSurf, vol_h, vol_h);
       iteration_count +=1;
       moab::Range HCLLverts;
-      DAG->moab_instance()->get_adjacencies(&i, 1, 0, false, HCLLverts);
-      std::vector<double> HCLLcoords(9);
-      DAG->moab_instance()->get_coords(HCLLverts, &HCLLcoords[0]);
+      std::vector<EntityHandle> verts;
+      DAG->moab_instance()->get_adjacencies(&i, 1, 0, false, verts);
+
+      DAG->moab_instance()->get_coords(&verts[0], verts.size(), coords);
      
+
       for (int j=0; j<3; j++)
       {
-        triA[j] = HCLLcoords[j];
-        triB[j] = HCLLcoords[j+3];
-        triC[j] = HCLLcoords[j+6];
+        triA[j] = coords[j];
+        triB[j] = coords[j+3];
+        triC[j] = coords[j+6];
       }
+
 
       triSource Tri(triA, triB, triC);
       randTri = Tri.random_pt();
 
       double triStart[3];
 
-      
+      //std::cout << "Tri EntityHandle: " << i << " normal = " << Tri.normal << std::endl;
       
 
       trace1 << randTri[0] << " " << randTri[1] << " " << randTri[2] << std::endl;
@@ -462,12 +465,12 @@ int main() {
       normB[2] = Bfield[2]/norm;
 
       Bn = dot_product(Bfield,Tri.normal);
+      //std::cout << " NORMAL = " << Tri.normal << " B.N = " <<  Bn << std::endl;
       if (Bn < 0)
       {
         fieldDir[0] = -normB[0];
         fieldDir[1] = -normB[1];
         fieldDir[2] = -normB[2];
-
       }
       else if (Bn > 0)
       {
@@ -480,39 +483,44 @@ int main() {
       // std::cout << Bfield << std::endl;
 
       DAG->ray_fire(vol_h, triStart, fieldDir, next_surf, next_surf_dist, &history, ds, 1);
-      if (next_surf != 0)
-        {
-          DAG->next_vol(next_surf, vol_h, vol_h);
-          history.get_last_intersection(hit);
-          integrator.count_hit(hit);
-          //history.reset();
-          continue;
-        }
-      for (int i=0; i<3; ++i)
+      if (next_surf != 0) {DAG->next_vol(next_surf, vol_h, vol_h);}
+
+      // if (next_surf != 0)
+      //   {
+      //     history.get_last_intersection(hit);
+      //     integrator.count_hit(hit);
+      //     LOG_INFO << "Surface " << next_surf << " hit after travelling " << ds << " units";  
+      //     history.reset();
+      //     continue;
+      //   }
+      for (int j=0; j<3; ++j)
       {
-        newPt[i] = triStart[i] + fieldDir[i]*ds;
+        newPt[j] = triStart[j] + fieldDir[j]*ds;
       }
       trace1 << newPt[0] << " " << newPt[1] << " " << newPt[2] << std::endl;
       history.rollback_last_intersection();
-
-      for (int i=0; i < nS; ++i, s+ds)
+      //history.reset();
+      s = ds;
+      for (int j=0; j < nS; ++j)
       {
+        s += ds; 
         newptA[0] = newPt[0]; 
         newptA[1] = newPt[1];
         newptA[2] = newPt[2];
         DAG->ray_fire(vol_h, newptA, fieldDir, next_surf, next_surf_dist, &history, ds, 1);
-        for (int i=0; i<3; ++i)
+        for (int k=0; k<3; ++k)
         {
-          newPt[i] = newPt[i] + fieldDir[i]*ds;
+          newPt[k] = newPt[k] + fieldDir[k]*ds;
         }
 
         trace1 << newPt[0] << " " << newPt[1] << " " << newPt[2] << std::endl;
 
         if (next_surf != 0)
         {
-          DAG->next_vol(next_surf, vol_h, vol_h);
+          //DAG->next_vol(next_surf, vol_h, vol_h);
           history.get_last_intersection(hit);
           integrator.count_hit(hit);
+          LOG_INFO << "Surface " << next_surf << " hit after travelling " << s << " units";
           //history.reset();
           break;
         }
@@ -524,6 +532,7 @@ int main() {
         if (Bfield[0] == 0)
         {
           LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";
+          integrator.count_lost_ray();
           break;
         }
         else
@@ -550,32 +559,48 @@ int main() {
           }    
         }
 
-
+        double R = sqrt(pow(newPt[0],2) + pow(newPt[1], 2));
         if (zSign == 1)
         {
-          if (newPt[2] < EquData.zcen) // break when crossing zcen
+          if (R >= EquData.rbdry)
           {
-            break;
+            if (newPt[2] < EquData.zcen) // break when crossing zcen
+            {
+              polarPos = coordTfm::cart_to_polar(newPt, "forwards");
+              std::vector<double> fluxPos = coordTfm::polar_to_flux(newPt, "forwards", EquData);
+              double heatflux = EquData.omp_power_dep(fluxPos[0], 100.25, 1.23, Bn);
+              integrator.store_heat_flux(i, heatflux);
+              break;
+            }
           } 
         }
         else if (zSign == -1)
         {
-          if (newPt[2] > EquData.zcen)
+          if (R >= EquData.rbdry)
           {
-            break;
+            if (newPt[2] > EquData.zcen)
+            {
+              polarPos = coordTfm::cart_to_polar(newPt, "forwards");
+              std::vector<double> fluxPos = coordTfm::polar_to_flux(polarPos, "forwards", EquData);
+              double heatflux = EquData.omp_power_dep(fluxPos[0], 100.25, 1.23, Bn);
+              integrator.store_heat_flux(i, heatflux);
+              break;
+            }
           }
         }
       }
-            
+      
 
 
     }
 
     LOG_WARNING << "Number of rays launched = " << targetFacets.size();
-    LOG_WARNING << "Number of ray-facet intersections = " << integrator.raysHit;
-    integrator.facet_values(integrator.nRays);
-
-
+    LOG_WARNING << "Number of shadowed ray intersections = " << integrator.raysHit;
+    LOG_WARNING << "Number of rays depositing power from omp = " << integrator.raysHeatDep;
+    LOG_WARNING << "Number of rays lost from magnetic domain = " << integrator.raysLost;
+    //integrator.facet_values(integrator.nRays);
+    integrator.facet_values(integrator.powFac);
+  
 //////////
 
 
