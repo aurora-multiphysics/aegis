@@ -6,13 +6,17 @@
 class settings{
   public: 
     std::string ray_qry;
-    std::string geo_input;
+    std::string dagmc_input;
+    std::string vtk_input;
     std::string runcase;
     std::string eqdsk_file;
-    std::string source_power;
+    std::string trace;
+    double Psol;
+    double lambda_q;
     std::string reflections;
-    std::string nSample;
+    int nSample;
     int cenopt;
+    int surf;
     void load_settings();
 };
 

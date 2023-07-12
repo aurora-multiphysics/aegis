@@ -2,6 +2,7 @@
 #define integrator__
 
 #include <iostream>
+#include <stdio.h>
 #include <cctype>
 #include <vector>
 #include <map>
@@ -50,7 +51,8 @@ class surfaceIntegrator
   std::vector<EntityHandle> facetEntities; // list of all entity handles in geometry
   std::unordered_map<EntityHandle, int> nRays; // Number of rays intersected with a given surface EntityHandle
   std::unordered_map<EntityHandle, double> powFac; // power assigned to each facet
-  
+  std::unordered_map<EntityHandle, std::vector<double>> launchPositions; // launch positions on each facet
+
   // Methods
   surfaceIntegrator(moab::Range const &Facets); // constructor
   void count_hit(EntityHandle facet_hit); // count hits belonging to each facet
@@ -63,6 +65,10 @@ class surfaceIntegrator
   // return sorted map of entityhandles against chosen value
   void facet_values(std::unordered_map<EntityHandle, int> const &map);
   void facet_values(std::unordered_map<EntityHandle, double> const &map);
+
+  void csv_out(std::unordered_map<moab::EntityHandle, double> const &map);
+  void piecewise_multilinear_out(std::unordered_map<moab::EntityHandle, double> const &map);
+
 
 /// TODO - Create a class that holds the unordered map and a string for the name of the map
 ///      - Potentially also any other variables that may be useful (i.e units for power values) 

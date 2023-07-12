@@ -1,6 +1,11 @@
-geo_input hcll.h5m
+DAGMC_input mast.h5m
+VTK_input mast.stl
 ray_qry exps/exps00010000.qry
 runcase eqdsk
-eqdsk_file eqdsk/test.eqdsk 
-source_power 100.0
+trace yes
+eqdsk_file eqdsk/equil_MAST.eqdsk 
+Psol 3.2
+lambda_q 6.187
 cenopt 2
+surf 479
+number_of_rays_launched_per_tri 5

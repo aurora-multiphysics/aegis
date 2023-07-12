@@ -4,6 +4,8 @@ cmake_minimum_required(VERSION 3.8)
 set(PROJECT_NAME aegis) 
 set(PROJECT_LIB_NAME ${PROJECT_NAME}-lib)
 
+message(STATUS "CMAKE Compiler is:" ${CMAKE_CXX_COMPILER})
+
 project(${PROJECT_NAME} VERSION 0.0.0 LANGUAGES CXX)
 set (CMAKE_CXX_STANDARD 17)
 #set (CMAKE_CXX_CLANG_TIDY 
@@ -24,7 +26,33 @@ find_package(OpenMP REQUIRED)
 #include(${CMAKE_SOURCE_DIR}/cmake/SetBuildType.cmake)
 
 # Set debugging symbols
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE DEBUG)
+
+# Import VTK
+find_package(VTK COMPONENTS REQUIRED
+   CommonCore
+   CommonDataModel
+   FiltersCore
+   FiltersGeometry
+   FiltersSources
+   IOXML
+   IOGeometry
+   IOLegacy
+)
+
+message (STATUS "Found VTK COMPONENTS" ${VTK_DIR})
+
+if (NOT VTK_FOUND)
+  message(FATAL_ERROR "Unable to find the VTK build folder.")
+endif()
+
+#target_link_libraries(${PROJECT_NAME} PRIVATE ${VTK_LIBRARIES})
+
+# vtk_module_autoinit is needed
+vtk_module_autoinit(
+  TARGETS ${PROJECT_NAME}
+  MODULES ${VTK_LIBRARIES}
+)
 
 
 # Import DAGMC
@@ -63,13 +91,15 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 if(BUILD_TYPE STREQUAL "TEST")
   set(BUILD_TYPE_COMPILE_FLAGS "-g;-O0;--coverage")
   set(TEST_LIBRARIES "gcov")
-elseif(BUILD_TYPE STREQUAL "DEBUG")
-  set(BUILD_TYPE_COMPILE_FLAGS "-g -O0")
+elseif(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+  set(BUILD_TYPE_COMPILE_FLAGS "-g;-O0")
   set(TEST_LIBRARIES "")
 elseif(BUILD_TYPE STREQUAL "RELEASE")
   set(BUILD_TYPE_COMPILE_FLAGS "-O2")
   set(TEST_LIBRARIES "")
 endif()
+
+message(STATUS "BUILD_TYPE_COMPILE_FLAGS" ${BUILD_TYPE_COMPILE_FLAGS})
 
 ############################################################
 # Add directories with source files

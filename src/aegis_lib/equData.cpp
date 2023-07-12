@@ -822,6 +822,10 @@ void equData::write_bfield(bool plotRZ, bool plotXYZ)
     std::vector<double> cartB(3); // cartesian magnetic field B(Bx, By, Bz)
     int phiSamples = 12;
     double dphi = 2*M_PI/phiSamples;
+    
+    BField_out_xyz << "x" << " " << "y" << " " << "z" << " " 
+		   << "Bx" << " " << "By" << " " << "Bz" << " " 
+		   << "r" << " " << "z" << " " << "phi" << std::endl;
 
     for (int k=0; k<=phiSamples; k++) // loop through phi
     {
@@ -1125,9 +1129,9 @@ void equData::boundary_rb()
   zbz = (1/re)*zdpdr;
   zbt = zf/re;
 
-  LOG_WARNING << "Radial BField component " << zbr;
-  LOG_WARNING << "Vertical BField component " << zbz;
-  LOG_WARNING << "Toroidal BField component " << zbt;
+  LOG_WARNING << "Radial BField component (Br) " << zbr;
+  LOG_WARNING << "Vertical BField component (Bz) " << zbz;
+  LOG_WARNING << "Toroidal BField component (Bt) " << zbt;
 }
 
 double equData::omp_power_dep(double psi, double Psol, double lambda_q, double bn)
