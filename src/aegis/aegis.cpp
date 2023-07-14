@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <iostream>
 #include <assert.h>
 #include <time.h>
 #include <algorithm>
@@ -16,7 +15,38 @@
 #include <array>
 #include <algorithm>
 #include <unordered_map>
+#include <time.h>
 
+#include <vtkCellArray.h>
+#include <vtkNew.h>
+#include <vtkPoints.h>
+#include <vtkPolyData.h>
+#include <vtkXMLPolyDataWriter.h>
+#include <vtkActor.h>
+#include <vtkCellArray.h>
+#include <vtkCellData.h>
+#include <vtkDoubleArray.h>
+#include <vtkNamedColors.h>
+#include <vtkNew.h>
+#include <vtkPoints.h>
+#include <vtkPolyData.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkPolyLine.h>
+#include <vtkProperty.h>
+#include <vtkCompositeDataGeometryFilter.h>
+#include <vtkExtractEdges.h>
+#include <vtkMultiBlockDataSet.h>
+#include <vtkXMLMultiBlockDataWriter.h>
+#include <vtkSphereSource.h>
+#include <vtkVector.h>
+#include <vtkCompositeDataSet.h>
+#include <vtkInformation.h>
+#include <vtkSTLReader.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkUnstructuredGridReader.h>
+#include <vtkUnstructuredGridWriter.h>
+#include <vtkGeometryFilter.h>
+#include <vtkAppendFilter.h>
 
 #include "DagMC.hpp"
 #include "moab/Core.hpp"
@@ -55,17 +85,19 @@ double * vecNorm(double vector[3]);
 //LOG_FATAL << "this is a fatal error message";       ***WRITTEN OUT TO CONSOLE AND LOGFILE***
 
 int main() {
+  clock_t start = clock();
   settings settings;
   settings.load_settings();
-  LOG_WARNING << "h5m Faceted Geometry file to be used = " << settings.geo_input;
+  LOG_WARNING << "h5m Faceted Geometry file to be used = " << settings.dagmc_input;
 
+  static const char* dagmc_input_file = settings.dagmc_input.c_str();
+  static const char* vtk_input_file = settings.vtk_input.c_str();
 
-  static const char* input_file = settings.geo_input.c_str();
   static const char* ray_qry_exps = settings.ray_qry.c_str();
   std::string eqdsk_file = settings.eqdsk_file;
   moab::Range Surfs, Vols, Facets, Facet_vertices;
   DAG = new DagMC(); // New DAGMC instance
-  DAG->load_file(input_file); // open test dag file
+  DAG->load_file(dagmc_input_file); // open test dag file
   DAG->init_OBBTree(); // initialise OBBTree
   DAG->setup_geometry(Surfs, Vols);
   //DAG->create_graveyard();
@@ -100,7 +132,7 @@ int main() {
     DAG->moab_instance()->get_coords(verts, &coords[0]);
     for (int j=0; j<verts.size(); j++)
     {
-      //std::cout << "Vertex " << DAG->moab_instance()->id_from_handle(verts[j]) << "(" <<  
+      //std::cout << "Vertex " << DAG->moab_instance()->id_from_handle(verts[j]) << "(" <<
       //coords[0+j] << ", " << coords[1+j] << ", "  << coords[2+j] << ")" << std::endl;
     }
       //std::cout << std::endl;
@@ -248,12 +280,13 @@ int main() {
     ray_intersect.open("ray_intersect.txt"); // write out stream to "ray_intersect.txt" file
 
 
+
     surfaceIntegrator integrator(Facets);
     //std::map<EntityHandle, int>::iterator it = integrator.nRays.begin();
     int lostRays=0;
 
     double intersect_pt[3];
-    std::vector<double> pSource(3); 
+    std::vector<double> pSource(3);
     pSource = {0, 0, -30};
     EntityHandle meshElement;
     double distanceMesh;
@@ -261,6 +294,7 @@ int main() {
     double reflected_dir[3];
     double reflect_dot;
     double surface_normal[3];
+
     EntityHandle obb_root;
     DAG->next_vol(Surfs[0], vol_h, vol_h);
     DAG->get_root(vol_h, obb_root);
@@ -347,7 +381,6 @@ int main() {
     std::cout << "------------------------------------------------------" << std::endl;
     equData EquData;
 
-
     EquData.read_eqdsk(eqdsk_file);
     //EquData.write_eqdsk_out();
 
@@ -356,10 +389,10 @@ int main() {
     EquData.centre(1);
     EquData.boundary_rb();
 
-    // attempting to create a trace through magnetic field 
+    // attempting to create a trace through magnetic field
     // Currently not working
 
-    
+
     bool plotRZ = true;
     bool plotXYZ = true;
     EquData.write_bfield(plotRZ, plotXYZ);
@@ -367,14 +400,13 @@ int main() {
     double s, ds;
     double normB[3];
     double norm;
-    std::ofstream trace1("trace1.txt");
     std::ofstream trace2("trace2.txt");
     std::ofstream trace3("trace3.txt");
 
     double newptA[3];
     double phi;
     std::vector<double> Bfield;
-    std::vector<double> polarPos(3); 
+    std::vector<double> polarPos(3);
     std::vector<double> newPt(3);
 
     ////////// Particle tracking
@@ -382,38 +414,97 @@ int main() {
     int nS;
     // Plasma facing surface of HCLL first wall structure
     moab::Range targetFacets; // range containing all of the triangles in the surface of interest
-     
-    // can specify particular surfaces of interest 
+
+    // can specify particular surfaces of interest
     EntityHandle targetSurf; // surface of interest
-    targetSurf = DAG->entity_by_id(2, 479); // front facing surface of HCLL
+    if (settings.surf != 0)
+    {
+      targetSurf = DAG->entity_by_id(2, settings.surf); // front facing surface of HCLL
+      DAG->moab_instance()->get_entities_by_type(targetSurf, MBTRI, targetFacets);
+    }
+    else
+    {
+      targetFacets = Facets;
+    }
 
-
-    DAG->moab_instance()->list_entity(targetSurf); // list geometric information about surface
-    DAG->moab_instance()->get_entities_by_type(targetSurf, MBTRI, targetFacets);
-    surfaceIntegrator integrator(targetFacets);
+    //DAG->moab_instance()->list_entity(targetSurf); // list geometric information about surface
+    surfaceIntegrator integrator(Facets);
     EntityHandle hit;
 
     std::vector<double> triA(3), triB(3), triC(3);
     std::vector<double> randTri;
     double fieldDir[3];
-    double Bn; // B.n at surface of geometry 
-    ds = 0.005;
+    double Bn; // B.n at surface of geometry
+    ds = 0.001;
     nS = 1000000;
-    int iteration_count = 0; 
+    int iteration_count = 0;
     int trace_count = 0;
     double coords[9];
     int zSign;
-    int terminationType;
-    for (auto i:targetFacets)
+    std::ofstream psi_out("psi.txt");
+
+    double psol = settings.Psol;
+    double lambda_q = settings.lambda_q;
+
+
+
+    // INITIALISE VTK STUFF -------------------------------------------------
+
+    vtkNew<vtkSTLReader> vtkInReader;
+    vtkInReader->SetFileName(vtk_input_file);
+    vtkInReader->Update();
+
+    vtkNew<vtkAppendFilter> appendFilter;
+    vtkNew<vtkUnstructuredGrid> vtkTargetUstr;
+
+    vtkPolyData* vtkTargetPD = vtkInReader->GetOutput();    
+    appendFilter->AddInputData(vtkTargetPD);
+    appendFilter->Update();
+
+    vtkTargetUstr->ShallowCopy(appendFilter->GetOutput());
+
+     vtkNew<vtkDoubleArray> vtkTargetHeatflux;
+     vtkTargetHeatflux->SetNumberOfComponents(1);
+     vtkTargetHeatflux->SetName("Heat Flux");
+
+
+    int facetCounter=0;
+    vtkNew<vtkMultiBlockDataSet> multiBlockRoot, vtkBranch;
+    std::map<std::string, vtkNew<vtkMultiBlockDataSet>> vtkParticleTracks;
+
+    multiBlockRoot->SetBlock(0, vtkBranch); // set block 
+    multiBlockRoot->GetMetaData(static_cast<int>(0)) // name block
+                  ->Set(vtkCompositeDataSet::NAME(), "Particle Tracks");
+    
+ 
+    vtkBranch->SetBlock(0, vtkParticleTracks["Shadowed"]); // set block 
+    vtkBranch->GetMetaData(static_cast<int>(0)) // name block
+                  ->Set(vtkCompositeDataSet::NAME(), "Shadowed Particles");   
+    int shadowedParticleCount = 0;
+
+
+    vtkBranch->SetBlock(1, vtkParticleTracks["Lost"]); // set block 
+    vtkBranch->GetMetaData(static_cast<int>(1)) // name block
+                  ->Set(vtkCompositeDataSet::NAME(), "Lost Particles");
+    int lostParticleCount = 0;
+
+    vtkBranch->SetBlock(2, vtkParticleTracks["Depositing"]); // set block 
+    vtkBranch->GetMetaData(static_cast<int>(2)) // name block
+                  ->Set(vtkCompositeDataSet::NAME(), "Depositing Particles");
+    int ompParticleCount = 0;
+
+    // LOOP OVER FACETS OF INTEREST ------------------------------------------------    
+
+    for (auto i:Facets)
     {
+      facetCounter +=1;
+
       DAG->next_vol(targetSurf, vol_h, vol_h);
       iteration_count +=1;
       moab::Range HCLLverts;
       std::vector<EntityHandle> verts;
       DAG->moab_instance()->get_adjacencies(&i, 1, 0, false, verts);
-
       DAG->moab_instance()->get_coords(&verts[0], verts.size(), coords);
-     
 
       for (int j=0; j<3; j++)
       {
@@ -425,28 +516,34 @@ int main() {
 
       triSource Tri(triA, triB, triC);
       randTri = Tri.random_pt();
+      integrator.launchPositions[i] = randTri;
+
+      vtkNew<vtkPoints> vtkpoints;
+      int vtkPointCounter = 0;
+
 
       double triStart[3];
 
       //std::cout << "Tri EntityHandle: " << i << " normal = " << Tri.normal << std::endl;
-      
 
-      trace1 << randTri[0] << " " << randTri[1] << " " << randTri[2] << std::endl;
-      trace3 << randTri[0] << " " << randTri[1] << " " << randTri[2] << std::endl;
+      if (settings.trace == "yes")
+      {
+        trace3 << randTri[0] << " " << randTri[1] << " " << randTri[2] << std::endl;
+        vtkpoints->InsertNextPoint(randTri[0], randTri[1], randTri[2]);
+        vtkPointCounter +=1;
 
+      }
       triStart[0] = randTri[0];
       triStart[1] = randTri[1];
       triStart[2] = randTri[2];
 
-      if (triStart[2] > 0) 
+      if (triStart[2] > 0)
       {
         zSign = 1;
-        terminationType = 2;
       }
-      else 
+      else
       {
         zSign = -1;
-        terminationType = 2;
       }
 
       Bfield = EquData.b_field(randTri, "cart");
@@ -454,14 +551,14 @@ int main() {
       if (Bfield[0] == 0 && Bfield[1] == 0 && Bfield[2] == 0)
       {
         LOG_INFO << "Position of triangle start not in magnetic field. Skipping to next triangle";
-        continue;
+        continue; // skip to next triangle if start position not in magnetic field
       }
-
-      polarPos = coordTfm::cart_to_polar(randTri,"forwards");
+      std::string forwards = "forwards";
+      polarPos = coordTfm::cart_to_polar(randTri, forwards);
       Bfield = EquData.b_field_cart(Bfield, polarPos[2], 0);
       norm = sqrt(pow(Bfield[0],2) + pow(Bfield[1],2) + pow(Bfield[2],2));
       normB[0] = Bfield[0]/norm;
-      normB[1] = Bfield[1]/norm; 
+      normB[1] = Bfield[1]/norm;
       normB[2] = Bfield[2]/norm;
 
       Bn = dot_product(Bfield,Tri.normal);
@@ -485,26 +582,27 @@ int main() {
       DAG->ray_fire(vol_h, triStart, fieldDir, next_surf, next_surf_dist, &history, ds, 1);
       if (next_surf != 0) {DAG->next_vol(next_surf, vol_h, vol_h);}
 
-      // if (next_surf != 0)
-      //   {
-      //     history.get_last_intersection(hit);
-      //     integrator.count_hit(hit);
-      //     LOG_INFO << "Surface " << next_surf << " hit after travelling " << ds << " units";  
-      //     history.reset();
-      //     continue;
-      //   }
+
       for (int j=0; j<3; ++j)
       {
         newPt[j] = triStart[j] + fieldDir[j]*ds;
       }
-      trace1 << newPt[0] << " " << newPt[1] << " " << newPt[2] << std::endl;
+
+      if (settings.trace == "yes")
+      {
+        vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
+        vtkPointCounter +=1;
+      }
       history.rollback_last_intersection();
       //history.reset();
       s = ds;
-      for (int j=0; j < nS; ++j)
+
+// --------------------- LOOP OVER PARTICLE TRACK --------------------- 
+
+      for (int j=0; j < nS; ++j) // loop along fieldline
       {
-        s += ds; 
-        newptA[0] = newPt[0]; 
+        s += ds;
+        newptA[0] = newPt[0];
         newptA[1] = newPt[1];
         newptA[2] = newPt[2];
         DAG->ray_fire(vol_h, newptA, fieldDir, next_surf, next_surf_dist, &history, ds, 1);
@@ -513,35 +611,94 @@ int main() {
           newPt[k] = newPt[k] + fieldDir[k]*ds;
         }
 
-        trace1 << newPt[0] << " " << newPt[1] << " " << newPt[2] << std::endl;
-
-        if (next_surf != 0)
+        if (settings.trace == "yes")
+        {
+          vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
+          vtkPointCounter +=1;    
+        }
+        if (next_surf != 0) // Terminate fieldline trace since shadowing surface hit
         {
           //DAG->next_vol(next_surf, vol_h, vol_h);
           history.get_last_intersection(hit);
           integrator.count_hit(hit);
           LOG_INFO << "Surface " << next_surf << " hit after travelling " << s << " units";
           //history.reset();
-          break;
+          double heatflux = 0.0;
+          integrator.store_heat_flux(i, heatflux);
+          if (settings.trace == "yes")
+          {
+            vtkNew<vtkPolyLine> vtkpolyline;
+            vtkpolyline->GetPointIds()->SetNumberOfIds(vtkPointCounter);
+            for (unsigned int i=0; i<vtkPointCounter; i++)
+            {
+              vtkpolyline->GetPointIds()->SetId(i, i);
+            }
+            
+            vtkNew<vtkCellArray> vtkcellarray;
+            vtkcellarray->InsertNextCell(vtkpolyline);
+
+            vtkNew<vtkPolyData> vtkpolydata;
+            vtkpolydata->SetPoints(vtkpoints);
+            vtkpolydata->SetLines(vtkcellarray);
+
+            vtkNew<vtkDoubleArray> vtkHeatflux;
+            vtkHeatflux->SetNumberOfComponents(1);
+            vtkHeatflux->SetName("Heat Flux");
+            vtkHeatflux->InsertNextValue(0.0);
+            vtkTargetHeatflux->InsertNextValue(0.0);
+            vtkpolydata->GetFieldData()->AddArray(vtkHeatflux);
+
+            vtkParticleTracks["Shadowed"]->SetBlock(shadowedParticleCount, vtkpolydata);
+            shadowedParticleCount +=1;
+          }
+          break; // break loop over ray if surface hit
         }
         history.rollback_last_intersection();
 
-        
+
         Bfield = EquData.b_field(newPt, "cart");
 
-        if (Bfield[0] == 0)
+        if (Bfield[0] == 0) // Terminate fieldline trace since particle has left magnetic domain
         {
           LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";
           integrator.count_lost_ray();
-          break;
+          double heatflux = 0.0;
+          integrator.store_heat_flux(i, heatflux);
+          if (settings.trace == "yes")
+          {
+            vtkNew<vtkPolyLine> vtkpolyline;
+            vtkpolyline->GetPointIds()->SetNumberOfIds(vtkPointCounter);
+            for (unsigned int i=0; i<vtkPointCounter; i++)
+            {
+              vtkpolyline->GetPointIds()->SetId(i, i);
+            }
+            
+            vtkNew<vtkCellArray> vtkcellarray;
+            vtkcellarray->InsertNextCell(vtkpolyline);
+
+            vtkNew<vtkPolyData> vtkpolydata;
+            vtkpolydata->SetPoints(vtkpoints);
+            vtkpolydata->SetLines(vtkcellarray);
+
+            vtkNew<vtkDoubleArray> vtkHeatflux;
+            vtkHeatflux->SetNumberOfComponents(1);
+            vtkHeatflux->SetName("Heat Flux");
+            vtkHeatflux->InsertNextValue(0.0);
+            vtkTargetHeatflux->InsertNextValue(0.0);
+            vtkpolydata->GetFieldData()->AddArray(vtkHeatflux);
+
+            vtkParticleTracks["Lost"]->SetBlock(lostParticleCount, vtkpolydata);
+            lostParticleCount +=1;
+          }
+          break; // break if ray leaves magnetic field
         }
         else
         {
           polarPos = coordTfm::cart_to_polar(newPt,"forwards");
           Bfield = EquData.b_field_cart(Bfield, polarPos[2], 0);
-          norm = sqrt(pow(Bfield[0],2) + pow(Bfield[1],2) + pow(Bfield[2],2)); 
+          norm = sqrt(pow(Bfield[0],2) + pow(Bfield[1],2) + pow(Bfield[2],2));
           normB[0] = Bfield[0]/norm;
-          normB[1] = Bfield[1]/norm; 
+          normB[1] = Bfield[1]/norm;
           normB[2] = Bfield[2]/norm;
 
           if (Bn < 0)
@@ -556,10 +713,13 @@ int main() {
             fieldDir[0] = normB[0];
             fieldDir[1] = normB[1];
             fieldDir[2] = normB[2];
-          }    
+          }
         }
 
         double R = sqrt(pow(newPt[0],2) + pow(newPt[1], 2));
+
+
+
         if (zSign == 1)
         {
           if (R >= EquData.rbdry)
@@ -568,11 +728,38 @@ int main() {
             {
               polarPos = coordTfm::cart_to_polar(newPt, "forwards");
               std::vector<double> fluxPos = coordTfm::polar_to_flux(newPt, "forwards", EquData);
-              double heatflux = EquData.omp_power_dep(fluxPos[0], 100.25, 1.23, Bn);
+              double heatflux = EquData.omp_power_dep(fluxPos[0], psol, lambda_q, Bn);
+              psi_out << heatflux << " " << fluxPos[0] << std::endl;
               integrator.store_heat_flux(i, heatflux);
-              break;
+              if (settings.trace == "yes")
+              {
+                vtkNew<vtkPolyLine> vtkpolyline;
+                vtkpolyline->GetPointIds()->SetNumberOfIds(vtkPointCounter);
+                for (unsigned int i=0; i<vtkPointCounter; i++)
+                {
+                  vtkpolyline->GetPointIds()->SetId(i, i);
+                }
+                
+                vtkNew<vtkCellArray> vtkcellarray;
+                vtkcellarray->InsertNextCell(vtkpolyline);
+
+                vtkNew<vtkPolyData> vtkpolydata;
+                vtkpolydata->SetPoints(vtkpoints);
+                vtkpolydata->SetLines(vtkcellarray);
+
+                vtkNew<vtkDoubleArray> vtkHeatflux;
+                vtkHeatflux->SetNumberOfComponents(1);
+                vtkHeatflux->SetName("Heat Flux");
+                vtkHeatflux->InsertNextValue(heatflux);
+                vtkTargetHeatflux->InsertNextValue(heatflux);
+                vtkpolydata->GetFieldData()->AddArray(vtkHeatflux);
+
+                vtkParticleTracks["Depositing"]->SetBlock(ompParticleCount, vtkpolydata);
+                ompParticleCount +=1;
+              }
+              break; // break if ray hits omp
             }
-          } 
+          }
         }
         else if (zSign == -1)
         {
@@ -582,34 +769,93 @@ int main() {
             {
               polarPos = coordTfm::cart_to_polar(newPt, "forwards");
               std::vector<double> fluxPos = coordTfm::polar_to_flux(polarPos, "forwards", EquData);
-              double heatflux = EquData.omp_power_dep(fluxPos[0], 100.25, 1.23, Bn);
+              double heatflux = EquData.omp_power_dep(fluxPos[0], psol, lambda_q, Bn);
+              psi_out << heatflux << " " << fluxPos[0] << std::endl;
               integrator.store_heat_flux(i, heatflux);
-              break;
+              if (settings.trace == "yes")
+              {
+                vtkNew<vtkPolyLine> vtkpolyline;
+                vtkpolyline->GetPointIds()->SetNumberOfIds(vtkPointCounter);
+                for (unsigned int i=0; i<vtkPointCounter; i++)
+                {
+                  vtkpolyline->GetPointIds()->SetId(i, i);
+                }
+                
+                vtkNew<vtkCellArray> vtkcellarray;
+                vtkcellarray->InsertNextCell(vtkpolyline);
+
+                vtkNew<vtkPolyData> vtkpolydata;
+                vtkpolydata->SetPoints(vtkpoints);
+                vtkpolydata->SetLines(vtkcellarray);
+
+                vtkNew<vtkDoubleArray> vtkHeatflux;
+                vtkHeatflux->SetNumberOfComponents(1);
+                vtkHeatflux->SetName("Heat Flux");
+                vtkHeatflux->InsertNextValue(heatflux);
+                vtkTargetHeatflux->InsertNextValue(heatflux);
+                vtkpolydata->GetFieldData()->AddArray(vtkHeatflux);
+
+                vtkParticleTracks["Depositing"]->SetBlock(ompParticleCount, vtkpolydata);
+                ompParticleCount +=1;
+              }
+              break; // break if ray hits omp
             }
           }
+
+
         }
+
+
       }
-      
+      // store vtkpolydata for singular line
 
 
     }
 
-    LOG_WARNING << "Number of rays launched = " << targetFacets.size();
+    LOG_WARNING << "Number of rays launched = " << Facets.size();
     LOG_WARNING << "Number of shadowed ray intersections = " << integrator.raysHit;
     LOG_WARNING << "Number of rays depositing power from omp = " << integrator.raysHeatDep;
     LOG_WARNING << "Number of rays lost from magnetic domain = " << integrator.raysLost;
     //integrator.facet_values(integrator.nRays);
-    integrator.facet_values(integrator.powFac);
-  
+    //integrator.facet_values(integrator.powFac);
+    integrator.csv_out(integrator.powFac);
+
+    integrator.piecewise_multilinear_out(integrator.powFac);
+
+    vtkTargetUstr->GetCellData()->AddArray(vtkTargetHeatflux);
+
+    vtkNew<vtkXMLMultiBlockDataWriter> vtkWriter;
+    vtkWriter->SetFileName("particle_tracks.vtm");
+    vtkWriter->SetInputData(multiBlockRoot);
+    vtkWriter->Write();
+
+    //vtkGeopolydata->GetCellData()->AddArray(vtkHeatflux);
+
+    vtkNew<vtkUnstructuredGridWriter> vtkUstrWriter;
+    vtkUstrWriter->SetFileName("out.vtk");
+    vtkUstrWriter->SetInputData(vtkTargetUstr);
+    vtkUstrWriter->Write();
+
 //////////
 
 
 
   }
+
+ 
+
   else // No runcase specified
   {
     LOG_FATAL << "No runcase specified - please choose from 'specific', 'rayqry' or 'eqdsk'";
   }
+
+
+  clock_t end = clock();
+  double elapsed = double(end - start)/CLOCKS_PER_SEC;
+
+  std::cout << "------------------------------------------------------" << std::endl;
+  std::cout << "Elapsed Aegis run time = " << elapsed << std::endl;
+  std::cout << "------------------------------------------------------" << std::endl;
 
   return 0;
 }

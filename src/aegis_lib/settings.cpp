@@ -29,9 +29,13 @@
         in >> param;
         in >> valueStr;
 
-        if (param == "geo_input")
+        if (param == "DAGMC_input")
         {
-          geo_input = valueStr; // string
+          dagmc_input = valueStr; // string
+        }
+        if (param == "VTK_input")
+        {
+          vtk_input = valueStr;
         }
         else if (param == "ray_qry")
         {
@@ -45,20 +49,34 @@
         {
           runcase = valueStr; // string
         }
-	      else if (param == "source_power")
+        else if (param == "trace")
+        {
+          trace = valueStr;
+        }
+	      else if (param == "Psol")
 	      {
-	      source_power = valueStr; // double
+	        Psol = std::stod(valueStr); // double
 	      }
+        else if (param == "lambda_q")
+        {
+          lambda_q = std::stod(valueStr);
+        }
 	      else if (param == "reflections")
 	      {
 	      reflections = valueStr; // int
 	      }
-        else if (param == "number_of_rays_fired")
+        else if (param == "number_of_rays_launched_per_tri")
 	      {
-	      nSample = valueStr; // int
+	        nSample = std::stoi(valueStr); // int
 	      }
         else if (param == "cenopt")
-        cenopt = std::stoi(valueStr);
+        {
+          cenopt = std::stoi(valueStr);
+        }
+        else if (param == "surf")
+        {
+          surf = std::stoi(valueStr);
+        }
       }
       in.close();
     }

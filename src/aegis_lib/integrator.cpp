@@ -1,4 +1,6 @@
 
+
+
 #include "integrator.h"
 #include <moab/Core.hpp>
 #include "moab/Interface.hpp"
@@ -38,7 +40,7 @@ void surfaceIntegrator::count_lost_ray()
 void surfaceIntegrator::store_heat_flux(EntityHandle facet, double heatflux)
 {
   powFac[facet] += heatflux; // tally accumulated heatflux on facet
-  raysHeatDep += 1; 
+  if (heatflux > 0 ) {raysHeatDep += 1;} 
 }
 
 
@@ -80,7 +82,79 @@ void surfaceIntegrator::facet_values(std::unordered_map<moab::EntityHandle, doub
     {
       if (pair.second > 0)
       {
-        std::cout << "EntityHandle:" << pair.first << " [" << pair.second << "] W/m^2" << std::endl;
+        std::cout << "EntityHandle:" << pair.first << " [" << pair.second << "] MW/m^2" << std::endl;
       }
     }
+}
+
+// output values of unordered_map to csv format
+void surfaceIntegrator::csv_out(std::unordered_map<moab::EntityHandle, double> const &map)
+{
+  moab::EntityHandle tri;
+  double value;
+  double x,y,z;
+  std::ofstream heat_out("heat_out.csv");
+
+  for (const auto &i:map) // i -> EntityHandle 
+  {
+    tri = i.first;
+    value = i.second;
+    x = launchPositions[tri][0];
+    y = launchPositions[tri][1];
+    z = launchPositions[tri][2];
+
+    heat_out << x << ", " << y << ", " << z << ", " << value << std::endl; 
+  }
+
+}
+
+void surfaceIntegrator::piecewise_multilinear_out(std::unordered_map<moab::EntityHandle, double> const &map)
+{
+  moab::EntityHandle tri;
+  std::vector<double> value; // value associated with EntityHandle
+  std::vector<double> x,y,z; // vectors of x,y,z coordinates
+  std::ofstream piecewise_multilinear_out("piecewise_multilinear.txt");
+  for (const auto &i:map) // i -> EntityHandle 
+  {
+    tri = i.first;
+    value.push_back(i.second);
+    x.push_back(launchPositions[tri][0]);
+    y.push_back(launchPositions[tri][1]);
+    z.push_back(launchPositions[tri][2]);
+
+
+  }
+
+  std::sort(x.begin(), x.end());
+  std::sort(y.begin(), y.end());
+  std::sort(z.begin(), z.end());
+  
+  piecewise_multilinear_out << "AXIS X" << std::endl;
+  for (auto i:x)
+  {
+    piecewise_multilinear_out << i << " ";
+  }
+  piecewise_multilinear_out << std::endl << std::endl;
+
+  piecewise_multilinear_out << "AXIS Y" << std::endl;
+  for (auto i:y)
+  {
+    piecewise_multilinear_out << i << " ";
+  }
+  piecewise_multilinear_out << std::endl << std::endl;
+
+  piecewise_multilinear_out << "AXIS Z" << std::endl;
+  for (auto i:z)
+  {
+    piecewise_multilinear_out << i << " ";
+  }
+  piecewise_multilinear_out << std::endl << std::endl;
+
+  piecewise_multilinear_out << "DATA" << std::endl;
+  for (auto i:value)
+  {
+    piecewise_multilinear_out << i << std::endl;
+  }
+
+
 }
