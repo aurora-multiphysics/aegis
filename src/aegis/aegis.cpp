@@ -22,17 +22,13 @@
 #include <vtkPoints.h>
 #include <vtkPolyData.h>
 #include <vtkXMLPolyDataWriter.h>
-#include <vtkActor.h>
 #include <vtkCellArray.h>
 #include <vtkCellData.h>
 #include <vtkDoubleArray.h>
-#include <vtkNamedColors.h>
 #include <vtkNew.h>
 #include <vtkPoints.h>
 #include <vtkPolyData.h>
-#include <vtkPolyDataMapper.h>
 #include <vtkPolyLine.h>
-#include <vtkProperty.h>
 #include <vtkCompositeDataGeometryFilter.h>
 #include <vtkExtractEdges.h>
 #include <vtkMultiBlockDataSet.h>
@@ -427,6 +423,16 @@ int main() {
       targetFacets = Facets;
     }
 
+    std::ofstream surfaceVERTS("surface_verts.txt");
+
+    surfaceVERTS << -7.235000 << " " << -0.119092 << " " << -5.300088 << std::endl;
+    surfaceVERTS << -7.235000 << " " << -0.377439 << " " << -4.917073 << std::endl;
+    surfaceVERTS << -5.565000 << " " << -0.119092 << " " << -5.300088 << std::endl;
+    surfaceVERTS << -5.565000 << " " << -0.377439 << " " << -4.917073 << std::endl;
+    //DAG->moab_instance()->get_coords()
+
+    //DAG->moab_instance()->get_coords(&verts[0], verts.size(), coords);
+
     //DAG->moab_instance()->list_entity(targetSurf); // list geometric information about surface
     surfaceIntegrator integrator(Facets);
     EntityHandle hit;
@@ -435,13 +441,12 @@ int main() {
     std::vector<double> randTri;
     double fieldDir[3];
     double Bn; // B.n at surface of geometry
-    ds = 0.001;
-    nS = 1000000;
+    ds = 0.1;
+    nS = 10000;
     int iteration_count = 0;
     int trace_count = 0;
     double coords[9];
     int zSign;
-    std::ofstream psi_out("psi.txt");
 
     double psol = settings.Psol;
     double lambda_q = settings.lambda_q;
@@ -729,7 +734,6 @@ int main() {
               polarPos = coordTfm::cart_to_polar(newPt, "forwards");
               std::vector<double> fluxPos = coordTfm::polar_to_flux(newPt, "forwards", EquData);
               double heatflux = EquData.omp_power_dep(fluxPos[0], psol, lambda_q, Bn);
-              psi_out << heatflux << " " << fluxPos[0] << std::endl;
               integrator.store_heat_flux(i, heatflux);
               if (settings.trace == "yes")
               {
@@ -770,7 +774,6 @@ int main() {
               polarPos = coordTfm::cart_to_polar(newPt, "forwards");
               std::vector<double> fluxPos = coordTfm::polar_to_flux(polarPos, "forwards", EquData);
               double heatflux = EquData.omp_power_dep(fluxPos[0], psol, lambda_q, Bn);
-              psi_out << heatflux << " " << fluxPos[0] << std::endl;
               integrator.store_heat_flux(i, heatflux);
               if (settings.trace == "yes")
               {

@@ -111,3 +111,14 @@ RUN cd /$WORKDIR/dagmc_bld/ && \
     cd ../lib/cmake/dagmc && \
     DAGMC_CMAKE_CONFIG=$(pwd)
    
+# Install VTK 
+RUN cd /$WORKDIR/ && \
+    mkdir VTK && \
+    git clone https://github.com/Kitware/VTK.git && \
+    cd VTK && \
+    mkdir VTK-build && \
+    cd VTK-build && \
+    cmake ../ && \ 
+    make && \
+    make install && \
+    
