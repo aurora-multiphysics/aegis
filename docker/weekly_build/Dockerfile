@@ -120,5 +120,5 @@ RUN cd /$WORKDIR/ && \
     cd VTK-build && \
     cmake ../ && \ 
     make && \
-    make install && \
+    make install
     
