@@ -1,11 +1,15 @@
 # Aegis 
 Aegis is a Monte-Carlo particle tracking tool for calculating power deposition loads (inspired by the SMARDDA FORTRAN code used for the same case) due to particles on surface accurate representations of fusion plasma First Wall Shielding. Makes use of DAGMC/Double-Down as a ray tracing tool that will be used to calculate neutral particle trajectories. Charged particle trajectories will eventually be calculated from field-line tracing and solving of the ODEs which govern these particles trajectories. 
 
-The following dependancies are required:
+The following dependancies are **required**:
 - **Embree v3.6.1** (Intel Embree Ray Tracer)  
 - **Double-Down v1.0.0** (A double precision interface to Embree) 
 - **MOAB Version 5.2.0** (Mesh Oriented datABase) 
 - **DAGMC** (Direct Accelerated Geometry Monte Carlo code)
+
+The following dependancies are **optional**:
+- **VTK** (Visualisation ToolKit) - For producing more advaced visualisations within ParaView
+
 # Building the repo
 Embree should be built with the following additional flags:
 
@@ -23,6 +27,8 @@ DAGMC should be built with the following additional flags:
 And finally this repo should be built with the following flag:
 
     cmake -DDAGMC_DIR=\${DAGMC_DIR}
+
+In order to produce visualisations to be used with ParaView, Aegis also makes use of the `VTK library` which should be installed locally. The CMakeLists.txt file included will pull the the necessary modules from VTK to produce visualisations as shown:
 
 Some example outputs from an Aegis run with the same magnetic equilibrium and geometry are shown below: 
 
