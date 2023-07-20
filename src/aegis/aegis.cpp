@@ -441,7 +441,7 @@ int main() {
     std::vector<double> randTri;
     double fieldDir[3];
     double Bn; // B.n at surface of geometry
-    ds = 0.1;
+    ds = 0.01;
     nS = 10000;
     int iteration_count = 0;
     int trace_count = 0;
@@ -470,7 +470,7 @@ int main() {
 
      vtkNew<vtkDoubleArray> vtkTargetHeatflux;
      vtkTargetHeatflux->SetNumberOfComponents(1);
-     vtkTargetHeatflux->SetName("Heat Flux");
+     vtkTargetHeatflux->SetName("Heat_Flux");
 
 
     int facetCounter=0;
@@ -648,7 +648,7 @@ int main() {
 
             vtkNew<vtkDoubleArray> vtkHeatflux;
             vtkHeatflux->SetNumberOfComponents(1);
-            vtkHeatflux->SetName("Heat Flux");
+            vtkHeatflux->SetName("Heat_Flux");
             vtkHeatflux->InsertNextValue(0.0);
             vtkTargetHeatflux->InsertNextValue(0.0);
             vtkpolydata->GetFieldData()->AddArray(vtkHeatflux);
@@ -687,7 +687,7 @@ int main() {
 
             vtkNew<vtkDoubleArray> vtkHeatflux;
             vtkHeatflux->SetNumberOfComponents(1);
-            vtkHeatflux->SetName("Heat Flux");
+            vtkHeatflux->SetName("Heat_Flux");
             vtkHeatflux->InsertNextValue(0.0);
             vtkTargetHeatflux->InsertNextValue(0.0);
             vtkpolydata->GetFieldData()->AddArray(vtkHeatflux);
@@ -753,7 +753,7 @@ int main() {
 
                 vtkNew<vtkDoubleArray> vtkHeatflux;
                 vtkHeatflux->SetNumberOfComponents(1);
-                vtkHeatflux->SetName("Heat Flux");
+                vtkHeatflux->SetName("Heat_Flux");
                 vtkHeatflux->InsertNextValue(heatflux);
                 vtkTargetHeatflux->InsertNextValue(heatflux);
                 vtkpolydata->GetFieldData()->AddArray(vtkHeatflux);
@@ -793,7 +793,7 @@ int main() {
 
                 vtkNew<vtkDoubleArray> vtkHeatflux;
                 vtkHeatflux->SetNumberOfComponents(1);
-                vtkHeatflux->SetName("Heat Flux");
+                vtkHeatflux->SetName("Heat_Flux");
                 vtkHeatflux->InsertNextValue(heatflux);
                 vtkTargetHeatflux->InsertNextValue(heatflux);
                 vtkpolydata->GetFieldData()->AddArray(vtkHeatflux);
@@ -827,12 +827,12 @@ int main() {
 
     vtkTargetUstr->GetCellData()->AddArray(vtkTargetHeatflux);
 
-    vtkNew<vtkXMLMultiBlockDataWriter> vtkWriter;
-    vtkWriter->SetFileName("particle_tracks.vtm");
-    vtkWriter->SetInputData(multiBlockRoot);
-    vtkWriter->Write();
+    vtkNew<vtkXMLMultiBlockDataWriter> vtkMBWriter;
+    vtkMBWriter->SetFileName("particle_tracks.vtm");
+    vtkMBWriter->SetInputData(multiBlockRoot);
+    vtkMBWriter->Write();
 
-    //vtkGeopolydata->GetCellData()->AddArray(vtkHeatflux);
+   // vtkGeopolydata->GetCellData()->AddArray(vtkHeatflux);
 
     vtkNew<vtkUnstructuredGridWriter> vtkUstrWriter;
     vtkUstrWriter->SetFileName("out.vtk");
@@ -845,7 +845,7 @@ int main() {
 
   }
 
- 
+
 
   else // No runcase specified
   {
