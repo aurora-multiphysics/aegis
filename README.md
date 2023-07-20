@@ -29,8 +29,8 @@ Some example outputs from an Aegis run with the same magnetic equilibrium and ge
 **Left: Heatflux deposited across the cells in a CAD mesh with OMP in the background**
 
 <p float="left">
-  <img src="https://github.com/Waqar-ukaea/aegis/blob/main/gh_images/heatflux_deposited.png" alt="Power Deposited" width="500"/>
-  <img src="https://github.com/Waqar-ukaea/aegis/blob/main/gh_images/particle_tracks.png" alt="Particle Tracks" width="487" /> 
+  <img src="https://github.com/Waqar-ukaea/aegis/blob/main/gh_images/heatflux_deposited.png" alt="Power Deposited" width="400"/>
+  <img src="https://github.com/Waqar-ukaea/aegis/blob/main/gh_images/particle_tracks.png" alt="Particle Tracks" width="390" /> 
 </p>
 
 **Right: Individual particle tracks (launched from cells in CAD mesh) coloured by their respective Heatflux with OMP in the background**
