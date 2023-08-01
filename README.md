@@ -23,3 +23,14 @@ DAGMC should be built with the following additional flags:
 And finally this repo should be built with the following flag:
 
     cmake -DDAGMC_DIR=\${DAGMC_DIR}
+
+Some example outputs from an Aegis run with the same magnetic equilibrium and geometry are shown below: 
+
+**Left: Heatflux deposited across the cells in a CAD mesh with OMP in the background**
+
+<p float="left">
+  <img src="https://github.com/Waqar-ukaea/aegis/blob/main/gh_images/heatflux_deposited.png" alt="Power Deposited" width="500"/>
+  <img src="https://github.com/Waqar-ukaea/aegis/blob/main/gh_images/particle_tracks.png" alt="Particle Tracks" width="487" /> 
+</p>
+
+**Right: Individual particle tracks (launched from cells in CAD mesh) coloured by their respective Heatflux with OMP in the background**
