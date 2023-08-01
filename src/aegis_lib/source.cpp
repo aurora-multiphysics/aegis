@@ -135,7 +135,7 @@ triSource::triSource(std::vector<double> xyz1, std::vector<double> xyz2, std::ve
   std::vector<double> normalVec(3);
 
 
-  // recover vector normal to plane 
+  // recover vector normal to plane (Cross product of two edges in the triangle)
   normalVec[0] = line1[1]*line2[2] - line1[2]*line2[1];
   normalVec[1] = line1[2]*line2[0] - line1[0]*line2[2];
   normalVec[2] = line1[0]*line2[1] - line1[1]*line2[0];

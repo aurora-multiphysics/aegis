@@ -26,6 +26,22 @@ surfaceIntegrator::surfaceIntegrator(moab::Range const &Facets)
 
 }
 
+// Overload for constructor use with STL vector
+surfaceIntegrator::surfaceIntegrator(std::vector<EntityHandle> const &Facets)
+{
+  LOG_TRACE << "-----surfaceIntegrator CONSTRUCTOR()-----";
+
+  nFacets = Facets.size();
+
+  for (auto i:Facets)
+  {
+    facetEntities.push_back(i);
+    nRays[i] = 0;
+    powFac[i] = 0;
+  }
+
+}
+
 void surfaceIntegrator::count_hit(EntityHandle facet_hit)
 {
   nRays[facet_hit] +=1;
