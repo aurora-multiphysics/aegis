@@ -30,6 +30,7 @@ class settings{
     std::vector<int> surfs;
     int nTrack;
     double dsTrack;
+    double psiref; // reference psi value for psibdry
     void load_settings(); // DEPRECIATED
     void load_params();
     void print_params();

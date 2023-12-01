@@ -74,6 +74,7 @@ std::vector<double> coordTfm::polar_to_flux(std::vector<double> inputVector,
     phi = inputVector[2];
 
     psi = alglib::spline2dcalc(EquData.psiSpline, r, z); // spline interpolation of psi(R,Z)
+
     theta = atan2(z-EquData.zcen, r-EquData.rcen);
     if (theta < -M_PI_2)
     {
@@ -81,7 +82,8 @@ std::vector<double> coordTfm::polar_to_flux(std::vector<double> inputVector,
     }
   }
 
-  outputVector[0] = psi;
+
+  outputVector[0] = -psi;
   outputVector[1] = theta;
   outputVector[2] = phi;
 

@@ -109,7 +109,8 @@ void surfaceIntegrator::csv_out(std::unordered_map<moab::EntityHandle, double> c
   moab::EntityHandle tri;
   double value;
   double x,y,z;
-  std::ofstream heat_out("heat_out.csv");
+  std::ofstream heat_out("heat_out.txt");
+  heat_out << "x," << "y," << "z," << "heat" << std::endl;
 
   for (const auto &i:map) // i -> EntityHandle 
   {
@@ -119,7 +120,7 @@ void surfaceIntegrator::csv_out(std::unordered_map<moab::EntityHandle, double> c
     y = launchPositions[tri][1];
     z = launchPositions[tri][2];
 
-    heat_out << x << ", " << y << ", " << z << ", " << value << std::endl; 
+    heat_out << x << "," << y << "," << z << "," << value << std::endl; 
   }
 
 }

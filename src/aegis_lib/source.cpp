@@ -119,7 +119,7 @@ void boxSource::get_dir()
 /////////
 
 // define plane via cartesian plane equation ax + by + cz + d = 0
-triSource::triSource(std::vector<double> xyz1, std::vector<double> xyz2, std::vector<double> xyz3)
+triSource::triSource(std::vector<double> xyz1, std::vector<double> xyz2, std::vector<double> xyz3, moab::EntityHandle handle)
 {
   xyzA = xyz1;
   xyzB = xyz2;
@@ -142,8 +142,18 @@ triSource::triSource(std::vector<double> xyz1, std::vector<double> xyz2, std::ve
 
   // recover constant D in plane equation
   D = -(normalVec[0]*xyzA[0] + normalVec[1]*xyzA[1] + normalVec[2]*xyzA[2]);
-  normal = normalVec;
+  this->normal = normalVec;
+  double magnitude = sqrt(pow(normalVec[0],2) + pow(normalVec[1],2) + pow(normalVec[2],2));
+  normalVec[0] = normalVec[0]/magnitude;
+  normalVec[1] = normalVec[1]/magnitude;
+  normalVec[2] = normalVec[2]/magnitude; 
+  this->unitNormal = normalVec;
+
+  this->entityHandle = handle;
+
 }
+
+
 
 std::vector<double> triSource::random_pt()
 {
@@ -168,6 +178,20 @@ std::vector<double> triSource::random_pt()
   return randomPt;
 }
 
+std::vector<double> triSource::centroid()
+{
+  std::vector<double> centroid(3);
+  double x, y, z; // xyz coords of centroid
+  x = (xyzA[0] + xyzB[0] + xyzC[0])/3; 
+  y = (xyzA[1] + xyzB[1] + xyzC[1])/3; 
+  z = (xyzA[2] + xyzB[2] + xyzC[2])/3; 
+
+  centroid[0] = x;
+  centroid[1] = y;
+  centroid[2] = z;
+
+  return centroid;
+}
 
 
 

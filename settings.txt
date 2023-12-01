@@ -1,5 +1,5 @@
-DAGMC_input res12_double_div_shad.h5m
-VTK_input res12_double_div_shad.stl
+DAGMC_input EQ3_cubes.h5m
+VTK_input EQ3_cubes.stl
 ray_qry exps/exps00010000.qry
 runcase eqdsk
 trace yes
@@ -7,7 +7,7 @@ eqdsk_file eqdsk/equil_MAST.eqdsk
 Psol 3.2
 lambda_q 6.187
 cenopt 2
-surfs 684 32 34 
+surfs 0
 number_of_rays_launched_per_tri 5
 nTrack 100000
-dsTrack 0.01
+dsTrack 0.05

@@ -1,10 +1,11 @@
 # String Valued Aegis Run Parameters
-DAGMC_input [s] res12_double_div_shad.h5m
-VTK_input [s] res12_double_div_shad.stl
+DAGMC_input [s] inres1.h5m
+VTK_input [s] inres1.stl
 ray_qry [s] exps/exps00010000.qry
 runcase [s] eqdsk
+launchPos [s] fixed
 trace [s] yes
-eqdsk_file [s] eqdsk/equil_MAST.eqdsk 
+eqdsk_file [s] eqdsk/EQ3.eqdsk 
 
 # Integer Valued Aegis Run Parameters
 cenopt [i] 2
@@ -12,9 +13,11 @@ number_of_rays_launched_per_tri [i] 5
 nTrack [i] 100000
 
 # Double Valued Aegis Run Parameters
-dsTrack [d] 0.01
-Psol [d] 3.2
-lambda_q [d] 6.187
+dsTrack [d] 0.05
+Psol [d] 7.5e+06
+lambda_q [d] 0.012
+psiref [d] -2.1628794
+rOutrBdry [d] 8.17385
 
 # Vector<int> Valued Aegis Run Parameters
-surfs [v] 684 32 34
+surfs [v] 479
