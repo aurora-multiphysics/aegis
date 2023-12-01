@@ -21,8 +21,8 @@ struct eqdskData
   double rcentr; // EFIT Radial dimension at centre of plasma
   double rgrid; // EFIT Minimum R in metre of rectangular computational box
   double zmid; // EFIT centre of computational box in metres
-  double rmaxis; // EFIT plasma centre (magnetic axis) in metre (R at central psi extremum)
-  double zmaxis; // EFIT plasma centre (magnetic axis) in metre (Z at central psi extremum)
+  double rqcen; // EFIT plasma centre (magnetic axis) in metre (R at central psi extremum)
+  double zqcen; // EFIT plasma centre (magnetic axis) in metre (Z at central psi extremum)
   double psimag1; // EFIT poloidal flux at the magnetic axis (Wb/rad)
   double psibdry1; // EFIT poloidal flux at the boundary (Wb/rad)
   double bcentr; // EFIT vacuum toroidal field at r=rcentr IGNORED BY SMARDDA
@@ -77,6 +77,12 @@ class equData{
 
   public:
 
+  // override for ITER corrections to eqdsk
+  bool OVERRIDE_ITER = true;
+
+  // scale factor for psibig
+  double psifac; // scale factor. Default 1.0
+
   // Aegis run parameters
   int cenopt; // option to determine how (Rcen,Zcen) is calculated 
               // 1 - Use values from eqdsk 
@@ -98,6 +104,7 @@ class equData{
   double dpsi; // 1d psi finite difference
   double rcen; // rcen calculated from centre()
   double zcen; // zcen calculated from centre()
+  double psicen;
   double rsig; // sign of dpsi/dr value (+1 -> Increase outwards, -1 -> Decrease outwards)
   double ivac; // I for vaccum field
 
@@ -174,7 +181,12 @@ class equData{
   // Determine Rm and Bpm (R and Bpol at omp)
   void boundary_rb();
 
-  double omp_power_dep(double psi, double Psol, double lambda_q, double bn);
+  double omp_power_dep(double psi, double Psol, double lambda_q, double bn, std::string formula);
+
+  void psi_limiter(std::vector<std::vector<double>> vertices);
+
+  void move(double rmove, double zmove, double fscale);
+
 };
 
 #endif
