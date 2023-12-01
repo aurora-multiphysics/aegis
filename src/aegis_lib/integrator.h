@@ -54,7 +54,9 @@ class surfaceIntegrator
   std::unordered_map<EntityHandle, std::vector<double>> launchPositions; // launch positions on each facet
 
   // Methods
-  surfaceIntegrator(moab::Range const &Facets); // constructor
+  surfaceIntegrator(moab::Range const &Facets); // constructor (with moab::Range)
+  surfaceIntegrator(std::vector<EntityHandle> const &Facets); // constructor (with std::vector<EntityHandle>)
+
   void count_hit(EntityHandle facet_hit); // count hits belonging to each facet
   void count_lost_ray();
   void store_heat_flux(EntityHandle facet, double heatflux); // store the power associated with a particular facet
