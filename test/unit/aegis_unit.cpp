@@ -323,9 +323,9 @@ TEST_F(aegisUnitTest, eqdsk_read) {
   EXPECT_FLOAT_EQ(eqdsk.pres[13], 457077.309);
   EXPECT_FLOAT_EQ(eqdsk.ffprime[54], 252.582128);
   EXPECT_FLOAT_EQ(eqdsk.pprime[11], 1742.17328);  
-  EXPECT_FLOAT_EQ(eqdsk.psi[56][1], -1.39236796);
-  EXPECT_FLOAT_EQ(eqdsk.psi[1][24], 6.80347259);
-  EXPECT_FLOAT_EQ(eqdsk.psi[12][102], 2.22815321);
+  EXPECT_FLOAT_EQ(eqdsk.psi[56][1], 1.39236796);
+  EXPECT_FLOAT_EQ(eqdsk.psi[1][24], -6.80347259);
+  EXPECT_FLOAT_EQ(eqdsk.psi[12][102], -2.22815321);
   EXPECT_FLOAT_EQ(eqdsk.qpsi[52], 1.64743552);
   EXPECT_FLOAT_EQ(eqdsk.rbdry[4], 7.9430907);  
   EXPECT_FLOAT_EQ(eqdsk.zbdry[39], 0.986207476);
