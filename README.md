@@ -1,5 +1,5 @@
 # Aegis 
-Aegis is a Monte-Carlo particle tracking tool for calculating power deposition loads (inspired by the SMARDDA FORTRAN code used for the same case) due to particles on surface accurate representations of fusion plasma First Wall Shielding. Makes use of DAGMC/Double-Down as a ray tracing tool that will be used to calculate neutral particle trajectories. Charged particle trajectories will eventually be calculated from field-line tracing and solving of the ODEs which govern these particles trajectories. 
+Aegis is a Monte-Carlo particle tracking tool for calculating power deposition loads due to particles on surface accurate representations of fusion plasma First Wall Shielding. Aegis is part of Aurora-Multiphysics simulation code group. It makes use of DAGMC/Double-Down as a ray tracing tool that will be used to calculate neutral particle trajectories. Charged particle trajectories are tracked as following magnetic field lines calculated from toroidal flux surface data.
 
 The following dependancies are **required**:
 - **Embree v3.6.1** (Intel Embree Ray Tracer)  

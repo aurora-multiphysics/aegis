@@ -1,4 +1,4 @@
-name: Aegis Dockerhub image build/push
+name: Weekly Dependency environment build
 
 on:
   schedule:

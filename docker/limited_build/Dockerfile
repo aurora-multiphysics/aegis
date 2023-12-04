@@ -7,7 +7,7 @@ ARG WORKDIR="opt"
 RUN cd /$WORKDIR && \
     mkdir temp && \
     cd temp && \
-    git clone https://github.com/Waqar-ukaea/aegis.git && \
+    git clone https://github.com/aurora-multiphysics/aegis.git && \
     cd aegis && \
     cmake -DDAGMC_DIR=/$WORKDIR/dagmc_bld/DAGMC/lib/cmake/dagmc/ && \
 
