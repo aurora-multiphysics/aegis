@@ -1,0 +1,56 @@
+0000001 | 2023-12-06, 14:50:27.692025 [trace] - -----equData.read_eqdsk()-----
+0000002 | 2023-12-06, 14:50:27.692446 [warning] - eqdsk file to be read - test.eqdsk
+0000003 | 2023-12-06, 14:50:27.692569 [warning] - Number of grid points in R (nw) = 65
+0000004 | 2023-12-06, 14:50:27.692591 [warning] - Number of grid points in Z (nh) = 129
+0000005 | 2023-12-06, 14:50:27.692673 [warning] - Geometry parameters from EFIT:
+0000006 | 2023-12-06, 14:50:27.692693 [warning] - Domain size in R eqdsk.rdim 6
+0000007 | 2023-12-06, 14:50:27.692730 [warning] - Domain size in Z eqdsk.zdim 12
+0000008 | 2023-12-06, 14:50:27.692747 [warning] - R at centre 6.2
+0000009 | 2023-12-06, 14:50:27.692763 [warning] - Domain start in R eqdsk.rgrid 3
+0000010 | 2023-12-06, 14:50:27.692779 [warning] - Domain centre in Z eqdsk.zmid 0
+0000011 | 2023-12-06, 14:50:27.692796 [warning] - Plasma parameters from EFIT:
+0000012 | 2023-12-06, 14:50:27.692811 [warning] - B at rcentre 5.3
+0000013 | 2023-12-06, 14:50:27.692828 [warning] - Flux at centre ssimag1 12.9719
+0000014 | 2023-12-06, 14:50:27.692844 [warning] - Flux at boundary ssibry1 2.51614
+0000015 | 2023-12-06, 14:50:27.692861 [warning] - Plasma centre in R eqdsk.rmaxis 6.37753
+0000016 | 2023-12-06, 14:50:27.692878 [warning] - Plasma centre in Z eqdsk.zmaxis -0.242403
+0000017 | 2023-12-06, 14:50:27.692894 [warning] - Plasma current 1.48039e+07
+0000018 | 2023-12-06, 14:50:27.692919 [trace] - -----equData.read_array()-----
+0000019 | 2023-12-06, 14:50:27.692940 [warning] - Reading eqdsk.fpol values...
+0000020 | 2023-12-06, 14:50:27.693009 [warning] - Number of eqdsk.fpol values read = 65
+0000021 | 2023-12-06, 14:50:27.693029 [trace] - -----equData.read_array()-----
+0000022 | 2023-12-06, 14:50:27.693039 [warning] - Reading eqdsk.pres values...
+0000023 | 2023-12-06, 14:50:27.693090 [warning] - Number of eqdsk.pres values read = 65
+0000024 | 2023-12-06, 14:50:27.693106 [trace] - -----equData.read_array()-----
+0000025 | 2023-12-06, 14:50:27.693123 [warning] - Reading eqdsk.ffprime values...
+0000026 | 2023-12-06, 14:50:27.693178 [warning] - Number of eqdsk.ffprime values read = 65
+0000027 | 2023-12-06, 14:50:27.693195 [trace] - -----equData.read_array()-----
+0000028 | 2023-12-06, 14:50:27.693207 [warning] - Reading eqdsk.pprime values...
+0000029 | 2023-12-06, 14:50:27.693264 [warning] - Number of eqdsk.pprime values read = 65
+0000030 | 2023-12-06, 14:50:27.693282 [trace] - -----equData.read_2darray()-----
+0000031 | 2023-12-06, 14:50:27.693412 [warning] - Reading Psi(R,Z) values...
+0000032 | 2023-12-06, 14:50:27.698832 [warning] - Number of Psi(R,Z) values read = 8385
+0000033 | 2023-12-06, 14:50:27.698911 [trace] - -----equData.read_array()-----
+0000034 | 2023-12-06, 14:50:27.698932 [warning] - Reading eqdsk.qpsi values...
+0000035 | 2023-12-06, 14:50:27.699010 [warning] - Number of eqdsk.qpsi values read = 65
+0000036 | 2023-12-06, 14:50:27.699034 [warning] - Number of boundary points 89
+0000037 | 2023-12-06, 14:50:27.699052 [warning] - Number of limiter points 57
+0000038 | 2023-12-06, 14:50:27.699083 [warning] - Reading eqdsk.rbdry and eqdsk.zbdry...
+0000039 | 2023-12-06, 14:50:27.699234 [warning] - Number of eqdsk.rbdry/eqdsk.zbdry values read 89
+0000040 | 2023-12-06, 14:50:27.699255 [warning] - Reading eqdsk.rlim and eqdsk.zlim...
+0000041 | 2023-12-06, 14:50:27.699357 [warning] - Number of eqdsk.rlim/eqdsk.zlim values read 57
+0000042 | 2023-12-06, 14:50:27.699392 [trace] - -----equData.set_rsig()-----
+0000043 | 2023-12-06, 14:50:27.699404 [warning] - Value of rsig (psiqbdry-psiaxis) = -1
+0000044 | 2023-12-06, 14:50:27.699433 [info] - Override for ITER case applied. Sign of psi flipped
+0000045 | 2023-12-06, 14:50:27.699563 [warning] - DPSI =  0.160858
+0000046 | 2023-12-06, 14:50:27.699584 [warning] - PSIQBDRY = -2.51614
+0000047 | 2023-12-06, 14:50:27.699603 [warning] - PSIAXIS = -12.9719
+0000048 | 2023-12-06, 14:50:27.699624 [warning] - RSIG = -1
+0000049 | 2023-12-06, 14:50:27.699643 [warning] - RMIN = 3
+0000050 | 2023-12-06, 14:50:27.699664 [warning] - RMAX = 9
+0000051 | 2023-12-06, 14:50:27.699683 [warning] - ZMIN = -6
+0000052 | 2023-12-06, 14:50:27.699701 [warning] - ZMAX = 6
+0000053 | 2023-12-06, 14:50:27.699720 [warning] - dR = 0.09375
+0000054 | 2023-12-06, 14:50:27.699740 [warning] - dZ = 0.09375
+0000055 | 2023-12-06, 14:50:27.699761 [warning] - PSINORM = 5.22788
+0000056 | 2023-12-06, 14:50:27.699781 [warning] - IVAC = 33.7283
