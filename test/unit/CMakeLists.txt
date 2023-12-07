@@ -13,4 +13,4 @@ target_link_libraries(unit_tests ${DAGMC_LIBRARY} dagmc-shared uwuw-shared )
 
 
 include(GoogleTest)
-gtest_discover_tests(unit_tests)
+gtest_discover_tests(unit_tests WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/test/Data")
