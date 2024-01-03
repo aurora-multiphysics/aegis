@@ -305,7 +305,7 @@ int main() {
     }
     // INITIALISE VTK STUFF -------------------------------------------------
 
-    vtkAegis aegisVTK;
+    vtkAegis aegisVTK = vtkAegis();
 
     const char* shadowedParticles = "Shadowed Particles";
     const char* depositingParticles = "Depositing Particles";
@@ -313,19 +313,7 @@ int main() {
     const char* maxLengthParticles = "Max Length Particles";
     aegisVTK.init_Ptrack_root();
 
-    // Read in STL file 
-    vtkNew<vtkSTLReader> vtkstlReader; // STL reader 
-    vtkstlReader->SetFileName(vtk_input_file);
-    vtkstlReader->Update();
 
-    vtkNew<vtkUnstructuredGrid> vtkTargetUstr;
-
-    // Transform PolyData to vtkUnstructuredGrid datatype using append filter
-    vtkNew<vtkAppendFilter> appendFilter;
-    vtkPolyData* vtkTargetPD = vtkstlReader->GetOutput(); 
-    appendFilter->AddInputData(vtkTargetPD);
-    appendFilter->Update();
-    vtkTargetUstr->ShallowCopy(appendFilter->GetOutput());
 
     LOG_INFO << "Initialising vtkUnstructuredGrid... ";
 
@@ -536,7 +524,7 @@ int main() {
           {
             aegisVTK.add_track(lostParticles, vtkpoints, 0.0);
           }
-          arrays["Q"]->InsertNextTuple1(0.0);
+          aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
           traceEnded = true;
           break; // break if ray leaves magnetic field
         }
@@ -571,7 +559,7 @@ int main() {
           {
             aegisVTK.add_track(depositingParticles, vtkpoints, Q);
           }
-          arrays["Q"]->InsertNextTuple1(heatflux);
+          aegisVTK.arrays["Q"]->InsertNextTuple1(Q);
           traceEnded = true;
           break; // break if ray hits omp
         }
@@ -581,7 +569,7 @@ int main() {
       if (traceEnded == false)
       {
         aegisVTK.add_track(maxLengthParticles, vtkpoints, 0.0);
-        arrays["Q"]->InsertNextTuple1(0.0);
+        aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
         LOG_INFO << "Fieldline trace reached maximum length before intersection";
         traceEnded = true;
       }
@@ -599,34 +587,12 @@ int main() {
 
     integrator.piecewise_multilinear_out(integrator.powFac);
 
-    vtkTargetUstr->GetCellData()->AddArray(aegisVTK.arrays["Q"]);
-    vtkTargetUstr->GetCellData()->AddArray(aegisVTK.arrays["B.n_Direction"]);
-    vtkTargetUstr->GetCellData()->AddArray(aegisVTK.arrays["Normal"]);
-    vtkTargetUstr->GetCellData()->AddArray(aegisVTK.arrays["Psi_Start"]);
-    vtkTargetUstr->GetCellData()->AddArray(aegisVTK.arrays["B.n"]);
-    vtkTargetUstr->GetCellData()->AddArray(aegisVTK.arrays["B_field"]);
+    aegisVTK.add_vtkArrays(vtk_input_file); // add arrays to vtkUnstructuredGrid
 
-    
+    aegisVTK.write_particleTracks("particle_tracks.vtm");
 
-    vtkNew<vtkXMLMultiBlockDataWriter> vtkMBWriter;
-    vtkMBWriter->SetFileName("particle_tracks.vtm");
-    vtkMBWriter->SetInputData(aegisVTK.multiBlockRoot);
-    vtkMBWriter->Write();
+    aegisVTK.write_unstructuredGrid("out.vtk");
 
-   // vtkGeopolydata->GetCellData()->AddArray(vtkHeatflux);
-
-    vtkNew<vtkUnstructuredGridWriter> vtkUstrWriter;
-    vtkUstrWriter->SetFileName("out.vtk");
-    vtkUstrWriter->SetInputData(vtkTargetUstr);
-    vtkUstrWriter->Write();
-    //integrator.facet_values(integrator.nRays);
-
-//////////
-  // double psi_test;
-  // double psiIn = 0.52798347924652100;
-  // double BN =  4.01979303;
-  // psi_test = EquData.omp_power_dep(psiIn, psol, lambda_q, BN, "exp");
-  // std::cout << psi_test << std::endl;
   }
 
   else // No runcase specified
