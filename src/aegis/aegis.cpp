@@ -493,7 +493,18 @@ int main() {
             vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
             vtkPointCounter +=1;
             // if block does not exist, create it
-            aegisVTK.add_track(shadowedParticles, vtkpoints, 0.0);
+            if (vtkParticleTracks.find(branchLostPart) == vtkParticleTracks.end())
+            {
+              int staticCast = aegisVTK.multiBlockCounters.size();
+              multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchLostPart]); // set block 
+              multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
+                              ->Set(vtkCompositeDataSet::NAME(), branchLostPart); 
+              std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchLostPart << std::endl;
+              aegisVTK.multiBlockCounters[branchLostPart] = 0;
+            }  
+            vtkSmartPointer<vtkPolyData> polydataTrack;
+            polydataTrack = aegisVTK.new_track(branchLostPart, vtkpoints, 0.0);
+            vtkParticleTracks[branchLostPart]->SetBlock(aegisVTK.multiBlockCounters[branchLostPart], polydataTrack);
           }
           aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
           traceEnded = true;
@@ -522,7 +533,18 @@ int main() {
           integrator.store_heat_flux(i, 0.0);
           if (particleTrace == "yes")
           {
-            aegisVTK.add_track(lostParticles, vtkpoints, 0.0);
+            if (vtkParticleTracks.find(branchLostPart) == vtkParticleTracks.end())
+            {
+              int staticCast = aegisVTK.multiBlockCounters.size();
+              multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchLostPart]); // set block 
+              multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
+                              ->Set(vtkCompositeDataSet::NAME(), branchLostPart); 
+              std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchLostPart << std::endl;
+              aegisVTK.multiBlockCounters[branchLostPart] = 0;
+            }  
+            vtkSmartPointer<vtkPolyData> polydataTrack;
+            polydataTrack = aegisVTK.new_track(branchLostPart, vtkpoints, 0.0);
+            vtkParticleTracks[branchLostPart]->SetBlock(aegisVTK.multiBlockCounters[branchLostPart], polydataTrack);
           }
           aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
           traceEnded = true;
@@ -557,7 +579,18 @@ int main() {
           integrator.store_heat_flux(i, Q);
           if (particleTrace == "yes")
           {
-            aegisVTK.add_track(depositingParticles, vtkpoints, Q);
+            if (vtkParticleTracks.find(branchLostPart) == vtkParticleTracks.end())
+            {
+              int staticCast = aegisVTK.multiBlockCounters.size();
+              multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchLostPart]); // set block 
+              multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
+                              ->Set(vtkCompositeDataSet::NAME(), branchLostPart); 
+              std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchLostPart << std::endl;
+              aegisVTK.multiBlockCounters[branchLostPart] = 0;
+            }  
+            vtkSmartPointer<vtkPolyData> polydataTrack;
+            polydataTrack = aegisVTK.new_track(branchLostPart, vtkpoints, Q);
+            vtkParticleTracks[branchLostPart]->SetBlock(aegisVTK.multiBlockCounters[branchLostPart], polydataTrack);
           }
           aegisVTK.arrays["Q"]->InsertNextTuple1(Q);
           traceEnded = true;
@@ -568,7 +601,18 @@ int main() {
       
       if (traceEnded == false)
       {
-        aegisVTK.add_track(maxLengthParticles, vtkpoints, 0.0);
+        if (vtkParticleTracks.find(branchLostPart) == vtkParticleTracks.end())
+            {
+              int staticCast = aegisVTK.multiBlockCounters.size();
+              multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchLostPart]); // set block 
+              multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
+                              ->Set(vtkCompositeDataSet::NAME(), branchLostPart); 
+              std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchLostPart << std::endl;
+              aegisVTK.multiBlockCounters[branchLostPart] = 0;
+            }  
+            vtkSmartPointer<vtkPolyData> polydataTrack;
+            polydataTrack = aegisVTK.new_track(branchLostPart, vtkpoints, 0.0);
+            vtkParticleTracks[branchLostPart]->SetBlock(aegisVTK.multiBlockCounters[branchLostPart], polydataTrack);
         aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
         LOG_INFO << "Fieldline trace reached maximum length before intersection";
         traceEnded = true;
