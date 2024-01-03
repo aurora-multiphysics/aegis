@@ -307,20 +307,6 @@ int main() {
 
     vtkAegis aegisVTK;
 
-    vtkNew<vtkMultiBlockDataSet> multiBlockRoot, multiBlockBranch;
-    std::map<std::string, vtkNew<vtkMultiBlockDataSet>> vtkParticleTracks;
-
-    const char* branchShadowedPart = "Shadowed Particles";
-    const char* branchLostPart = "Lost Particles";
-    const char* branchDepositingPart = "Depositing Particles";
-    const char* branchMaxLengthPart = "Max Length Particles";
-
-    multiBlockRoot->SetBlock(0, multiBlockBranch); // set block 
-    multiBlockRoot->GetMetaData(static_cast<int>(0)) // name block
-                  ->Set(vtkCompositeDataSet::NAME(), "Particle Tracks");
-    LOG_INFO << "Initialising particle_tracks root ";
-
-
     // Read in STL file 
     vtkNew<vtkSTLReader> vtkstlReader; // STL reader 
     vtkstlReader->SetFileName(vtk_input_file);
@@ -453,7 +439,6 @@ int main() {
 
       }
 
-
       // Don't intersect on initial launch 
 
       int ray_orientation = 1;
@@ -466,7 +451,6 @@ int main() {
         DAG->next_vol(next_surf, vol_h, vol_h);
         LOG_INFO << "---- RAY HIT ON LAUNCH [" << facetCounter << "] ----";
       }
-
 
       for (int j=0; j<3; ++j)
       {
@@ -508,25 +492,6 @@ int main() {
 
 
           integrator.store_heat_flux(i, 0.0);
-          if (particleTrace == "yes")
-          {
-            vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
-            vtkPointCounter +=1;
-            // if block does not exist, create it
-            if (vtkParticleTracks.find(branchShadowedPart) == vtkParticleTracks.end())
-            {
-              int staticCast = aegisVTK.multiBlockCounters.size();
-              multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchShadowedPart]); // set block 
-              multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
-                              ->Set(vtkCompositeDataSet::NAME(), branchShadowedPart); 
-              std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchShadowedPart << std::endl;
-              aegisVTK.multiBlockCounters[branchShadowedPart] = 0;
-            }  
-            vtkSmartPointer<vtkPolyData> polydataTrack;
-            polydataTrack = aegisVTK.new_track(branchShadowedPart, vtkpoints, 0.0);
-            vtkParticleTracks[branchShadowedPart]->SetBlock(aegisVTK.multiBlockCounters[branchShadowedPart], polydataTrack);
-            
-          }
           aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
           traceEnded = true;
           break; // break loop over ray if surface hit
@@ -552,23 +517,7 @@ int main() {
           LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";
           integrator.count_lost_ray();
           integrator.store_heat_flux(i, 0.0);
-          if (particleTrace == "yes")
-          {
-            if (vtkParticleTracks.find(branchLostPart) == vtkParticleTracks.end())
-            {
-              int staticCast = aegisVTK.multiBlockCounters.size();
-              multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchLostPart]); // set block 
-              multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
-                              ->Set(vtkCompositeDataSet::NAME(), branchLostPart); 
-              std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchLostPart << std::endl;
-              aegisVTK.multiBlockCounters[branchLostPart] = 0;
-            }  
-            vtkSmartPointer<vtkPolyData> polydataTrack;
-            polydataTrack = aegisVTK.new_track(branchLostPart, vtkpoints, 0.0);
-            vtkParticleTracks[branchLostPart]->SetBlock(aegisVTK.multiBlockCounters[branchLostPart], polydataTrack);
-            aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
-          }
-
+          aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
           traceEnded = true;
           break; // break if ray leaves magnetic field
         }
@@ -599,22 +548,7 @@ int main() {
           polarPos = coordTfm::cart_to_polar(newPt, "forwards");
           std::vector<double> fluxPos = coordTfm::polar_to_flux(particle.get_pos("polar"), "forwards", EquData);
           integrator.store_heat_flux(i, Q);
-          if (particleTrace == "yes")
-          {
-            if (vtkParticleTracks.find(branchDepositingPart) == vtkParticleTracks.end())
-            {
-              int staticCast = aegisVTK.multiBlockCounters.size();
-              multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchDepositingPart]); // set block 
-              multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
-                              ->Set(vtkCompositeDataSet::NAME(), branchDepositingPart); 
-              std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchDepositingPart << std::endl;
-              aegisVTK.multiBlockCounters[branchDepositingPart] = 0;
-            }  
-            vtkSmartPointer<vtkPolyData> polydataTrack;
-            polydataTrack = aegisVTK.new_track(branchDepositingPart, vtkpoints, Q);
-            vtkParticleTracks[branchDepositingPart]->SetBlock(aegisVTK.multiBlockCounters[branchDepositingPart], polydataTrack);
-            aegisVTK.arrays["Q"]->InsertNextTuple1(Q);
-          }
+          aegisVTK.arrays["Q"]->InsertNextTuple1(Q);
           traceEnded = true;
           break; // break if ray hits omp
         }
@@ -623,18 +557,6 @@ int main() {
       
       if (traceEnded == false)
       {
-        if (vtkParticleTracks.find(branchMaxLengthPart) == vtkParticleTracks.end())
-        {
-          int staticCast = aegisVTK.multiBlockCounters.size();
-          multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchMaxLengthPart]); // set block 
-          multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
-                          ->Set(vtkCompositeDataSet::NAME(), branchMaxLengthPart); 
-          std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchMaxLengthPart << std::endl;
-          aegisVTK.multiBlockCounters[branchMaxLengthPart] = 0;
-        }  
-        vtkSmartPointer<vtkPolyData> polydataTrack;
-        polydataTrack = aegisVTK.new_track(branchMaxLengthPart, vtkpoints, 0.0);
-        vtkParticleTracks[branchMaxLengthPart]->SetBlock(aegisVTK.multiBlockCounters[branchMaxLengthPart], polydataTrack);
         aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
         LOG_INFO << "Fieldline trace reached maximum length before intersection";
         traceEnded = true;
