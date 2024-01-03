@@ -335,32 +335,15 @@ int main() {
     appendFilter->Update();
     vtkTargetUstr->ShallowCopy(appendFilter->GetOutput());
 
-    // set metadata associated with array(s)
-    vtkNew<vtkDoubleArray> vtkTargetHeatflux;
-    vtkTargetHeatflux->SetNumberOfComponents(1);
-    vtkTargetHeatflux->SetName("Q ");
     LOG_INFO << "Initialising vtkUnstructuredGrid... ";
 
-    vtkNew<vtkDoubleArray> vtkBnOrientation;
-    vtkBnOrientation->SetNumberOfComponents(1);
-    vtkBnOrientation->SetName("Bn_Direction");
-
-    vtkNew<vtkDoubleArray> vtkNormal;
-    vtkNormal->SetNumberOfComponents(3);
-    vtkNormal->SetName("Normal");
-
-    vtkNew<vtkDoubleArray> vtkBField;
-    vtkBField->SetNumberOfComponents(3);
-    vtkBField->SetName("bfield");
-
-    vtkNew<vtkDoubleArray> vtkPsiStart;
-    vtkPsiStart->SetNumberOfComponents(1);
-    vtkPsiStart->SetName("psista");
-
-    
-    vtkNew<vtkDoubleArray> vtkBdotN;
-    vtkBdotN->SetNumberOfComponents(1);
-    vtkBdotN->SetName("zbdotn");
+    // create arrays for various cell data  
+    aegisVTK.new_vtkArray("Q", 1);
+    aegisVTK.new_vtkArray("B.n_direction", 1);
+    aegisVTK.new_vtkArray("Normal", 3);
+    aegisVTK.new_vtkArray("B_field", 3);
+    aegisVTK.new_vtkArray("Psi_Start", 1);
+    aegisVTK.new_vtkArray("B.n", 1);
 
     int facetCounter=0;
 
@@ -389,7 +372,7 @@ int main() {
       }
       triSource Tri(triA, triB, triC, i);
 
-      vtkNormal->InsertNextTuple3(Tri.unitNormal[0], Tri.unitNormal[1], Tri.unitNormal[2]);
+      aegisVTK.arrays["Normal"]->InsertNextTuple3(Tri.unitNormal[0], Tri.unitNormal[1], Tri.unitNormal[2]);
       std::vector<double> launchPos;
       
       if (launchType == "fixed") // get launchpos on triangle
@@ -433,7 +416,7 @@ int main() {
       polarPos = coordTfm::cart_to_polar(launchPos, forwards);
       
 
-      vtkBField->InsertNextTuple3(particle.BfieldXYZ[0], particle.BfieldXYZ[1], particle.BfieldXYZ[2]);
+      aegisVTK.arrays["B_field"]->InsertNextTuple3(particle.BfieldXYZ[0], particle.BfieldXYZ[1], particle.BfieldXYZ[2]);
 
       Bn = dot_product(particle.BfieldXYZ,Tri.unitNormal);
       
@@ -450,8 +433,8 @@ int main() {
 
       //std::cout << EquData.psibdry << std::endl;
 
-      vtkPsiStart->InsertNextTuple1(psi);
-      vtkBdotN->InsertNextTuple1(Bn);
+      aegisVTK.arrays["Psi_Start"]->InsertNextTuple1(psi);
+      aegisVTK.arrays["B.n"]->InsertNextTuple1(Bn);
       psi_values << std::setprecision(8);
       psi_values << psi << " " << psid << " " << Q << " " << Bn << std::endl;
       // --------------------------- TODO move Bn check and Q calculation into a class (maybe triangle source class?)
@@ -459,13 +442,13 @@ int main() {
       if (Bn < 0)
       {
 
-        vtkBnOrientation->InsertNextTuple1(-1.0);
+        aegisVTK.arrays["B.n_direction"]->InsertNextTuple1(-1.0);
         Q = EquData.omp_power_dep(psid, psol, lambda_q, -Bn, "exp");
       }
       else if (Bn > 0)
       {
 
-        vtkBnOrientation->InsertNextTuple1(1.0);
+        aegisVTK.arrays["B.n_direction"]->InsertNextTuple1(1.0);
         Q = EquData.omp_power_dep(psid, psol, lambda_q, Bn, "exp");
 
       }
@@ -481,8 +464,6 @@ int main() {
         history.get_last_intersection(hit);
         history.rollback_last_intersection();
         DAG->next_vol(next_surf, vol_h, vol_h);
-        //DAG->surface_sense(vol_h,surface,sense);
-        //int ray_orientation = -sense;
         LOG_INFO << "---- RAY HIT ON LAUNCH [" << facetCounter << "] ----";
       }
 
@@ -544,8 +525,9 @@ int main() {
             vtkSmartPointer<vtkPolyData> polydataTrack;
             polydataTrack = aegisVTK.new_track(branchShadowedPart, vtkpoints, 0.0);
             vtkParticleTracks[branchShadowedPart]->SetBlock(aegisVTK.multiBlockCounters[branchShadowedPart], polydataTrack);
-            vtkTargetHeatflux->InsertNextTuple1(0.0);
+            
           }
+          aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
           traceEnded = true;
           break; // break loop over ray if surface hit
         }
@@ -584,7 +566,7 @@ int main() {
             vtkSmartPointer<vtkPolyData> polydataTrack;
             polydataTrack = aegisVTK.new_track(branchLostPart, vtkpoints, 0.0);
             vtkParticleTracks[branchLostPart]->SetBlock(aegisVTK.multiBlockCounters[branchLostPart], polydataTrack);
-            vtkTargetHeatflux->InsertNextTuple1(0.0);
+            aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
           }
 
           traceEnded = true;
@@ -631,7 +613,7 @@ int main() {
             vtkSmartPointer<vtkPolyData> polydataTrack;
             polydataTrack = aegisVTK.new_track(branchDepositingPart, vtkpoints, Q);
             vtkParticleTracks[branchDepositingPart]->SetBlock(aegisVTK.multiBlockCounters[branchDepositingPart], polydataTrack);
-            vtkTargetHeatflux->InsertNextTuple1(Q);
+            aegisVTK.arrays["Q"]->InsertNextTuple1(Q);
           }
           traceEnded = true;
           break; // break if ray hits omp
@@ -653,7 +635,7 @@ int main() {
         vtkSmartPointer<vtkPolyData> polydataTrack;
         polydataTrack = aegisVTK.new_track(branchMaxLengthPart, vtkpoints, 0.0);
         vtkParticleTracks[branchMaxLengthPart]->SetBlock(aegisVTK.multiBlockCounters[branchMaxLengthPart], polydataTrack);
-        vtkTargetHeatflux->InsertNextTuple1(0.0);
+        aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
         LOG_INFO << "Fieldline trace reached maximum length before intersection";
         traceEnded = true;
       }
@@ -671,12 +653,12 @@ int main() {
 
     integrator.piecewise_multilinear_out(integrator.powFac);
 
-    vtkTargetUstr->GetCellData()->AddArray(vtkTargetHeatflux);
-    vtkTargetUstr->GetCellData()->AddArray(vtkBnOrientation);
-    vtkTargetUstr->GetCellData()->AddArray(vtkNormal);
-    vtkTargetUstr->GetCellData()->AddArray(vtkPsiStart);
-    vtkTargetUstr->GetCellData()->AddArray(vtkBdotN);
-    vtkTargetUstr->GetCellData()->AddArray(vtkBField);
+    vtkTargetUstr->GetCellData()->AddArray(aegisVTK.arrays["Q"]);
+    vtkTargetUstr->GetCellData()->AddArray(aegisVTK.arrays["B.n_Direction"]);
+    vtkTargetUstr->GetCellData()->AddArray(aegisVTK.arrays["Normal"]);
+    vtkTargetUstr->GetCellData()->AddArray(aegisVTK.arrays["Psi_Start"]);
+    vtkTargetUstr->GetCellData()->AddArray(aegisVTK.arrays["B.n"]);
+    vtkTargetUstr->GetCellData()->AddArray(aegisVTK.arrays["B_field"]);
 
     
 

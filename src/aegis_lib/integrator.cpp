@@ -175,3 +175,11 @@ void surfaceIntegrator::piecewise_multilinear_out(std::unordered_map<moab::Entit
 
 
 }
+
+
+// double surfaceIntegrator::calculate_q()
+// {
+//   double q; // power deposited on current cell calculated from eich formula
+
+
+// }

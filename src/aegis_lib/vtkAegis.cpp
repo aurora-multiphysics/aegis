@@ -21,17 +21,18 @@ void vtkAegis::init_Ptrack_root()
     LOG_INFO << "Initialising particle_tracks root ";
 }
 
-void vtkAegis::init_Ptrack_branch(const char* branchName, std::map<std::string, vtkNew<vtkMultiBlockDataSet>> vtkParticleTracks)
+void vtkAegis::init_Ptrack_branch(const char* branchName)
 {
 
-  if (vtkParticleTracks.find(branchName) == vtkParticleTracks.end())
+  if (particleTracks.find(branchName) == particleTracks.end())
   {
     int staticCast = multiBlockCounters.size();
-    std::cout << "STATICAST INT = " << staticCast << std::endl;
-    multiBlockBranch->SetBlock(0, vtkParticleTracks[branchName]); // set block 
+    multiBlockBranch->SetBlock(staticCast, particleTracks[branchName]); // set block 
     multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
                    ->Set(vtkCompositeDataSet::NAME(), branchName);
     multiBlockCounters[branchName] = 0;
+    std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchName << std::endl;
+    particleTracks[branchName] = vtkSmartPointer<vtkMultiBlockDataSet>::New();
   }
 }
 
@@ -63,3 +64,25 @@ vtkNew<vtkPolyData> vtkAegis::new_track(const char* branchName, vtkPoints* vtkpo
   return vtkPolydata;
 
 }
+
+void vtkAegis::add_track(const char* branchName, vtkPoints* vtkpoints, double heatflux)
+{
+  init_Ptrack_branch(branchName);
+  vtkSmartPointer<vtkPolyData> polydataTrack = vtkSmartPointer<vtkPolyData>::New();
+  polydataTrack = new_track(branchName, vtkpoints, heatflux);
+  particleTracks[branchName]->SetBlock(multiBlockCounters[branchName], polydataTrack);
+  arrays["Q"]->InsertNextTuple1(heatflux);
+}
+
+void vtkAegis::new_vtkArray(std::string arrName, int nComponents)
+{
+  vtkSmartPointer<vtkDoubleArray> tempArray = vtkSmartPointer<vtkDoubleArray>::New(); 
+  tempArray->SetNumberOfComponents(nComponents);
+  tempArray->SetName(arrName.data());
+  arrays.insert(std::make_pair(arrName.data(), tempArray));
+  LOG_INFO << "Initialised new vtkDoubleArray '" << arrName  << "' with nComponents = " << nComponents;
+
+}
+
+
+
