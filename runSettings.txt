@@ -4,13 +4,13 @@ VTK_input [s] inres1.stl
 ray_qry [s] exps/exps00010000.qry
 runcase [s] eqdsk
 launchPos [s] fixed
-trace [s] yes
+trace [s] no
 eqdsk_file [s] eqdsk/EQ3.eqdsk 
 
 # Integer Valued Aegis Run Parameters
 cenopt [i] 2
 number_of_rays_launched_per_tri [i] 5
-nTrack [i] 100000
+nTrack [i] 10000
 
 # Double Valued Aegis Run Parameters
 dsTrack [d] 0.05

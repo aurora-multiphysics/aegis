@@ -25,10 +25,9 @@ class particleBase
   std::vector<double> Bfield; // magnetic field at current pos
   std::vector<double> dir; // unit direction vector of particle at current position
   std::vector<double> BfieldXYZ; // cartesian mangetic field
-  double dirCS[3]; // c style array of particle direction for use in DagMC::ray_fire()
-  double posCS[3]; //c style array of particle position for use in DagMC::ray_fire()
   std::vector<double> pos; // current position of particle 
-
+  std::vector<double> launchPos; // initial starting position of particle on triangle
+  int atMidplane; // 0 == Not at midplane; 1 == At Inner-Midplane; 2 == At Outer-Midplane  
 
 
   void set_pos(std::vector<double> newPosition); // set new particle position
@@ -40,7 +39,7 @@ class particleBase
   void align_dir_to_surf(double Bn); // align particle dir to surface normal
   void update_vectors(double distanceTravelled); // update position  
   void update_vectors(double distanceTravelled, equData &EquData); // overload to update dir as well
-  void update_cs_arrays(); // update C-style arrays ready for use in DagMC::ray_fire()
+  void check_if_midplane_reached(double zcen, double rInrBdry, double rOutrBdry); // check if particle has reached inner or outer midplane and set value of atMidplane
 };
 
 

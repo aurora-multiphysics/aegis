@@ -12,16 +12,25 @@
 
 void particleBase::set_pos(std::vector<double> newPosition) // set current particle position
 {
+  if (this->pos.empty()) 
+  { 
+    this->launchPos = newPosition;
+  }
   this->pos = newPosition; // set the new position
 }
 
 void particleBase::set_pos(double newPosition[]) // overload set_pos() for C-style array
 {
-  std::vector<double> tempVector(3); 
+  std::vector<double> tempVector(3);
   for (int i=0; i<3; i++)
   {
     tempVector[i] = newPosition[i];
   }
+
+  if (this->pos.empty())
+  {
+    this->launchPos = tempVector;
+  } 
   this->pos = tempVector; // set the new position  
 }
 
@@ -65,10 +74,6 @@ void particleBase::set_dir(equData &EquData) // Set unit direction vector along 
   normB[2] = magn[2]/norm;
 
   this->dir = normB;
-  this->dirCS[0] = this->dir[0];
-  this->dirCS[1] = this->dir[1];
-  this->dirCS[2] = this->dir[2];
-
 }
 
 std::vector<double> particleBase::get_dir(std::string coordType)
@@ -85,12 +90,6 @@ void particleBase::align_dir_to_surf(double Bn)
     this->dir[1] = -this->dir[1];
     this->dir[2] = -this->dir[2];
   }
-
-  // update C style array for direction vector
-
-  this->dirCS[0] = this->dir[0];
-  this->dirCS[1] = this->dir[1];
-  this->dirCS[2] = this->dir[2];
 }
 
 void particleBase::update_vectors(double distanceTravelled)
@@ -118,13 +117,24 @@ void particleBase::update_vectors(double distanceTravelled, equData &EquData)
   this->set_dir(EquData);
 }
 
-void particleBase::update_cs_arrays() 
+void particleBase::check_if_midplane_reached(double zcen, double rInrBdry, double rOutrBdry)
 {
-  this->dirCS[0] = this->dir[0];
-  this->dirCS[1] = this->dir[1];
-  this->dirCS[2] = this->dir[2];
+  double x = this->pos[0];
+  double y = this->pos[1];
+  double z = this->pos[2];
+  double r = sqrt(pow(x,2) + pow(y,2));
+  double startZ = this->launchPos[2]; 
+  this->atMidplane = 0;
 
-  this->posCS[0] = this->pos[0];
-  this->posCS[1] = this->pos[1];
-  this->posCS[2] = this->pos[2];
+  if (startZ > zcen)
+  {
+    if (r <= rInrBdry) {this->atMidplane = 1;}
+    else if (r >= rOutrBdry) {this->atMidplane = 2;}
+  }
+  else if (startZ < zcen)
+  {
+    if (r <= rInrBdry) {this->atMidplane = 1;}
+    else if (r >= rOutrBdry) {this->atMidplane = 2;}
+  }
 }
+

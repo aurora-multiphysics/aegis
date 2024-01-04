@@ -357,8 +357,8 @@ void equData::eqdsk_write_array(std::ofstream &file, std::vector<double> array, 
 void equData::init_interp_splines()
 {
   LOG_TRACE << "-----equData.init_interp_splines()-----";
-  double r_pts[nw];
-  double z_pts[nh];
+  std::vector<double> r_pts(nw);
+  std::vector<double> z_pts(nh);
   r_pts[0] = rmin;
   z_pts[0] = zmin;
 
@@ -366,20 +366,20 @@ void equData::init_interp_splines()
 
 
 // loop over Z creating spline knots
-  for (int i=0; i<nw; i++)
+  for (int i=1; i<nw; i++)
   {
-    r_pts[i+1] = r_pts[i]+dr;
+    r_pts[i] = r_pts[i-1]+dr;
   }
 // loop over Z creating spline knots
-  for (int i=0; i<nh; i++)
+  for (int i=1; i<nh; i++)
   {
-    z_pts[i+1] = z_pts[i]+dz;
+    z_pts[i] = z_pts[i-1]+dz;
   }
 
 // loop over (R,Z) creating for spline knots
   double psi_pts[nw*nh];
   int count = 0;
-  for (int i=0; i<nw; i++)
+  for (int i=0; i<nw; i++) // flatten Psi(R,Z) array into Psi(index)
   {
     for(int j=0; j<nh; j++)
     {
@@ -395,26 +395,33 @@ void equData::init_interp_splines()
   // loop over R to create 1d knots of psi
   psi_1dpts[0] = psiaxis;
   dpsi = rsig*dpsi; // set correct sign of dpsi depending on if increase/decrease outwards
-  for (int i=0; i<nh; i++)
+  std::ofstream psi1d_out("psi_1d_pts.txt");
+  for (int i=1; i<nh; i++)
   {
-    psi_1dpts[i+1] = psi_1dpts[i]+dpsi;
+    psi_1dpts[i] = psi_1dpts[i-1]+dpsi;
+    std::cout << psi_1dpts[i] << std::endl;
   }
 
-  std::cout << "--------FPOL---------" << std::endl;
+  // std::cout << "--------FPOL---------" << std::endl;
 
-  for (int i=0; i<nw; i++)
-  {
-    //f_pts[i] = eqdsk.fpol[i];
-    std::cout << f_pts[i] << " " << std::endl;
-  }
-  std::cout << "--------FPOL---------" << std::endl;
+  // for (int i=0; i<nw; i++)
+  // {
+  //   //f_pts[i] = eqdsk.fpol[i];
+  //   std::cout << f_pts[i] << " " << std::endl;
+  // }
+  // std::cout << "--------FPOL---------" << std::endl;
 
   // set 1d arrays for R grid, Z grid and Psi grids
-  r_grid.setcontent(nw, r_pts);
-  z_grid.setcontent(nh, z_pts);
+  r_grid.setcontent(nw, r_pts.data());
+  z_grid.setcontent(nh, z_pts.data());
   psi_grid.setcontent(count, psi_pts);
   psi_1dgrid.setcontent(nw, psi_1dpts);
   f_grid.setcontent(nw, f_pts);
+
+  for (int i=0 ; i<nh; i++)
+  {
+    psi1d_out << psi_1dgrid[i] << std::endl;
+  }
 
 
   // Construct the spline interpolant for flux function psi(R,Z)

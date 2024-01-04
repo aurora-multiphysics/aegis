@@ -96,12 +96,8 @@ int main() {
   DAG->load_file(dagmc_input_file); // open test dag file
   DAG->init_OBBTree(); // initialise OBBTree
   DAG->setup_geometry(Surfs, Vols);
-  //DAG->create_graveyard();
-  //DAG->remove_graveyard();
   DAG->moab_instance()->get_entities_by_type(0, MBTRI, Facets);
   LOG_WARNING << "No of triangles in geometry " << Facets.size();
-
-  //DAG->moab_instance()->get_entities_by_dimension()
 
   moab::EntityHandle triangle_set, vertex_set;
   DAG->moab_instance()->create_meshset( moab::MESHSET_SET, triangle_set );
@@ -123,14 +119,10 @@ int main() {
   {
     moab::Range verts;
     DAG->moab_instance()->get_adjacencies(&i, 1, 0, false, verts);
-    //std::cout << "Tri " << DAG->moab_instance()->id_from_handle(i) << " vertex adjacencies:" << std::endl;
     std::vector<double> coords(3*verts.size());
     DAG->moab_instance()->get_coords(verts, &coords[0]);
   }
 
-
-
-  //DAG->write_mesh("dag.out", 1);
   EntityHandle prev_surf; // previous surface id
   EntityHandle next_surf; // surface id
   double next_surf_dist=0.0; // distance to the next surface ray will intersect
@@ -151,59 +143,16 @@ int main() {
     equData EquData;
 
     EquData.read_eqdsk(eqdsk_file);
-    //EquData.write_eqdsk_out();
     EquData.move(-0.006, 0, 1); // same values smardda uses for EQ3. TODO - add these parameters to input config file
     EquData.psibdry = settings.dValues["psiref"]; // psiref in geoq.ctl = this 
     EquData.init_interp_splines();
     EquData.gnuplot_out();
-
     EquData.centre(1);
-
-    // COMMENTED OUT BECAUSE IM NOT SURE IT SHOULD EVEN BE USED
-    //EquData.boundary_rb(); 
-
-    std::cout << "PSIBDRY = " << EquData.psibdry << std::endl;
-    std::vector<double> vertexCoordinates;
-    
-    // TESTING B CALCUALTIONS 
-    // posang%pos(1)=self%rmin+0.7*(self%rmax-self%rmin)
-    // posang%pos(2)=0
-    // posang%pos(3)=self%zmin+0.5*(self%zmax-self%zmin)
-
-    std::vector<double> testBPos = {7.4427804, 0, 0.15000000};
-    std::vector<double> testB; 
-    std::vector<double> testBPosPsi;
-    testB = EquData.b_field(testBPos, "cart");
-    testBPosPsi = coordTfm::cart_to_polar(testBPos, "");
-    testBPosPsi = coordTfm::polar_to_flux(testBPosPsi, "", EquData);
-
-    std::cout << "==================" << std::endl;
-    std::cout << "Bx = " << testB[0] << std::endl;
-    std::cout << "By = " << testB[1] << std::endl;
-    std::cout << "Bz = " << testB[2] << std::endl;
-    std::cout << "zpsi = " << testBPosPsi[0] << std::endl;
-    std::cout << "==================" << std::endl;
-    // 
-
 
     double psol = settings.dValues["Psol"];
     double lambda_q = settings.dValues["lambda_q"];
 
-    // double ZPSID = 0.18319528554382325;
-    // std::vector<double> TESTPOS = {268.606201/1000, 1127.0083/1000, 772.985352/1000};
-    // TESTPOS = coordTfm::cart_to_polar(TESTPOS, "forwards");
-    // TESTPOS = coordTfm::polar_to_flux(TESTPOS, "forwards", EquData);
-    // std::cout << "TESTPSI = " << TESTPOS[0] << std::endl;
-
-
-    // double ZBDOTN = -4.0550704;
-    // double TESTQ;
-    // TESTQ = EquData.omp_power_dep(ZPSID, 7500000, 0.012, ZBDOTN, "exp");
-  
-    // std::cout << "------------------------------------------------------" << std::endl;
-    // std::cout << "TEST Q = " << TESTQ << std::endl;
-    // std::cout << "------------------------------------------------------" << std::endl;
-
+    std::vector<double> vertexCoordinates;
     DAG->moab_instance()->get_vertex_coordinates(vertexCoordinates);
     LOG_WARNING << "NUMBER OF VERTICES = " <<  vertexCoordinates.size() << std::endl;
     int numVertex = vertexCoordinates.size()/3;
@@ -219,20 +168,16 @@ int main() {
 
     EquData.psi_limiter(vertexList);
     
-
     bool plotRZ = true;
     bool plotXYZ = true;
     EquData.write_bfield(plotRZ, plotXYZ);
     std::vector<double> cartPosSource(3);
     std::ofstream launchPosTxt("launch_positions.txt");
 
-    
     double phi;
     std::vector<double> Bfield;
     std::vector<double> polarPos(3);
     std::vector<double> newPt(3);
-
-    ////////// Particle tracking
 
     // Get triangles from the surface(s) of interest
     moab::Range targetFacets, targetFacetsMeshset; // range containing all of the triangles in the surface of interest
@@ -281,9 +226,7 @@ int main() {
 
     std::vector<double> triA(3), triB(3), triC(3); // triangle nodes
     double Bn; // B.n at surface of geometry
-    
     double s; 
-    
     double ds = settings.dValues["dsTrack"];
     int nS = settings.iValues["nTrack"];
 
@@ -320,47 +263,13 @@ int main() {
                   ->Set(vtkCompositeDataSet::NAME(), "Particle Tracks");
     LOG_INFO << "Initialising particle_tracks root ";
 
-
-    // Read in STL file 
-    vtkNew<vtkSTLReader> vtkstlReader; // STL reader 
-    vtkstlReader->SetFileName(vtk_input_file);
-    vtkstlReader->Update();
-
-    vtkNew<vtkUnstructuredGrid> vtkTargetUstr;
-
-    // Transform PolyData to vtkUnstructuredGrid datatype using append filter
-    vtkNew<vtkAppendFilter> appendFilter;
-    vtkPolyData* vtkTargetPD = vtkstlReader->GetOutput(); 
-    appendFilter->AddInputData(vtkTargetPD);
-    appendFilter->Update();
-    vtkTargetUstr->ShallowCopy(appendFilter->GetOutput());
-
-    // set metadata associated with array(s)
-    vtkNew<vtkDoubleArray> vtkTargetHeatflux;
-    vtkTargetHeatflux->SetNumberOfComponents(1);
-    vtkTargetHeatflux->SetName("Q ");
-    LOG_INFO << "Initialising vtkUnstructuredGrid... ";
-
-    vtkNew<vtkDoubleArray> vtkBnOrientation;
-    vtkBnOrientation->SetNumberOfComponents(1);
-    vtkBnOrientation->SetName("Bn_Direction");
-
-    vtkNew<vtkDoubleArray> vtkNormal;
-    vtkNormal->SetNumberOfComponents(3);
-    vtkNormal->SetName("Normal");
-
-    vtkNew<vtkDoubleArray> vtkBField;
-    vtkBField->SetNumberOfComponents(3);
-    vtkBField->SetName("bfield");
-
-    vtkNew<vtkDoubleArray> vtkPsiStart;
-    vtkPsiStart->SetNumberOfComponents(1);
-    vtkPsiStart->SetName("psista");
-
-    
-    vtkNew<vtkDoubleArray> vtkBdotN;
-    vtkBdotN->SetNumberOfComponents(1);
-    vtkBdotN->SetName("zbdotn");
+    // create arrays for various cell data  
+    aegisVTK.new_vtkArray("Q", 1);
+    aegisVTK.new_vtkArray("B.n_direction", 1);
+    aegisVTK.new_vtkArray("Normal", 3);
+    aegisVTK.new_vtkArray("B_field", 3);
+    aegisVTK.new_vtkArray("Psi_Start", 1);
+    aegisVTK.new_vtkArray("B.n", 1);
 
     int facetCounter=0;
 
@@ -389,38 +298,27 @@ int main() {
       }
       triSource Tri(triA, triB, triC, i);
 
-      vtkNormal->InsertNextTuple3(Tri.unitNormal[0], Tri.unitNormal[1], Tri.unitNormal[2]);
-      std::vector<double> launchPos;
+      aegisVTK.arrays["Normal"]->InsertNextTuple3(Tri.unitNormal[0], Tri.unitNormal[1], Tri.unitNormal[2]);
       
       if (launchType == "fixed") // get launchpos on triangle
       {
-        launchPos = Tri.centroid();
+        particle.set_pos(Tri.centroid());
       }
       else
       {
-        launchPos = Tri.random_pt();
+        particle.set_pos(Tri.random_pt());
       }
-      integrator.launchPositions[i] = launchPos;
+      particle.set_dir(EquData); // Set unit direction vector along cartesian magnetic field vector
+      integrator.launchPositions[i] = particle.launchPos;
 
       vtkNew<vtkPoints> vtkpoints;
       int vtkPointCounter = 0;
 
-      double triStart[3];
-
-      triStart[0] = launchPos[0];
-      triStart[1] = launchPos[1];
-      triStart[2] = launchPos[2];
-
-      particle.set_pos(triStart); // Set current position of particle
-      particle.set_dir(EquData); // Set unit direction vector along cartesian magnetic field vector
-
       if (particleTrace == "yes")
       {
-        vtkpoints->InsertNextPoint(launchPos[0], launchPos[1], launchPos[2]);
+        vtkpoints->InsertNextPoint(particle.launchPos[0], particle.launchPos[1], particle.launchPos[2]);
         vtkPointCounter +=1;
-
       }
-
 
       bool outOfBounds = particle.check_if_in_bfield(EquData);
       if (outOfBounds)
@@ -430,66 +328,50 @@ int main() {
       }
 
       std::string forwards = "forwards";
-      polarPos = coordTfm::cart_to_polar(launchPos, forwards);
-      
-
-      vtkBField->InsertNextTuple3(particle.BfieldXYZ[0], particle.BfieldXYZ[1], particle.BfieldXYZ[2]);
-
+      polarPos = coordTfm::cart_to_polar(particle.launchPos, forwards);
+      aegisVTK.arrays["B_field"]->InsertNextTuple3(particle.BfieldXYZ[0], particle.BfieldXYZ[1], particle.BfieldXYZ[2]);
       Bn = dot_product(particle.BfieldXYZ,Tri.unitNormal);
       
       // CALCULATING Q at surface 
       double psi;
 
       std::vector<double> temp;
-      temp = coordTfm::cart_to_polar(launchPos, "forwards");
+      temp = coordTfm::cart_to_polar(particle.launchPos, "forwards");
       temp = coordTfm::polar_to_flux(temp, "forwards", EquData);
       psi = temp[0];
       double psid = psi + EquData.psibdry;
-      //std::cout << "PSI = " << psi << " PSID = " << psid << std::endl;
       double Q;
 
-      //std::cout << EquData.psibdry << std::endl;
-
-      vtkPsiStart->InsertNextTuple1(psi);
-      vtkBdotN->InsertNextTuple1(Bn);
-      psi_values << std::setprecision(8);
-      psi_values << psi << " " << psid << " " << Q << " " << Bn << std::endl;
+      aegisVTK.arrays["Psi_Start"]->InsertNextTuple1(psi);
+      aegisVTK.arrays["B.n"]->InsertNextTuple1(Bn);
       // --------------------------- TODO move Bn check and Q calculation into a class (maybe triangle source class?)
       particle.align_dir_to_surf(Bn);
       if (Bn < 0)
       {
-
-        vtkBnOrientation->InsertNextTuple1(-1.0);
+        aegisVTK.arrays["B.n_direction"]->InsertNextTuple1(-1.0);
         Q = EquData.omp_power_dep(psid, psol, lambda_q, -Bn, "exp");
       }
       else if (Bn > 0)
       {
-
-        vtkBnOrientation->InsertNextTuple1(1.0);
+        aegisVTK.arrays["B.n_direction"]->InsertNextTuple1(1.0);
         Q = EquData.omp_power_dep(psid, psol, lambda_q, Bn, "exp");
-
       }
 
-
       // Don't intersect on initial launch 
-
       int ray_orientation = 1;
       history.reset();
-      DAG->ray_fire(vol_h, triStart, particle.dirCS, next_surf, next_surf_dist, &history,ds,ray_orientation);
+      DAG->ray_fire(vol_h, particle.launchPos.data(), particle.dir.data(), next_surf, next_surf_dist, &history,ds,ray_orientation);
       if (next_surf != 0) 
       {
         history.get_last_intersection(hit);
         history.rollback_last_intersection();
         DAG->next_vol(next_surf, vol_h, vol_h);
-        //DAG->surface_sense(vol_h,surface,sense);
-        //int ray_orientation = -sense;
         LOG_INFO << "---- RAY HIT ON LAUNCH [" << facetCounter << "] ----";
       }
 
-
       for (int j=0; j<3; ++j)
       {
-        newPt[j] = triStart[j] + particle.dir[j]*ds;
+        newPt[j] = particle.launchPos[j] + particle.dir[j]*ds;
         particle.pos[j] = particle.pos[j] + particle.dir[j]*ds;
       }
 
@@ -509,8 +391,7 @@ int main() {
         history.reset();
         traceEnded = false;
         s += ds;
-        particle.update_cs_arrays();
-        DAG->ray_fire(vol_h, particle.posCS, particle.dirCS, next_surf, next_surf_dist, &history, ds, ray_orientation);
+        DAG->ray_fire(vol_h, particle.pos.data(), particle.dir.data(), next_surf, next_surf_dist, &history, ds, ray_orientation);
 
         if (next_surf != 0) // Terminate fieldline trace since shadowing surface hit
         {
@@ -524,7 +405,6 @@ int main() {
           LOG_INFO << "Surface " << next_surf << " hit after travelling " << s << " units";
           history.rollback_last_intersection();
           history.reset();
-
 
           integrator.store_heat_flux(i, 0.0);
           if (particleTrace == "yes")
@@ -544,8 +424,9 @@ int main() {
             vtkSmartPointer<vtkPolyData> polydataTrack;
             polydataTrack = aegisVTK.new_track(branchShadowedPart, vtkpoints, 0.0);
             vtkParticleTracks[branchShadowedPart]->SetBlock(aegisVTK.multiBlockCounters[branchShadowedPart], polydataTrack);
-            vtkTargetHeatflux->InsertNextTuple1(0.0);
+            
           }
+          aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
           traceEnded = true;
           break; // break loop over ray if surface hit
         }
@@ -555,7 +436,6 @@ int main() {
           newPt[1] = newPt[1] +particle.dir[1]*ds; // ds because a surface isnt reached so next_surf_dist does not have a value
           newPt[2] = newPt[2] +particle.dir[2]*ds;
         }
-        //history.reset();
         
         if (particleTrace == "yes")
         {
@@ -584,9 +464,8 @@ int main() {
             vtkSmartPointer<vtkPolyData> polydataTrack;
             polydataTrack = aegisVTK.new_track(branchLostPart, vtkpoints, 0.0);
             vtkParticleTracks[branchLostPart]->SetBlock(aegisVTK.multiBlockCounters[branchLostPart], polydataTrack);
-            vtkTargetHeatflux->InsertNextTuple1(0.0);
           }
-
+          aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
           traceEnded = true;
           break; // break if ray leaves magnetic field
         }
@@ -596,23 +475,9 @@ int main() {
           particle.align_dir_to_surf(Bn);
         }
 
-        bool particleIMP = false; // flag for particle reaching IMP
-        bool particleOMP = false; // flag for particle reaching OMP
-        double R = sqrt(pow(newPt[0],2) + pow(newPt[1], 2));
-        double Z = newPt[2];
+        particle.check_if_midplane_reached(EquData.zcen, EquData.rbdry, rOutrBdry);
 
-        if (triStart[2] > EquData.zcen)
-        {
-          if (R <= EquData.rbdry) {particleIMP = true;}
-          else if (R >= rOutrBdry) {particleOMP = true;}
-        }
-        else if (triStart[2] < EquData.zcen)
-        {
-          if (R <= EquData.rbdry) {particleIMP = true;}
-          else if (R >= rOutrBdry) {particleOMP = true;}
-        }
-
-        if (particleOMP == true || particleIMP == true)
+        if (particle.atMidplane !=0) // if particle is 1 or 2 then deposit heat
         {
           polarPos = coordTfm::cart_to_polar(newPt, "forwards");
           std::vector<double> fluxPos = coordTfm::polar_to_flux(particle.get_pos("polar"), "forwards", EquData);
@@ -631,8 +496,8 @@ int main() {
             vtkSmartPointer<vtkPolyData> polydataTrack;
             polydataTrack = aegisVTK.new_track(branchDepositingPart, vtkpoints, Q);
             vtkParticleTracks[branchDepositingPart]->SetBlock(aegisVTK.multiBlockCounters[branchDepositingPart], polydataTrack);
-            vtkTargetHeatflux->InsertNextTuple1(Q);
           }
+          aegisVTK.arrays["Q"]->InsertNextTuple1(Q);
           traceEnded = true;
           break; // break if ray hits omp
         }
@@ -653,7 +518,7 @@ int main() {
         vtkSmartPointer<vtkPolyData> polydataTrack;
         polydataTrack = aegisVTK.new_track(branchMaxLengthPart, vtkpoints, 0.0);
         vtkParticleTracks[branchMaxLengthPart]->SetBlock(aegisVTK.multiBlockCounters[branchMaxLengthPart], polydataTrack);
-        vtkTargetHeatflux->InsertNextTuple1(0.0);
+        aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
         LOG_INFO << "Fieldline trace reached maximum length before intersection";
         traceEnded = true;
       }
@@ -665,40 +530,21 @@ int main() {
     LOG_WARNING << "Number of rays lost from magnetic domain = " << integrator.raysLost;
     LOG_WARNING << "Number of rays that reached the maximum allowed length = " 
                 << aegisVTK.multiBlockCounters[branchMaxLengthPart];
-    //integrator.facet_values(integrator.nRays);
-    //integrator.facet_values(integrator.powFac);
+
     integrator.csv_out(integrator.powFac);
 
     integrator.piecewise_multilinear_out(integrator.powFac);
 
-    vtkTargetUstr->GetCellData()->AddArray(vtkTargetHeatflux);
-    vtkTargetUstr->GetCellData()->AddArray(vtkBnOrientation);
-    vtkTargetUstr->GetCellData()->AddArray(vtkNormal);
-    vtkTargetUstr->GetCellData()->AddArray(vtkPsiStart);
-    vtkTargetUstr->GetCellData()->AddArray(vtkBdotN);
-    vtkTargetUstr->GetCellData()->AddArray(vtkBField);
+    aegisVTK.write_unstructuredGrid(vtk_input_file, "out.vtk");
 
-    
+    if (particleTrace == "yes")
+    {  
+      vtkNew<vtkXMLMultiBlockDataWriter> vtkMBWriter;
+      vtkMBWriter->SetFileName("particle_tracks.vtm");
+      vtkMBWriter->SetInputData(multiBlockRoot);
+      vtkMBWriter->Write();
+    }
 
-    vtkNew<vtkXMLMultiBlockDataWriter> vtkMBWriter;
-    vtkMBWriter->SetFileName("particle_tracks.vtm");
-    vtkMBWriter->SetInputData(multiBlockRoot);
-    vtkMBWriter->Write();
-
-   // vtkGeopolydata->GetCellData()->AddArray(vtkHeatflux);
-
-    vtkNew<vtkUnstructuredGridWriter> vtkUstrWriter;
-    vtkUstrWriter->SetFileName("out.vtk");
-    vtkUstrWriter->SetInputData(vtkTargetUstr);
-    vtkUstrWriter->Write();
-    //integrator.facet_values(integrator.nRays);
-
-//////////
-  // double psi_test;
-  // double psiIn = 0.52798347924652100;
-  // double BN =  4.01979303;
-  // psi_test = EquData.omp_power_dep(psiIn, psol, lambda_q, BN, "exp");
-  // std::cout << psi_test << std::endl;
   }
 
   else // No runcase specified
