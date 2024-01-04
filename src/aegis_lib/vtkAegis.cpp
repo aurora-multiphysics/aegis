@@ -4,34 +4,31 @@
 
 vtkAegis::vtkAegis()
 {
-  this->multiBlockRoot = vtkSmartPointer<vtkMultiBlockDataSet>::New();
-  this->multiBlockBranch = vtkSmartPointer<vtkMultiBlockDataSet>::New();
   this->unstructuredGrid = vtkSmartPointer<vtkUnstructuredGrid>::New();
-
 }
 
-void vtkAegis::init_Ptrack_root()
+void vtkAegis::init_Ptrack_root(vtkSmartPointer<vtkMultiBlockDataSet> &multiBlockRoot, vtkSmartPointer<vtkMultiBlockDataSet> &multiBlockBranch)
 {
   // Initalise root
 
-    this->multiBlockRoot->SetBlock(0, this->multiBlockBranch); // set block 
-    this->multiBlockRoot->GetMetaData(static_cast<int>(0)) // name block
+    multiBlockRoot->SetBlock(0, multiBlockBranch); // set block 
+    multiBlockRoot->GetMetaData(static_cast<int>(0)) // name block
                   ->Set(vtkCompositeDataSet::NAME(), "Particle Tracks");
     LOG_INFO << "Initialising particle_tracks root ";
 }
 
-void vtkAegis::init_Ptrack_branch(const char* branchName)
+void vtkAegis::init_Ptrack_branch(const char* branchName, vtkSmartPointer<vtkMultiBlockDataSet> &multiBlockBranch, vtkSmartPointer<vtkMultiBlockDataSet> &track)
 {
-
   if (this->particleTracks.find(branchName) == this->particleTracks.end())
   {
     int staticCast = this->multiBlockCounters.size();
-    this->multiBlockBranch->SetBlock(staticCast, this->particleTracks[branchName]); // set block 
-    this->multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
+    multiBlockBranch->SetBlock(staticCast, this->particleTracks[branchName]); // set block 
+    multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
                    ->Set(vtkCompositeDataSet::NAME(), branchName);
     this->multiBlockCounters[branchName] = 0;
     std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchName << std::endl;
-    this->particleTracks[branchName] = vtkSmartPointer<vtkMultiBlockDataSet>::New();
+    track = vtkSmartPointer<vtkMultiBlockDataSet>::New();
+
   }
 }
 
@@ -64,13 +61,7 @@ vtkNew<vtkPolyData> vtkAegis::new_track(const char* branchName, vtkPoints* vtkpo
 
 }
 
-void vtkAegis::add_track(const char* branchName, vtkPoints* vtkpoints, double heatflux)
-{
-  init_Ptrack_branch(branchName);
-  vtkSmartPointer<vtkPolyData> polydataTrack = vtkSmartPointer<vtkPolyData>::New();
-  polydataTrack = new_track(branchName, vtkpoints, heatflux);
-  this->particleTracks[branchName]->SetBlock(this->multiBlockCounters[branchName], polydataTrack);
-}
+
 
 void vtkAegis::new_vtkArray(std::string arrName, int nComponents)
 {
@@ -81,7 +72,7 @@ void vtkAegis::new_vtkArray(std::string arrName, int nComponents)
   LOG_INFO << "Initialised new vtkDoubleArray '" << arrName  << "' with nComponents = " << nComponents;
 }
 
-void vtkAegis::add_vtkArrays(const char* vtk_input_file)
+void vtkAegis::add_vtkArrays(const char* vtk_input_file) // read stl and add arrays
 {
   // Read in STL file 
   vtkNew<vtkSTLReader> vtkstlReader; // STL reader 
@@ -105,18 +96,12 @@ void vtkAegis::add_vtkArrays(const char* vtk_input_file)
   }
 }
 
-void vtkAegis::write_unstructuredGrid(const char* fileName)
+void vtkAegis::write_unstructuredGrid(const char* vtk_input_file, const char* fileName)
 {
+  this->add_vtkArrays(vtk_input_file);
   vtkNew<vtkUnstructuredGridWriter> vtkUstrWriter;
   vtkUstrWriter->SetFileName(fileName);
   vtkUstrWriter->SetInputData(this->unstructuredGrid);
   vtkUstrWriter->Write();
 }
 
-void vtkAegis::write_particleTracks(const char* fileName)
-{
-  vtkNew<vtkXMLMultiBlockDataWriter> vtkMBWriter;
-  vtkMBWriter->SetFileName(fileName);
-  vtkMBWriter->SetInputData(this->multiBlockRoot);
-  vtkMBWriter->Write();
-}
