@@ -59,14 +59,6 @@ using moab::DagMC;
 using moab::OrientedBoxTreeTool;
 moab::DagMC* DAG;
 
-void next_pt(double prev_pt[3], double origin[3], double next_surf_dist,
-                          double dir[3], std::ofstream &ray_intersect);
-double dot_product(double vector_a[], double vector_b[]);
-double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
-void reflect(double dir[3], double prev_dir[3], EntityHandle next_surf);
-double * vecNorm(double vector[3]);
-
-
 // LOG macros
 
 //LOG_TRACE << "this is a trace message";             ***WRITTEN OUT TO LOGFILE***
@@ -76,8 +68,6 @@ double * vecNorm(double vector[3]);
 //LOG_FATAL << "this is a fatal error message";       ***WRITTEN OUT TO CONSOLE AND LOGFILE***
 
 int main() {
-
-
 
   clock_t start = clock();
   settings settings;
@@ -129,9 +119,6 @@ int main() {
   double prev_surf_dist; // previous next_surf_dist before the next ray_fire call
   DagMC::RayHistory history; // initialise RayHistory object
   EntityHandle vol_h = DAG->entity_by_index(3, 1);
-
-
-
 
   // --------------------------------------------------------------------------------------------------------
 
@@ -277,7 +264,7 @@ int main() {
     std::string particleTrace = settings.sValues["trace"];
     double rOutrBdry = settings.dValues["rOutrBdry"];
     LOG_WARNING << "rOutrBdry (from input file) = " << rOutrBdry;
-    // LOOP OVER FACETS OF INTEREST IN SURFACE s -----------------------------------------------------------    
+    // LOOP OVER FACETS OF INTEREST IN SURFACE s ----------------------------------------------------------- 
     for (auto i:targetFacets)
     {
       //DAG->moab_instance()->list_entity(s);
@@ -330,11 +317,10 @@ int main() {
       std::string forwards = "forwards";
       polarPos = coordTfm::cart_to_polar(particle.launchPos, forwards);
       aegisVTK.arrays["B_field"]->InsertNextTuple3(particle.BfieldXYZ[0], particle.BfieldXYZ[1], particle.BfieldXYZ[2]);
-      Bn = dot_product(particle.BfieldXYZ,Tri.unitNormal);
+      Bn = Tri.dot_product(particle.BfieldXYZ); // dot product between triangle normal and bfield
       
       // CALCULATING Q at surface 
       double psi;
-
       std::vector<double> temp;
       temp = coordTfm::cart_to_polar(particle.launchPos, "forwards");
       temp = coordTfm::polar_to_flux(temp, "forwards", EquData);
@@ -561,21 +547,5 @@ int main() {
   std::cout << "------------------------------------------------------" << std::endl;
 
   return 0;
-}
-
-
-
-double dot_product(double vector_a[], double vector_b[]){
-   double product = 0;
-   for (int i = 0; i < 3; i++)
-   product = product + vector_a[i] * vector_b[i];
-   return product;
-}
-
-double dot_product(std::vector<double> vector_a, std::vector<double> vector_b){
-   double product = 0;
-   for (int i = 0; i < 3; i++)
-   product = product + vector_a[i] * vector_b[i];
-   return product;
 }
 
