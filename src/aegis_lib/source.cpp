@@ -176,7 +176,7 @@ double triSource::dot_product(std::vector<double> externalVector)
   double product = 0;
   for (int i; i<3; i++)
   {
-    product = product + externalVector[i]*this->normal[i];
+    product = product + externalVector[i]*this->unitNormal[i];
   }
   return product;
 }

@@ -59,6 +59,14 @@ using moab::DagMC;
 using moab::OrientedBoxTreeTool;
 moab::DagMC* DAG;
 
+void next_pt(double prev_pt[3], double origin[3], double next_surf_dist,
+                          double dir[3], std::ofstream &ray_intersect);
+double dot_product(double vector_a[], double vector_b[]);
+double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
+void reflect(double dir[3], double prev_dir[3], EntityHandle next_surf);
+double * vecNorm(double vector[3]);
+
+
 // LOG macros
 
 //LOG_TRACE << "this is a trace message";             ***WRITTEN OUT TO LOGFILE***
@@ -68,6 +76,8 @@ moab::DagMC* DAG;
 //LOG_FATAL << "this is a fatal error message";       ***WRITTEN OUT TO CONSOLE AND LOGFILE***
 
 int main() {
+
+
 
   clock_t start = clock();
   settings settings;
@@ -120,6 +130,9 @@ int main() {
   DagMC::RayHistory history; // initialise RayHistory object
   EntityHandle vol_h = DAG->entity_by_index(3, 1);
 
+
+
+
   // --------------------------------------------------------------------------------------------------------
 
   if (settings.sValues["runcase"]=="eqdsk") // structure in place in case I want to have completely different run options
@@ -128,9 +141,9 @@ int main() {
     std::cout << "--------------------READING EQDSK---------------------" << std::endl;
     std::cout << "------------------------------------------------------" << std::endl;
     equData EquData;
-
+    std::cout << "RMOVE = "  << settings.dValues["rmove"] << std::endl; 
     EquData.read_eqdsk(eqdsk_file);
-    EquData.move(-0.006, 0, 1); // same values smardda uses for EQ3. TODO - add these parameters to input config file
+    EquData.move(settings.dValues["rmove"], settings.dValues["zmove"], settings.dValues["fscale"]); // same values smardda uses for EQ3. TODO - add these parameters to input config file
     EquData.psibdry = settings.dValues["psiref"]; // psiref in geoq.ctl = this 
     EquData.init_interp_splines();
     EquData.gnuplot_out();
@@ -160,6 +173,7 @@ int main() {
     EquData.write_bfield(plotRZ, plotXYZ);
     std::vector<double> cartPosSource(3);
     std::ofstream launchPosTxt("launch_positions.txt");
+    LOG_WARNING << "EquData.psibdry = " << EquData.psibdry;
 
     double phi;
     std::vector<double> Bfield;
@@ -264,7 +278,7 @@ int main() {
     std::string particleTrace = settings.sValues["trace"];
     double rOutrBdry = settings.dValues["rOutrBdry"];
     LOG_WARNING << "rOutrBdry (from input file) = " << rOutrBdry;
-    // LOOP OVER FACETS OF INTEREST IN SURFACE s ----------------------------------------------------------- 
+    // LOOP OVER FACETS OF INTEREST IN SURFACE s -----------------------------------------------------------    
     for (auto i:targetFacets)
     {
       //DAG->moab_instance()->list_entity(s);
@@ -295,8 +309,21 @@ int main() {
       {
         particle.set_pos(Tri.random_pt());
       }
-      particle.set_dir(EquData); // Set unit direction vector along cartesian magnetic field vector
       integrator.launchPositions[i] = particle.launchPos;
+
+      particle.check_if_in_bfield(EquData);
+      if (particle.outOfBounds)
+      {
+        LOG_INFO << "Particle start is out of magnetic field bounds. Skipping to next triangle. Check correct eqdsk is being used for the given geometry";
+        aegisVTK.arrays["B_field"]->InsertNextTuple3(0,0,0);
+        aegisVTK.arrays["Psi_Start"]->InsertNextTuple1(0);
+        aegisVTK.arrays["B.n"]->InsertNextTuple1(0);
+        aegisVTK.arrays["B.n_direction"]->InsertNextTuple1(0);
+        aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
+        continue;
+      }
+
+      particle.set_dir(EquData); // Set unit direction vector along cartesian magnetic field vector
 
       vtkNew<vtkPoints> vtkpoints;
       int vtkPointCounter = 0;
@@ -307,27 +334,21 @@ int main() {
         vtkPointCounter +=1;
       }
 
-      bool outOfBounds = particle.check_if_in_bfield(EquData);
-      if (outOfBounds)
-      {
-        LOG_WARNING << "Particle has moved out of magnetic field bounds. Skipping to next triangle";
-        continue;
-      }
-
       std::string forwards = "forwards";
       polarPos = coordTfm::cart_to_polar(particle.launchPos, forwards);
+
       aegisVTK.arrays["B_field"]->InsertNextTuple3(particle.BfieldXYZ[0], particle.BfieldXYZ[1], particle.BfieldXYZ[2]);
-      Bn = Tri.dot_product(particle.BfieldXYZ); // dot product between triangle normal and bfield
+      Bn = dot_product(particle.BfieldXYZ,Tri.unitNormal);
       
       // CALCULATING Q at surface 
       double psi;
+
       std::vector<double> temp;
       temp = coordTfm::cart_to_polar(particle.launchPos, "forwards");
       temp = coordTfm::polar_to_flux(temp, "forwards", EquData);
       psi = temp[0];
       double psid = psi + EquData.psibdry;
       double Q;
-
       aegisVTK.arrays["Psi_Start"]->InsertNextTuple1(psi);
       aegisVTK.arrays["B.n"]->InsertNextTuple1(Bn);
       // --------------------------- TODO move Bn check and Q calculation into a class (maybe triangle source class?)
@@ -335,13 +356,17 @@ int main() {
       if (Bn < 0)
       {
         aegisVTK.arrays["B.n_direction"]->InsertNextTuple1(-1.0);
-        Q = EquData.omp_power_dep(psid, psol, lambda_q, -Bn, "exp");
       }
       else if (Bn > 0)
       {
         aegisVTK.arrays["B.n_direction"]->InsertNextTuple1(1.0);
-        Q = EquData.omp_power_dep(psid, psol, lambda_q, Bn, "exp");
+        
       }
+      Q = EquData.omp_power_dep(psid, psol, lambda_q, Bn, "exp");
+      Q = std::fabs(Q);
+      psi_values << Q << " " << psi << " " << psid << " " << particle.BfieldXYZ[0] << " " << particle.BfieldXYZ[1] 
+                 << " " << particle.BfieldXYZ[2] << " " << Bn << std::endl;
+
 
       // Don't intersect on initial launch 
       int ray_orientation = 1;
@@ -430,8 +455,8 @@ int main() {
         }
 
         particle.set_pos(newPt);
-        outOfBounds = particle.check_if_in_bfield(EquData);
-        if (outOfBounds) // Terminate fieldline trace since particle has left magnetic domain
+        particle.check_if_in_bfield(EquData);
+        if (particle.outOfBounds) // Terminate fieldline trace since particle has left magnetic domain
         {
           LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";
           integrator.count_lost_ray();
@@ -547,5 +572,21 @@ int main() {
   std::cout << "------------------------------------------------------" << std::endl;
 
   return 0;
+}
+
+
+
+double dot_product(double vector_a[], double vector_b[]){
+   double product = 0;
+   for (int i = 0; i < 3; i++)
+   product = product + vector_a[i] * vector_b[i];
+   return product;
+}
+
+double dot_product(std::vector<double> vector_a, std::vector<double> vector_b){
+   double product = 0;
+   for (int i = 0; i < 3; i++)
+   product = product + vector_a[i] * vector_b[i];
+   return product;
 }
 

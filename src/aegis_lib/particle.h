@@ -28,14 +28,14 @@ class particleBase
   std::vector<double> pos; // current position of particle 
   std::vector<double> launchPos; // initial starting position of particle on triangle
   int atMidplane; // 0 == Not at midplane; 1 == At Inner-Midplane; 2 == At Outer-Midplane  
-
+  bool outOfBounds = false;
 
   void set_pos(std::vector<double> newPosition); // set new particle position
   void set_pos(double newPosition[]); // overload for C-style array
   std::vector<double> get_pos(std::string coordType); // return STL vector of the current position
   void set_dir(equData &EquData); // set unit drection vector and Bfield at current position
   std::vector<double> get_dir(std::string coordType); // return STL vector of unit direction
-  bool check_if_in_bfield(equData &Equdata); // check if in magnetic field
+  void check_if_in_bfield(equData &Equdata); // check if in magnetic field
   void align_dir_to_surf(double Bn); // align particle dir to surface normal
   void update_vectors(double distanceTravelled); // update position  
   void update_vectors(double distanceTravelled, equData &EquData); // overload to update dir as well

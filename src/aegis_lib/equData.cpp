@@ -145,9 +145,7 @@ void equData::read_eqdsk(std::string filename)
     dz = (zmax-zmin)/nz;
     psiqbdry = eqdsk.psibdry1;
     psiaxis = eqdsk.psimag1;
-    psinorm = std::abs(psiqbdry-psiaxis)/2;
-    set_rsig();
-    dpsi = std::abs(rsig*(psiqbdry-psiaxis)/nw);
+   
     ivac = eqdsk.fpol[0];
     psifac = 1.0;
 
@@ -172,8 +170,15 @@ void equData::read_eqdsk(std::string filename)
             }
         }
       }
+      else 
+      {
+        for (auto i:eqdsk.fpol) {i = -i;}
+      }
     } 
     
+    set_rsig();
+    dpsi = std::abs(rsig*(psiqbdry-psiaxis)/nw);
+    psinorm = std::fabs(psiqbdry-psiaxis)/2;
 
 
     LOG_WARNING << "DPSI =  " << dpsi;
@@ -416,7 +421,7 @@ void equData::init_interp_splines()
   z_grid.setcontent(nh, z_pts.data());
   psi_grid.setcontent(count, psi_pts);
   psi_1dgrid.setcontent(nw, psi_1dpts);
-  f_grid.setcontent(nw, f_pts);
+  f_grid.setcontent(nw, eqdsk.fpol.data());
 
   for (int i=0 ; i<nh; i++)
   {
@@ -440,7 +445,7 @@ void equData::init_interp_splines()
   PSI = alglib::spline2dcalc(psiSpline, R, Z);
 
   std::cout << "-----------------" << std::endl;
-  std::cout << "PSI TEST VALUE = " << PSI << std::endl;
+  std::cout << "PSI TEST VALUE psi(6, 0.41) = " << PSI << std::endl;
   std::cout << "-----------------" << std::endl;
 
 
@@ -477,9 +482,9 @@ void equData::set_rsig()
   {
     rsig = -1.0;
   }
-  else if (psiqbdry > psiaxis)
+  else if (psiqbdry-psiaxis > 0)
   {
-    rsig = 1.0;
+    rsig = +1.0;
   }
 
   LOG_WARNING << "Value of rsig (psiqbdry-psiaxis) = " << rsig;
@@ -755,8 +760,8 @@ std::vector<double> equData::b_field(std::vector<double> position,
   double zdpdz; // local dpsi/dz from spline calc
   double zf; // local f(psi) = RB_T toroidal component of B
   double null; // second derivative of psi not needed
-
   // if position vector is already in polars skip coord transform and calculate B
+  
   if (startingFrom == "polar")
   {
     zr = position[0];
@@ -770,7 +775,7 @@ std::vector<double> equData::b_field(std::vector<double> position,
     zr = polarPosition[0];
     zz = polarPosition[1];
   }
-
+  
   if (zr < rmin || zr > rmax || zz < zmin || zz > zmax )
   {
     return std::vector<double>();
@@ -792,7 +797,6 @@ std::vector<double> equData::b_field(std::vector<double> position,
   // return the calculated B vector
   return bVector;
 
-
 }
 
 std::vector<double> equData::b_field_cart(std::vector<double> polarBVector, double phi, int normalise)
@@ -808,8 +812,8 @@ std::vector<double> equData::b_field_cart(std::vector<double> polarBVector, doub
   zbz = polarBVector[1];
   zbt = polarBVector[2];
 
-  zbx = zbr*cos(-phi) - zbt*sin(-phi);
-  zby = zbr*sin(-phi) + zbt*cos(-phi);
+  zbx = zbr*cos(phi) - zbt*sin(phi);
+  zby = -(zbr*sin(phi) + zbt*cos(phi));
 
   cartBVector[0] = zbx;
   cartBVector[1] = zby;
