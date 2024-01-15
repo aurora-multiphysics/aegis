@@ -34,11 +34,11 @@ void particleBase::set_pos(double newPosition[]) // overload set_pos() for C-sty
   this->pos = tempVector; // set the new position  
 }
 
-bool particleBase::check_if_in_bfield(equData &EquData)
+void particleBase::check_if_in_bfield(equData &EquData)
 {
   std::vector<double> currentBfield = EquData.b_field(this->pos, "cart");
-  if (currentBfield.empty()) {return true;}
-  else {return false;}
+  if (currentBfield.empty()) {this->outOfBounds = true;}
+  else {this->outOfBounds = false;}
 }
 
 std::vector<double> particleBase::get_pos(std::string coordType) // return STL vector of current particle position
@@ -61,10 +61,14 @@ std::vector<double> particleBase::get_pos(std::string coordType) // return STL v
 
 void particleBase::set_dir(equData &EquData) // Set unit direction vector along cartesian magnetic field vector
 {
+  this->check_if_in_bfield(EquData);
+  if (this->outOfBounds) {return;} // exit function early if out of bounds
+
   double norm; // normalisation constant for magnetic field
   std::vector<double> normB(3); // normalised magnetic field
   std::vector<double> polarPos = coordTfm::cart_to_polar(this->pos, "forwards"); // polar position
-  std::vector<double> magn = EquData.b_field(this->pos, "cart"); // magnetic field
+  std::vector<double> magn(3); 
+  magn = EquData.b_field(this->pos, "cart"); // magnetic field
   this->Bfield = magn;
   magn = EquData.b_field_cart(magn, polarPos[2], 0);
   this->BfieldXYZ = magn;
