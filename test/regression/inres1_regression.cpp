@@ -1,4 +1,6 @@
+#include <gtest/gtest.h>
 #include <stdio.h>
+#include <bits/stdc++.h>
 #include <assert.h>
 #include <time.h>
 #include <algorithm>
@@ -18,24 +20,6 @@
 #include <time.h>
 #include <any>
 
-#include <vtkCellArray.h>
-#include <vtkNew.h>
-#include <vtkPoints.h>
-#include <vtkPolyData.h>
-#include <vtkXMLPolyDataWriter.h>
-#include <vtkCellArray.h>
-#include <vtkCellData.h>
-#include <vtkDoubleArray.h>
-#include <vtkPolyLine.h>
-#include <vtkMultiBlockDataSet.h>
-#include <vtkXMLMultiBlockDataWriter.h>
-#include <vtkCompositeDataSet.h>
-#include <vtkInformation.h>
-#include <vtkSTLReader.h>
-#include <vtkUnstructuredGrid.h>
-#include <vtkUnstructuredGridReader.h>
-#include <vtkUnstructuredGridWriter.h>
-#include <vtkAppendFilter.h>
 
 #include "DagMC.hpp"
 #include "moab/Core.hpp"
@@ -48,38 +32,27 @@
 #include "integrator.h"
 #include "coordtfm.h"
 #include "alglib/interpolation.h"
-#include "vtkAegis.h"
 #include "particle.h"
+ 
+ using namespace moab;
 
+ using moab::DagMC;
 
-using namespace moab;
-using namespace coordTfm;
+ moab::DagMC* DAG;
 
-using moab::DagMC;
-using moab::OrientedBoxTreeTool;
-moab::DagMC* DAG;
-
-void next_pt(double prev_pt[3], double origin[3], double next_surf_dist,
-                          double dir[3], std::ofstream &ray_intersect);
-double dot_product(double vector_a[], double vector_b[]);
 double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
-void reflect(double dir[3], double prev_dir[3], EntityHandle next_surf);
-double * vecNorm(double vector[3]);
 
-
-// LOG macros
-
-//LOG_TRACE << "this is a trace message";             ***WRITTEN OUT TO LOGFILE***
-//LOG_DEBUG << "this is a debug message";             ***WRITTEN OUT TO LOGFILE***
-//LOG_WARNING << "this is a warning message";         ***WRITTEN OUT TO CONSOLE AND LOGFILE***
-//LOG_ERROR << "this is an error message";            ***WRITTEN OUT TO CONSOLE AND LOGFILE***
-//LOG_FATAL << "this is a fatal error message";       ***WRITTEN OUT TO CONSOLE AND LOGFILE***
-
-int main() {
+ class aegisRegressionTests: public ::testing::Test {
+  protected:
+  virtual void SetUp() {}
+  virtual void TearDown() {}
+ };
 
 
 
-  clock_t start = clock();
+ TEST_F(aegisRegressionTests, inres1)
+ {
+
   settings settings;
   settings.load_params();
   settings.print_params();
@@ -87,7 +60,7 @@ int main() {
   LOG_WARNING << "h5m Faceted Geometry file to be used = " << settings.sValues["DAGMC_input"];
 
   static const char* dagmc_input_file = settings.sValues["DAGMC_input"].c_str();
-  static const char* vtk_input_file = settings.sValues["VTK_input"].c_str();
+
 
   static const char* ray_qry_exps = settings.sValues["ray_qry"].c_str();
   std::string eqdsk_file = settings.sValues["eqdsk_file"];
@@ -130,10 +103,9 @@ int main() {
   DagMC::RayHistory history; // initialise RayHistory object
   EntityHandle vol_h = DAG->entity_by_index(3, 1);
 
+  std::vector<std::pair<double,double>> aegis_qValues; // store values of Q to assert against
 
-  
-
-  // --------------------------------------------------------------------------------------------------------
+ // --------------------------------------------------------------------------------------------------------
 
   if (settings.sValues["runcase"]=="eqdsk") // structure in place in case I want to have completely different run options
   {
@@ -158,7 +130,7 @@ int main() {
     int numVertex = vertexCoordinates.size()/3;
     std::vector<std::vector<double>> vertexList(numVertex, std::vector<double> (3));
 
-    // create list of vertexes as XYZ vectors
+ // create list of vertexes as XYZ vectors
     for (int i = 0; i<numVertex; i++)
     {
       vertexList[i][0] = vertexCoordinates[i];
@@ -167,7 +139,6 @@ int main() {
     }
 
     EquData.psi_limiter(vertexList);
-    
     bool plotRZ = true;
     bool plotXYZ = true;
     EquData.write_bfield(plotRZ, plotXYZ);
@@ -180,10 +151,10 @@ int main() {
     std::vector<double> polarPos(3);
     std::vector<double> newPt(3);
 
-    // Get triangles from the surface(s) of interest
+ // Get triangles from the surface(s) of interest
     moab::Range targetFacets, targetFacetsMeshset; // range containing all of the triangles in the surface of interest
     moab::Range tempFacets;
-    // can specify particular surfaces of interest
+ // can specify particular surfaces of interest
     EntityHandle targetSurf; // surface of interest
     targetSurf = Surfs[0];
 
@@ -247,30 +218,6 @@ int main() {
       launchType = "random";
       LOG_WARNING << "Launching from random positions in triangles";
     }
-    // INITIALISE VTK STUFF -------------------------------------------------
-
-    vtkAegis aegisVTK;
-
-    vtkNew<vtkMultiBlockDataSet> multiBlockRoot, multiBlockBranch;
-    std::map<std::string, vtkNew<vtkMultiBlockDataSet>> vtkParticleTracks;
-
-    const char* branchShadowedPart = "Shadowed Particles";
-    const char* branchLostPart = "Lost Particles";
-    const char* branchDepositingPart = "Depositing Particles";
-    const char* branchMaxLengthPart = "Max Length Particles";
-
-    multiBlockRoot->SetBlock(0, multiBlockBranch); // set block 
-    multiBlockRoot->GetMetaData(static_cast<int>(0)) // name block
-                  ->Set(vtkCompositeDataSet::NAME(), "Particle Tracks");
-    LOG_INFO << "Initialising particle_tracks root ";
-
-    // create arrays for various cell data  
-    aegisVTK.new_vtkArray("Q", 1);
-    aegisVTK.new_vtkArray("B.n_direction", 1);
-    aegisVTK.new_vtkArray("Normal", 3);
-    aegisVTK.new_vtkArray("B_field", 3);
-    aegisVTK.new_vtkArray("Psi_Start", 1);
-    aegisVTK.new_vtkArray("B.n", 1);
 
     int facetCounter=0;
 
@@ -278,7 +225,8 @@ int main() {
     std::string particleTrace = settings.sValues["trace"];
     double rOutrBdry = settings.dValues["rOutrBdry"];
     LOG_WARNING << "rOutrBdry (from input file) = " << rOutrBdry;
-    // LOOP OVER FACETS OF INTEREST IN SURFACE s -----------------------------------------------------------    
+ // LOOP OVER FACETS OF INTEREST IN SURFACE s ----------------------------------------------------------- 
+    
     for (auto i:targetFacets)
     {
       //DAG->moab_instance()->list_entity(s);
@@ -299,7 +247,6 @@ int main() {
       }
       triSource Tri(triA, triB, triC, i);
 
-      aegisVTK.arrays["Normal"]->InsertNextTuple3(Tri.unitNormal[0], Tri.unitNormal[1], Tri.unitNormal[2]);
       
       if (launchType == "fixed") // get launchpos on triangle
       {
@@ -315,29 +262,12 @@ int main() {
       if (particle.outOfBounds)
       {
         LOG_INFO << "Particle start is out of magnetic field bounds. Skipping to next triangle. Check correct eqdsk is being used for the given geometry";
-        aegisVTK.arrays["B_field"]->InsertNextTuple3(0,0,0);
-        aegisVTK.arrays["Psi_Start"]->InsertNextTuple1(0);
-        aegisVTK.arrays["B.n"]->InsertNextTuple1(0);
-        aegisVTK.arrays["B.n_direction"]->InsertNextTuple1(0);
-        aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
         continue;
       }
 
       particle.set_dir(EquData); // Set unit direction vector along cartesian magnetic field vector
-
-      vtkNew<vtkPoints> vtkpoints;
-      int vtkPointCounter = 0;
-
-      if (particleTrace == "yes")
-      {
-        vtkpoints->InsertNextPoint(particle.launchPos[0], particle.launchPos[1], particle.launchPos[2]);
-        vtkPointCounter +=1;
-      }
-
       std::string forwards = "forwards";
       polarPos = coordTfm::cart_to_polar(particle.launchPos, forwards);
-
-      aegisVTK.arrays["B_field"]->InsertNextTuple3(particle.BfieldXYZ[0], particle.BfieldXYZ[1], particle.BfieldXYZ[2]);
       Bn = dot_product(particle.BfieldXYZ,Tri.unitNormal);
       
       // CALCULATING Q at surface 
@@ -349,24 +279,11 @@ int main() {
       psi = temp[0];
       double psid = psi + EquData.psibdry;
       double Q;
-      aegisVTK.arrays["Psi_Start"]->InsertNextTuple1(psi);
-      aegisVTK.arrays["B.n"]->InsertNextTuple1(Bn);
+      double psiOnSurf = psi;
       // --------------------------- TODO move Bn check and Q calculation into a class (maybe triangle source class?)
       particle.align_dir_to_surf(Bn);
-      if (Bn < 0)
-      {
-        aegisVTK.arrays["B.n_direction"]->InsertNextTuple1(-1.0);
-      }
-      else if (Bn > 0)
-      {
-        aegisVTK.arrays["B.n_direction"]->InsertNextTuple1(1.0);
-        
-      }
       Q = EquData.omp_power_dep(psid, psol, lambda_q, Bn, "exp");
       Q = std::fabs(Q);
-      psi_values << Q << " " << psi << " " << psid << " " << particle.BfieldXYZ[0] << " " << particle.BfieldXYZ[1] 
-                 << " " << particle.BfieldXYZ[2] << " " << Bn << std::endl;
-
 
       // Don't intersect on initial launch 
       int ray_orientation = 1;
@@ -386,11 +303,6 @@ int main() {
         particle.pos[j] = particle.pos[j] + particle.dir[j]*ds;
       }
 
-      if (particleTrace == "yes")
-      {
-        vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
-        vtkPointCounter +=1;
-      }
       //history.rollback_last_intersection();
       history.reset();
       s = ds;
@@ -416,28 +328,8 @@ int main() {
           LOG_INFO << "Surface " << next_surf << " hit after travelling " << s << " units";
           history.rollback_last_intersection();
           history.reset();
-
           integrator.store_heat_flux(i, 0.0);
-          if (particleTrace == "yes")
-          {
-            vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
-            vtkPointCounter +=1;
-            // if block does not exist, create it
-            if (vtkParticleTracks.find(branchShadowedPart) == vtkParticleTracks.end())
-            {
-              int staticCast = aegisVTK.multiBlockCounters.size();
-              multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchShadowedPart]); // set block 
-              multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
-                              ->Set(vtkCompositeDataSet::NAME(), branchShadowedPart); 
-              std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchShadowedPart << std::endl;
-              aegisVTK.multiBlockCounters[branchShadowedPart] = 0;
-            }  
-            vtkSmartPointer<vtkPolyData> polydataTrack;
-            polydataTrack = aegisVTK.new_track(branchShadowedPart, vtkpoints, 0.0);
-            vtkParticleTracks[branchShadowedPart]->SetBlock(aegisVTK.multiBlockCounters[branchShadowedPart], polydataTrack);
-            
-          }
-          aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
+          aegis_qValues.push_back(std::make_pair(psiOnSurf,Q));
           traceEnded = true;
           break; // break loop over ray if surface hit
         }
@@ -448,12 +340,6 @@ int main() {
           newPt[2] = newPt[2] +particle.dir[2]*ds;
         }
         
-        if (particleTrace == "yes")
-        {
-          vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
-          vtkPointCounter +=1;    
-        }
-
         particle.set_pos(newPt);
         particle.check_if_in_bfield(EquData);
         if (particle.outOfBounds) // Terminate fieldline trace since particle has left magnetic domain
@@ -461,22 +347,7 @@ int main() {
           LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";
           integrator.count_lost_ray();
           integrator.store_heat_flux(i, 0.0);
-          if (particleTrace == "yes")
-          {
-            if (vtkParticleTracks.find(branchLostPart) == vtkParticleTracks.end())
-            {
-              int staticCast = aegisVTK.multiBlockCounters.size();
-              multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchLostPart]); // set block 
-              multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
-                              ->Set(vtkCompositeDataSet::NAME(), branchLostPart); 
-              std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchLostPart << std::endl;
-              aegisVTK.multiBlockCounters[branchLostPart] = 0;
-            }  
-            vtkSmartPointer<vtkPolyData> polydataTrack;
-            polydataTrack = aegisVTK.new_track(branchLostPart, vtkpoints, 0.0);
-            vtkParticleTracks[branchLostPart]->SetBlock(aegisVTK.multiBlockCounters[branchLostPart], polydataTrack);
-          }
-          aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
+          aegis_qValues.push_back(std::make_pair(psiOnSurf,Q));
           traceEnded = true;
           break; // break if ray leaves magnetic field
         }
@@ -485,108 +356,94 @@ int main() {
           particle.set_dir(EquData);
           particle.align_dir_to_surf(Bn);
         }
-
-        particle.check_if_midplane_reached(EquData.zcen, EquData.rbdry, rOutrBdry-0.1);
-
+        
+        particle.check_if_midplane_reached(EquData.zcen, EquData.rbdry, rOutrBdry);
         if (particle.atMidplane !=0) // if particle is 1 or 2 then deposit heat
         {
           polarPos = coordTfm::cart_to_polar(newPt, "forwards");
           std::vector<double> fluxPos = coordTfm::polar_to_flux(particle.get_pos("polar"), "forwards", EquData);
           integrator.store_heat_flux(i, Q);
-          if (particleTrace == "yes")
-          {
-            if (vtkParticleTracks.find(branchDepositingPart) == vtkParticleTracks.end())
-            {
-              int staticCast = aegisVTK.multiBlockCounters.size();
-              multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchDepositingPart]); // set block 
-              multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
-                              ->Set(vtkCompositeDataSet::NAME(), branchDepositingPart); 
-              std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchDepositingPart << std::endl;
-              aegisVTK.multiBlockCounters[branchDepositingPart] = 0;
-            }  
-            vtkSmartPointer<vtkPolyData> polydataTrack;
-            polydataTrack = aegisVTK.new_track(branchDepositingPart, vtkpoints, Q);
-            vtkParticleTracks[branchDepositingPart]->SetBlock(aegisVTK.multiBlockCounters[branchDepositingPart], polydataTrack);
-          }
-          aegisVTK.arrays["Q"]->InsertNextTuple1(Q);
+          aegis_qValues.push_back(std::make_pair(psiOnSurf,Q));
           traceEnded = true;
           break; // break if ray hits omp
         }
-
+        
       }
-      
+
       if (traceEnded == false)
       {
-        if (vtkParticleTracks.find(branchMaxLengthPart) == vtkParticleTracks.end())
-        {
-          int staticCast = aegisVTK.multiBlockCounters.size();
-          multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchMaxLengthPart]); // set block 
-          multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
-                          ->Set(vtkCompositeDataSet::NAME(), branchMaxLengthPart); 
-          std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchMaxLengthPart << std::endl;
-          aegisVTK.multiBlockCounters[branchMaxLengthPart] = 0;
-        }  
-        vtkSmartPointer<vtkPolyData> polydataTrack;
-        polydataTrack = aegisVTK.new_track(branchMaxLengthPart, vtkpoints, 0.0);
-        vtkParticleTracks[branchMaxLengthPart]->SetBlock(aegisVTK.multiBlockCounters[branchMaxLengthPart], polydataTrack);
-        aegisVTK.arrays["Q"]->InsertNextTuple1(0.0);
+        aegis_qValues.push_back(std::make_pair(psiOnSurf,Q));
         LOG_INFO << "Fieldline trace reached maximum length before intersection";
         traceEnded = true;
       }
     }
-
-    LOG_WARNING << "Number of rays launched = " << facetCounter;
-    LOG_WARNING << "Number of shadowed ray intersections = " << integrator.raysHit;
-    LOG_WARNING << "Number of rays depositing power from omp = " << integrator.raysHeatDep;
-    LOG_WARNING << "Number of rays lost from magnetic domain = " << integrator.raysLost;
-    LOG_WARNING << "Number of rays that reached the maximum allowed length = " 
-                << aegisVTK.multiBlockCounters[branchMaxLengthPart];
-
-    integrator.csv_out(integrator.powFac);
-
-    integrator.piecewise_multilinear_out(integrator.powFac);
-
-    aegisVTK.write_unstructuredGrid(vtk_input_file, "out.vtk");
-
-    if (particleTrace == "yes")
-    {  
-      vtkNew<vtkXMLMultiBlockDataWriter> vtkMBWriter;
-      vtkMBWriter->SetFileName("particle_tracks.vtm");
-      vtkMBWriter->SetInputData(multiBlockRoot);
-      vtkMBWriter->Write();
-    }
-
   }
 
-  else // No runcase specified
+  std::ifstream smardda_qValues_in("smardda_qvalues.txt");
+  double qvalue;
+  std::vector<std::pair<double,double>> smardda_qValues;
+  std::string line;
+  
+  if (smardda_qValues_in)
   {
-    LOG_FATAL << "No runcase specified - please choose from 'eqdsk'";
+    while (std::getline(smardda_qValues_in, line, '\n'))
+    {
+      std::istringstream ss(line);
+      std::vector<double> tempVec;
+      while(ss >> qvalue)
+      {
+        tempVec.push_back(qvalue);  
+      }
+      smardda_qValues.push_back(std::make_pair(tempVec[1], tempVec[0]));
+    }
+  }
+  else 
+  {
+    FAIL() << "Cannot find 'smardda_qvalues.txt' file";
   }
 
+  std::sort(aegis_qValues.begin(), aegis_qValues.end());
+  std::sort(smardda_qValues.begin(), smardda_qValues.end());
 
-  clock_t end = clock();
-  double elapsed = double(end - start)/CLOCKS_PER_SEC;
+  double Q_rel_sum;
+  std::cout << std::endl << "Printing first 10 elements..." << std::endl;
+  for (int i=0; i<10; i++)
+  {
+    std::cout << "Element - " << i << std::endl;
+    std::cout << "PSI = " << aegis_qValues[i].first << " Q = " << aegis_qValues[i].second << " --> AEGIS" << std::endl;
+    std::cout << "PSI = " << smardda_qValues[i].first << " Q = " << smardda_qValues[i].second << " --> SMARDDA" << std::endl;
+    Q_rel_sum += std::pow((aegis_qValues[i].second - smardda_qValues[i].second), 2);
+    std::cout << std::endl;
+  }  
 
-  std::cout << "------------------------------------------------------" << std::endl;
-  std::cout << "Elapsed Aegis run time = " << elapsed << std::endl;
-  std::cout << "------------------------------------------------------" << std::endl;
+  double L2_NORM = std::sqrt( (1.0/Facets.size())*Q_rel_sum );
+  const double EXPECTED_L2_NORM = 14.0936;
 
-  return 0;
-}
+  L2_NORM = 13.5;
+  const auto AEGIS_MAX = *std::max_element(aegis_qValues.begin(),aegis_qValues.end(),[](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
+  const auto SMARDDA_MAX = *std::max_element(smardda_qValues.begin(),smardda_qValues.end(),[](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
 
+  double percentTol = 5; // 5% tolerance
+  double MAX_REL_ERROR = fabs(std::fabs((AEGIS_MAX.second - SMARDDA_MAX.second)/SMARDDA_MAX.second)*100);
+  double L2_NORM_ERROR = fabs(std::fabs((L2_NORM - EXPECTED_L2_NORM)/EXPECTED_L2_NORM)*100);
+  std::cout << "---------------------------" << std::endl;
+  std::cout << "MAX Q AEGIS = " << AEGIS_MAX.second << std::endl;
+  std::cout << "MAX Q SMARDDA = " << SMARDDA_MAX.second << std::endl;
+  std::cout << "MAX Q %ERROR = " << MAX_REL_ERROR << std::endl;
+  std::cout << "L2_NORM = " << L2_NORM << std::endl;
+  std::cout << "L2_NORM %Error = " << L2_NORM_ERROR << std::endl;
+  std::cout << "---------------------------" << std::endl << std::endl;
+  
+  EXPECT_LT(MAX_REL_ERROR, percentTol);
+  ASSERT_LT(L2_NORM_ERROR, percentTol);
+ }
 
-
-double dot_product(double vector_a[], double vector_b[]){
-   double product = 0;
-   for (int i = 0; i < 3; i++)
-   product = product + vector_a[i] * vector_b[i];
-   return product;
-}
 
 double dot_product(std::vector<double> vector_a, std::vector<double> vector_b){
-   double product = 0;
-   for (int i = 0; i < 3; i++)
-   product = product + vector_a[i] * vector_b[i];
-   return product;
+  double product = 0;
+  for (int i = 0; i < 3; i++)
+  {
+    product = product + vector_a[i] * vector_b[i];
+  }
+  return product;
 }
-

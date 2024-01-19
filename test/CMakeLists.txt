@@ -1,4 +1,12 @@
 Find_package(Threads REQUIRED)
+set(CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -lpthread")
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_MULTITHREAD ON)
+ADD_DEFINITIONS(-DBOOST_LOG_DYN_LINK)
+set(Boost_PACKAGES system log log_setup)
+set(BOOST_REQUESTED_VERSION 1.71)
+
+find_package(Boost REQUIRED COMPONENTS ${Boost_PACKAGES})
 
 include(ExternalProject)
 
@@ -48,6 +56,7 @@ add_dependencies(${GMOCK_MAIN_LIBRARY} googletest)
 # Set up to generate coverage reports
 find_package(PythonInterp REQUIRED)
 find_program(GCOVR_PATH gcovr PATHS ${CMAKE_SOURCE_DIR}/scripts/test)
+
 
 IF(BUILD_TYPE STREQUAL "TEST")
   add_custom_target(gcovr

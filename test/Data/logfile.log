@@ -1,62 +1,950 @@
-0000001 | 2024-01-11, 11:28:15.156782 [trace] - -----equData.read_eqdsk()-----
-0000002 | 2024-01-11, 11:28:15.157250 [warning] - eqdsk file to be read - test.eqdsk
-0000003 | 2024-01-11, 11:28:15.157358 [warning] - Number of grid points in R (nw) = 65
-0000004 | 2024-01-11, 11:28:15.157379 [warning] - Number of grid points in Z (nh) = 129
-0000005 | 2024-01-11, 11:28:15.157422 [warning] - Geometry parameters from EFIT:
-0000006 | 2024-01-11, 11:28:15.157438 [warning] - Domain size in R eqdsk.rdim 6
-0000007 | 2024-01-11, 11:28:15.157474 [warning] - Domain size in Z eqdsk.zdim 12
-0000008 | 2024-01-11, 11:28:15.157491 [warning] - R at centre 6.2
-0000009 | 2024-01-11, 11:28:15.157507 [warning] - Domain start in R eqdsk.rgrid 3
-0000010 | 2024-01-11, 11:28:15.157523 [warning] - Domain centre in Z eqdsk.zmid 0
-0000011 | 2024-01-11, 11:28:15.157538 [warning] - Plasma parameters from EFIT:
-0000012 | 2024-01-11, 11:28:15.157552 [warning] - B at rcentre 5.3
-0000013 | 2024-01-11, 11:28:15.157568 [warning] - Flux at centre ssimag1 12.9719
-0000014 | 2024-01-11, 11:28:15.157586 [warning] - Flux at boundary ssibry1 2.51614
-0000015 | 2024-01-11, 11:28:15.157602 [warning] - Plasma centre in R eqdsk.rmaxis 6.37753
-0000016 | 2024-01-11, 11:28:15.157617 [warning] - Plasma centre in Z eqdsk.zmaxis -0.242403
-0000017 | 2024-01-11, 11:28:15.157633 [warning] - Plasma current 1.48039e+07
-0000018 | 2024-01-11, 11:28:15.157651 [trace] - -----equData.read_array()-----
-0000019 | 2024-01-11, 11:28:15.157664 [warning] - Reading eqdsk.fpol values...
-0000020 | 2024-01-11, 11:28:15.157706 [warning] - Number of eqdsk.fpol values read = 65
-0000021 | 2024-01-11, 11:28:15.157725 [trace] - -----equData.read_array()-----
-0000022 | 2024-01-11, 11:28:15.157733 [warning] - Reading eqdsk.pres values...
-0000023 | 2024-01-11, 11:28:15.157774 [warning] - Number of eqdsk.pres values read = 65
-0000024 | 2024-01-11, 11:28:15.157789 [trace] - -----equData.read_array()-----
-0000025 | 2024-01-11, 11:28:15.157798 [warning] - Reading eqdsk.ffprime values...
-0000026 | 2024-01-11, 11:28:15.157838 [warning] - Number of eqdsk.ffprime values read = 65
-0000027 | 2024-01-11, 11:28:15.157854 [trace] - -----equData.read_array()-----
-0000028 | 2024-01-11, 11:28:15.157863 [warning] - Reading eqdsk.pprime values...
-0000029 | 2024-01-11, 11:28:15.157902 [warning] - Number of eqdsk.pprime values read = 65
-0000030 | 2024-01-11, 11:28:15.157919 [trace] - -----equData.read_2darray()-----
-0000031 | 2024-01-11, 11:28:15.158002 [warning] - Reading Psi(R,Z) values...
-0000032 | 2024-01-11, 11:28:15.161051 [warning] - Number of Psi(R,Z) values read = 8385
-0000033 | 2024-01-11, 11:28:15.161081 [trace] - -----equData.read_array()-----
-0000034 | 2024-01-11, 11:28:15.161089 [warning] - Reading eqdsk.qpsi values...
-0000035 | 2024-01-11, 11:28:15.161125 [warning] - Number of eqdsk.qpsi values read = 65
-0000036 | 2024-01-11, 11:28:15.161139 [warning] - Number of boundary points 89
-0000037 | 2024-01-11, 11:28:15.161152 [warning] - Number of limiter points 57
-0000038 | 2024-01-11, 11:28:15.161171 [warning] - Reading eqdsk.rbdry and eqdsk.zbdry...
-0000039 | 2024-01-11, 11:28:15.161245 [warning] - Number of eqdsk.rbdry/eqdsk.zbdry values read 89
-0000040 | 2024-01-11, 11:28:15.161258 [warning] - Reading eqdsk.rlim and eqdsk.zlim...
-0000041 | 2024-01-11, 11:28:15.161314 [warning] - Number of eqdsk.rlim/eqdsk.zlim values read 57
-0000042 | 2024-01-11, 11:28:15.161327 [info] - Override for ITER case applied. Sign of psi flipped
-0000043 | 2024-01-11, 11:28:15.161422 [trace] - -----equData.set_rsig()-----
-0000044 | 2024-01-11, 11:28:15.161429 [warning] - Value of rsig (psiqbdry-psiaxis) = 1
-0000045 | 2024-01-11, 11:28:15.161444 [warning] - DPSI =  0.160858
-0000046 | 2024-01-11, 11:28:15.161458 [warning] - PSIQBDRY = -2.51614
-0000047 | 2024-01-11, 11:28:15.161472 [warning] - PSIAXIS = -12.9719
-0000048 | 2024-01-11, 11:28:15.161486 [warning] - RSIG = 1
-0000049 | 2024-01-11, 11:28:15.161500 [warning] - RMIN = 3
-0000050 | 2024-01-11, 11:28:15.161513 [warning] - RMAX = 9
-0000051 | 2024-01-11, 11:28:15.161527 [warning] - ZMIN = -6
-0000052 | 2024-01-11, 11:28:15.161541 [warning] - ZMAX = 6
-0000053 | 2024-01-11, 11:28:15.161554 [warning] - dR = 0.09375
-0000054 | 2024-01-11, 11:28:15.161568 [warning] - dZ = 0.09375
-0000055 | 2024-01-11, 11:28:15.161582 [warning] - PSINORM = 5.22788
-0000056 | 2024-01-11, 11:28:15.161596 [warning] - IVAC = 33.7283
-0000057 | 2024-01-11, 11:28:15.161612 [trace] - -----equData.init_interp_splines()-----
-0000058 | 2024-01-11, 11:28:15.169369 [trace] - -----equData.centre-----
-0000059 | 2024-01-11, 11:28:15.169398 [info] - (Rcen,Zcen) values taken from eqdsk (Rmaxis,Zmaxis)
-0000060 | 2024-01-11, 11:28:15.169406 [warning] - Rcen value calculated from equData.centre() = 6.37753
-0000061 | 2024-01-11, 11:28:15.169418 [warning] - Zcen value calculated from equData.centre() = -0.242403
-0000062 | 2024-01-11, 11:28:15.169429 [warning] - Psicen value calculated from equData.centre() = -12.9746
+0000001 | 2024-01-19, 10:21:42.273541 [warning] - h5m Faceted Geometry file to be used = inres1.h5m
+0000002 | 2024-01-19, 10:21:42.325582 [warning] - No of triangles in geometry 3350
+0000003 | 2024-01-19, 10:21:42.325648 [warning] - Number of vertices in geometry 2057
+0000004 | 2024-01-19, 10:21:42.326328 [trace] - -----equData.read_eqdsk()-----
+0000005 | 2024-01-19, 10:21:42.326360 [warning] - eqdsk file to be read - EQ3.eqdsk
+0000006 | 2024-01-19, 10:21:42.326396 [warning] - Number of grid points in R (nw) = 65
+0000007 | 2024-01-19, 10:21:42.326404 [warning] - Number of grid points in Z (nh) = 129
+0000008 | 2024-01-19, 10:21:42.326426 [warning] - Geometry parameters from EFIT:
+0000009 | 2024-01-19, 10:21:42.326432 [warning] - Domain size in R eqdsk.rdim 6.2439
+0000010 | 2024-01-19, 10:21:42.326439 [warning] - Domain size in Z eqdsk.zdim 12.4878
+0000011 | 2024-01-19, 10:21:42.326445 [warning] - R at centre 6.2
+0000012 | 2024-01-19, 10:21:42.326451 [warning] - Domain start in R eqdsk.rgrid 3.07805
+0000013 | 2024-01-19, 10:21:42.326457 [warning] - Domain centre in Z eqdsk.zmid 0.15
+0000014 | 2024-01-19, 10:21:42.326463 [warning] - Plasma parameters from EFIT:
+0000015 | 2024-01-19, 10:21:42.326469 [warning] - B at rcentre 2.65
+0000016 | 2024-01-19, 10:21:42.326475 [warning] - Flux at centre ssimag1 10.0029
+0000017 | 2024-01-19, 10:21:42.326481 [warning] - Flux at boundary ssibry1 2.16451
+0000018 | 2024-01-19, 10:21:42.326487 [warning] - Plasma centre in R eqdsk.rmaxis 6.24825
+0000019 | 2024-01-19, 10:21:42.326493 [warning] - Plasma centre in Z eqdsk.zmaxis 0.485034
+0000020 | 2024-01-19, 10:21:42.326500 [warning] - Plasma current 7.5e+06
+0000021 | 2024-01-19, 10:21:42.326507 [trace] - -----equData.read_array()-----
+0000022 | 2024-01-19, 10:21:42.326513 [warning] - Reading eqdsk.fpol values...
+0000023 | 2024-01-19, 10:21:42.326529 [warning] - Number of eqdsk.fpol values read = 65
+0000024 | 2024-01-19, 10:21:42.326537 [trace] - -----equData.read_array()-----
+0000025 | 2024-01-19, 10:21:42.326541 [warning] - Reading eqdsk.pres values...
+0000026 | 2024-01-19, 10:21:42.326556 [warning] - Number of eqdsk.pres values read = 65
+0000027 | 2024-01-19, 10:21:42.326563 [trace] - -----equData.read_array()-----
+0000028 | 2024-01-19, 10:21:42.326567 [warning] - Reading eqdsk.ffprime values...
+0000029 | 2024-01-19, 10:21:42.326582 [warning] - Number of eqdsk.ffprime values read = 65
+0000030 | 2024-01-19, 10:21:42.326587 [trace] - -----equData.read_array()-----
+0000031 | 2024-01-19, 10:21:42.326591 [warning] - Reading eqdsk.pprime values...
+0000032 | 2024-01-19, 10:21:42.326606 [warning] - Number of eqdsk.pprime values read = 65
+0000033 | 2024-01-19, 10:21:42.326613 [trace] - -----equData.read_2darray()-----
+0000034 | 2024-01-19, 10:21:42.326629 [warning] - Reading Psi(R,Z) values...
+0000035 | 2024-01-19, 10:21:42.327822 [warning] - Number of Psi(R,Z) values read = 8385
+0000036 | 2024-01-19, 10:21:42.327842 [trace] - -----equData.read_array()-----
+0000037 | 2024-01-19, 10:21:42.327845 [warning] - Reading eqdsk.qpsi values...
+0000038 | 2024-01-19, 10:21:42.327860 [warning] - Number of eqdsk.qpsi values read = 65
+0000039 | 2024-01-19, 10:21:42.327868 [warning] - Number of boundary points 231
+0000040 | 2024-01-19, 10:21:42.327873 [warning] - Number of limiter points 66
+0000041 | 2024-01-19, 10:21:42.327882 [warning] - Reading eqdsk.rbdry and eqdsk.zbdry...
+0000042 | 2024-01-19, 10:21:42.327952 [warning] - Number of eqdsk.rbdry/eqdsk.zbdry values read 231
+0000043 | 2024-01-19, 10:21:42.327958 [warning] - Reading eqdsk.rlim and eqdsk.zlim...
+0000044 | 2024-01-19, 10:21:42.327982 [warning] - Number of eqdsk.rlim/eqdsk.zlim values read 66
+0000045 | 2024-01-19, 10:21:42.327988 [info] - Override for ITER case applied. Sign of psi flipped
+0000046 | 2024-01-19, 10:21:42.328033 [trace] - -----equData.set_rsig()-----
+0000047 | 2024-01-19, 10:21:42.328036 [warning] - Value of rsig (psiqbdry-psiaxis) = 1
+0000048 | 2024-01-19, 10:21:42.328043 [warning] - DPSI =  0.120591
+0000049 | 2024-01-19, 10:21:42.328049 [warning] - PSIQBDRY = -2.16451
+0000050 | 2024-01-19, 10:21:42.328055 [warning] - PSIAXIS = -10.0029
+0000051 | 2024-01-19, 10:21:42.328061 [warning] - RSIG = 1
+0000052 | 2024-01-19, 10:21:42.328067 [warning] - RMIN = 3.07805
+0000053 | 2024-01-19, 10:21:42.328072 [warning] - RMAX = 9.32195
+0000054 | 2024-01-19, 10:21:42.328078 [warning] - ZMIN = -6.0939
+0000055 | 2024-01-19, 10:21:42.328084 [warning] - ZMAX = 6.3939
+0000056 | 2024-01-19, 10:21:42.328090 [warning] - dR = 0.097561
+0000057 | 2024-01-19, 10:21:42.328095 [warning] - dZ = 0.097561
+0000058 | 2024-01-19, 10:21:42.328101 [warning] - PSINORM = 3.91921
+0000059 | 2024-01-19, 10:21:42.328107 [warning] - IVAC = 17.9528
+0000060 | 2024-01-19, 10:21:42.328117 [trace] - -----equData.init_interp_splines()-----
+0000061 | 2024-01-19, 10:21:42.331849 [trace] - -----equData.gnuplot_out()-----
+0000062 | 2024-01-19, 10:21:42.348270 [trace] - -----equData.centre-----
+0000063 | 2024-01-19, 10:21:42.348284 [info] - (Rcen,Zcen) values taken from eqdsk (Rmaxis,Zmaxis)
+0000064 | 2024-01-19, 10:21:42.348290 [warning] - Rcen value calculated from equData.centre() = 6.24225
+0000065 | 2024-01-19, 10:21:42.348302 [warning] - Zcen value calculated from equData.centre() = 0.485034
+0000066 | 2024-01-19, 10:21:42.348308 [warning] - Psicen value calculated from equData.centre() = -10.0029
+0000067 | 2024-01-19, 10:21:42.348339 [warning] - NUMBER OF VERTICES = 6171
+0000068 | 2024-01-19, 10:21:42.357393 [trace] - -----equData.b_field_write()-----
+0000069 | 2024-01-19, 10:21:43.154694 [warning] - EquData.psibdry = -2.16288
+0000070 | 2024-01-19, 10:21:43.154779 [warning] - No surface ID provided. Launching from all surfaces by default. WARNING - Will take a significant amount of time for larger geometry sets
+0000071 | 2024-01-19, 10:21:43.154788 [warning] - Total Number of Triangles rays launched from = 3350
+0000072 | 2024-01-19, 10:21:43.154817 [trace] - -----surfaceIntegrator CONSTRUCTOR()-----
+0000073 | 2024-01-19, 10:21:43.156249 [warning] - Launching from triangle centroid/barycentre
+0000074 | 2024-01-19, 10:21:43.156278 [warning] - rOutrBdry (from input file) = 8.07385
+0000075 | 2024-01-19, 10:21:43.169284 [info] - ---- RAY HIT ON LAUNCH [4] ----
+0000076 | 2024-01-19, 10:21:44.175479 [info] - ---- RAY HIT ON LAUNCH [259] ----
+0000077 | 2024-01-19, 10:21:44.175547 [info] - Surface 12682136550675316760 hit after travelling 0.2 units
+0000078 | 2024-01-19, 10:21:44.175570 [info] - ---- RAY HIT ON LAUNCH [260] ----
+0000079 | 2024-01-19, 10:21:44.175630 [info] - ---- RAY HIT ON LAUNCH [261] ----
+0000080 | 2024-01-19, 10:21:44.175652 [info] - Surface 12682136550675316760 hit after travelling 0.25 units
+0000081 | 2024-01-19, 10:21:44.175665 [info] - ---- RAY HIT ON LAUNCH [262] ----
+0000082 | 2024-01-19, 10:21:44.175671 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000083 | 2024-01-19, 10:21:44.175686 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000084 | 2024-01-19, 10:21:44.175701 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000085 | 2024-01-19, 10:21:44.175713 [info] - ---- RAY HIT ON LAUNCH [265] ----
+0000086 | 2024-01-19, 10:21:44.175734 [info] - Surface 12682136550675316761 hit after travelling 0.25 units
+0000087 | 2024-01-19, 10:21:44.175767 [info] - ---- RAY HIT ON LAUNCH [266] ----
+0000088 | 2024-01-19, 10:21:44.179099 [info] - ---- RAY HIT ON LAUNCH [267] ----
+0000089 | 2024-01-19, 10:21:44.179120 [info] - Surface 12682136550675316761 hit after travelling 0.25 units
+0000090 | 2024-01-19, 10:21:44.179143 [info] - ---- RAY HIT ON LAUNCH [268] ----
+0000091 | 2024-01-19, 10:21:44.179150 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000092 | 2024-01-19, 10:21:44.179167 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000093 | 2024-01-19, 10:21:44.179182 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000094 | 2024-01-19, 10:21:44.179197 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000095 | 2024-01-19, 10:21:44.179222 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000096 | 2024-01-19, 10:21:44.179275 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000097 | 2024-01-19, 10:21:44.179300 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000098 | 2024-01-19, 10:21:44.179340 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000099 | 2024-01-19, 10:21:44.179377 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000100 | 2024-01-19, 10:21:44.179437 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000101 | 2024-01-19, 10:21:44.179483 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000102 | 2024-01-19, 10:21:44.179522 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000103 | 2024-01-19, 10:21:44.179562 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000104 | 2024-01-19, 10:21:44.179609 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000105 | 2024-01-19, 10:21:44.179664 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000106 | 2024-01-19, 10:21:44.179724 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000107 | 2024-01-19, 10:21:44.179782 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000108 | 2024-01-19, 10:21:44.179841 [info] - Surface 12682136550675316763 hit after travelling 0.6 units
+0000109 | 2024-01-19, 10:21:44.179899 [info] - Surface 12682136550675316763 hit after travelling 0.6 units
+0000110 | 2024-01-19, 10:21:44.180520 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000111 | 2024-01-19, 10:21:44.180576 [info] - Surface 12682136550675316763 hit after travelling 0.6 units
+0000112 | 2024-01-19, 10:21:44.180625 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000113 | 2024-01-19, 10:21:44.180673 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000114 | 2024-01-19, 10:21:44.180715 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000115 | 2024-01-19, 10:21:44.180754 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000116 | 2024-01-19, 10:21:44.180794 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000117 | 2024-01-19, 10:21:44.180828 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000118 | 2024-01-19, 10:21:44.180867 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000119 | 2024-01-19, 10:21:44.180909 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000120 | 2024-01-19, 10:21:44.180954 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000121 | 2024-01-19, 10:21:44.181000 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000122 | 2024-01-19, 10:21:44.181049 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000123 | 2024-01-19, 10:21:44.181097 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000124 | 2024-01-19, 10:21:44.181151 [info] - Surface 12682136550675316763 hit after travelling 0.6 units
+0000125 | 2024-01-19, 10:21:44.181198 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000126 | 2024-01-19, 10:21:44.181245 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000127 | 2024-01-19, 10:21:44.181289 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000128 | 2024-01-19, 10:21:44.181331 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000129 | 2024-01-19, 10:21:44.181368 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000130 | 2024-01-19, 10:21:44.181406 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000131 | 2024-01-19, 10:21:44.181440 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000132 | 2024-01-19, 10:21:44.181472 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000133 | 2024-01-19, 10:21:44.181501 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000134 | 2024-01-19, 10:21:44.181528 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000135 | 2024-01-19, 10:21:44.181552 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000136 | 2024-01-19, 10:21:44.181578 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000137 | 2024-01-19, 10:21:44.181597 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000138 | 2024-01-19, 10:21:44.181612 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000139 | 2024-01-19, 10:21:44.181626 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000140 | 2024-01-19, 10:21:44.181639 [info] - ---- RAY HIT ON LAUNCH [327] ----
+0000141 | 2024-01-19, 10:21:44.181666 [info] - Surface 12682136550675316760 hit after travelling 0.35 units
+0000142 | 2024-01-19, 10:21:44.181686 [info] - ---- RAY HIT ON LAUNCH [328] ----
+0000143 | 2024-01-19, 10:21:44.184860 [info] - ---- RAY HIT ON LAUNCH [329] ----
+0000144 | 2024-01-19, 10:21:44.184881 [info] - Surface 12682136550675316761 hit after travelling 0.25 units
+0000145 | 2024-01-19, 10:21:44.184893 [info] - ---- RAY HIT ON LAUNCH [330] ----
+0000146 | 2024-01-19, 10:21:44.188102 [info] - ---- RAY HIT ON LAUNCH [331] ----
+0000147 | 2024-01-19, 10:21:44.188122 [info] - Surface 12682136550675316761 hit after travelling 0.25 units
+0000148 | 2024-01-19, 10:21:44.188135 [info] - ---- RAY HIT ON LAUNCH [332] ----
+0000149 | 2024-01-19, 10:21:44.188141 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000150 | 2024-01-19, 10:21:44.188156 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000151 | 2024-01-19, 10:21:44.188171 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000152 | 2024-01-19, 10:21:44.188192 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000153 | 2024-01-19, 10:21:44.188211 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000154 | 2024-01-19, 10:21:44.188225 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000155 | 2024-01-19, 10:21:44.188244 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000156 | 2024-01-19, 10:21:44.188257 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000157 | 2024-01-19, 10:21:44.188272 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000158 | 2024-01-19, 10:21:44.188284 [info] - ---- RAY HIT ON LAUNCH [341] ----
+0000159 | 2024-01-19, 10:21:44.188298 [info] - Surface 12682136550675316762 hit after travelling 0.15 units
+0000160 | 2024-01-19, 10:21:44.188315 [info] - ---- RAY HIT ON LAUNCH [342] ----
+0000161 | 2024-01-19, 10:21:44.196256 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000162 | 2024-01-19, 10:21:44.196271 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000163 | 2024-01-19, 10:21:44.212637 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000164 | 2024-01-19, 10:21:44.212670 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000165 | 2024-01-19, 10:21:44.212702 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000166 | 2024-01-19, 10:21:44.212730 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000167 | 2024-01-19, 10:21:44.212764 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000168 | 2024-01-19, 10:21:44.212797 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000169 | 2024-01-19, 10:21:44.212825 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000170 | 2024-01-19, 10:21:44.212853 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000171 | 2024-01-19, 10:21:44.212881 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000172 | 2024-01-19, 10:21:44.212906 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000173 | 2024-01-19, 10:21:44.212929 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000174 | 2024-01-19, 10:21:44.212953 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000175 | 2024-01-19, 10:21:44.212979 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000176 | 2024-01-19, 10:21:44.212999 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000177 | 2024-01-19, 10:21:44.213019 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000178 | 2024-01-19, 10:21:44.213035 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000179 | 2024-01-19, 10:21:44.213054 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000180 | 2024-01-19, 10:21:44.213070 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000181 | 2024-01-19, 10:21:44.213085 [info] - ---- RAY HIT ON LAUNCH [369] ----
+0000182 | 2024-01-19, 10:21:44.213135 [info] - Surface 12682136550675316761 hit after travelling 0.3 units
+0000183 | 2024-01-19, 10:21:44.213149 [info] - ---- RAY HIT ON LAUNCH [370] ----
+0000184 | 2024-01-19, 10:21:44.216149 [info] - ---- RAY HIT ON LAUNCH [371] ----
+0000185 | 2024-01-19, 10:21:44.216170 [info] - Surface 12682136550675316761 hit after travelling 0.3 units
+0000186 | 2024-01-19, 10:21:44.216183 [info] - ---- RAY HIT ON LAUNCH [372] ----
+0000187 | 2024-01-19, 10:21:44.219223 [info] - ---- RAY HIT ON LAUNCH [373] ----
+0000188 | 2024-01-19, 10:21:44.219251 [info] - Surface 12682136550675316760 hit after travelling 0.35 units
+0000189 | 2024-01-19, 10:21:44.219271 [info] - ---- RAY HIT ON LAUNCH [374] ----
+0000190 | 2024-01-19, 10:21:44.219278 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000191 | 2024-01-19, 10:21:44.219293 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000192 | 2024-01-19, 10:21:44.219314 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000193 | 2024-01-19, 10:21:44.219343 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000194 | 2024-01-19, 10:21:44.219370 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000195 | 2024-01-19, 10:21:44.219409 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000196 | 2024-01-19, 10:21:44.219451 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000197 | 2024-01-19, 10:21:44.219498 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000198 | 2024-01-19, 10:21:44.219530 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000199 | 2024-01-19, 10:21:44.219554 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000200 | 2024-01-19, 10:21:44.219581 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000201 | 2024-01-19, 10:21:44.219603 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000202 | 2024-01-19, 10:21:44.219618 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000203 | 2024-01-19, 10:21:44.219633 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000204 | 2024-01-19, 10:21:44.219645 [info] - ---- RAY HIT ON LAUNCH [388] ----
+0000205 | 2024-01-19, 10:21:44.219672 [info] - Surface 12682136550675316760 hit after travelling 0.35 units
+0000206 | 2024-01-19, 10:21:44.219684 [info] - ---- RAY HIT ON LAUNCH [389] ----
+0000207 | 2024-01-19, 10:21:44.222524 [info] - ---- RAY HIT ON LAUNCH [390] ----
+0000208 | 2024-01-19, 10:21:44.222564 [info] - Surface 12682136550675316761 hit after travelling 0.35 units
+0000209 | 2024-01-19, 10:21:44.222589 [info] - ---- RAY HIT ON LAUNCH [391] ----
+0000210 | 2024-01-19, 10:21:44.225483 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000211 | 2024-01-19, 10:21:44.225498 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000212 | 2024-01-19, 10:21:44.225512 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000213 | 2024-01-19, 10:21:44.225532 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000214 | 2024-01-19, 10:21:44.225557 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000215 | 2024-01-19, 10:21:44.225582 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000216 | 2024-01-19, 10:21:44.225606 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000217 | 2024-01-19, 10:21:44.225633 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000218 | 2024-01-19, 10:21:44.225661 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000219 | 2024-01-19, 10:21:44.225694 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000220 | 2024-01-19, 10:21:44.225724 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000221 | 2024-01-19, 10:21:44.225755 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000222 | 2024-01-19, 10:21:44.225790 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000223 | 2024-01-19, 10:21:44.225825 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000224 | 2024-01-19, 10:21:44.225859 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000225 | 2024-01-19, 10:21:44.225896 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000226 | 2024-01-19, 10:21:44.225937 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000227 | 2024-01-19, 10:21:44.225976 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000228 | 2024-01-19, 10:21:44.226019 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000229 | 2024-01-19, 10:21:44.226063 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000230 | 2024-01-19, 10:21:44.226109 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000231 | 2024-01-19, 10:21:44.226149 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000232 | 2024-01-19, 10:21:44.226188 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000233 | 2024-01-19, 10:21:44.226223 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000234 | 2024-01-19, 10:21:44.226260 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000235 | 2024-01-19, 10:21:44.226291 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000236 | 2024-01-19, 10:21:44.226323 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000237 | 2024-01-19, 10:21:44.226354 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000238 | 2024-01-19, 10:21:44.226390 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000239 | 2024-01-19, 10:21:44.226425 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000240 | 2024-01-19, 10:21:44.226463 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000241 | 2024-01-19, 10:21:44.226503 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000242 | 2024-01-19, 10:21:44.226537 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000243 | 2024-01-19, 10:21:44.226566 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000244 | 2024-01-19, 10:21:44.226597 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000245 | 2024-01-19, 10:21:44.226620 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000246 | 2024-01-19, 10:21:44.226634 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000247 | 2024-01-19, 10:21:44.226649 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000248 | 2024-01-19, 10:21:44.226663 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000249 | 2024-01-19, 10:21:44.226675 [info] - ---- RAY HIT ON LAUNCH [431] ----
+0000250 | 2024-01-19, 10:21:44.226698 [info] - Surface 12682136550675316761 hit after travelling 0.3 units
+0000251 | 2024-01-19, 10:21:44.226716 [info] - ---- RAY HIT ON LAUNCH [432] ----
+0000252 | 2024-01-19, 10:21:44.229679 [info] - ---- RAY HIT ON LAUNCH [433] ----
+0000253 | 2024-01-19, 10:21:44.229702 [info] - Surface 12682136550675316761 hit after travelling 0.3 units
+0000254 | 2024-01-19, 10:21:44.229718 [info] - ---- RAY HIT ON LAUNCH [434] ----
+0000255 | 2024-01-19, 10:21:44.232707 [info] - ---- RAY HIT ON LAUNCH [435] ----
+0000256 | 2024-01-19, 10:21:44.232747 [info] - Surface 12682136550675316760 hit after travelling 0.35 units
+0000257 | 2024-01-19, 10:21:44.232765 [info] - ---- RAY HIT ON LAUNCH [436] ----
+0000258 | 2024-01-19, 10:21:44.232773 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000259 | 2024-01-19, 10:21:44.232792 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000260 | 2024-01-19, 10:21:44.232807 [info] - ---- RAY HIT ON LAUNCH [438] ----
+0000261 | 2024-01-19, 10:21:44.232836 [info] - Surface 12682136550675316760 hit after travelling 0.35 units
+0000262 | 2024-01-19, 10:21:44.232848 [info] - ---- RAY HIT ON LAUNCH [439] ----
+0000263 | 2024-01-19, 10:21:44.235827 [info] - ---- RAY HIT ON LAUNCH [440] ----
+0000264 | 2024-01-19, 10:21:44.235859 [info] - Surface 12682136550675316761 hit after travelling 0.35 units
+0000265 | 2024-01-19, 10:21:44.235872 [info] - ---- RAY HIT ON LAUNCH [441] ----
+0000266 | 2024-01-19, 10:21:44.238892 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000267 | 2024-01-19, 10:21:44.238910 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000268 | 2024-01-19, 10:21:44.238925 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000269 | 2024-01-19, 10:21:44.238945 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000270 | 2024-01-19, 10:21:44.238970 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000271 | 2024-01-19, 10:21:44.238994 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000272 | 2024-01-19, 10:21:44.239017 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000273 | 2024-01-19, 10:21:44.239044 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000274 | 2024-01-19, 10:21:44.239071 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000275 | 2024-01-19, 10:21:44.239103 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000276 | 2024-01-19, 10:21:44.239135 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000277 | 2024-01-19, 10:21:44.239167 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000278 | 2024-01-19, 10:21:44.239203 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000279 | 2024-01-19, 10:21:44.239237 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000280 | 2024-01-19, 10:21:44.239273 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000281 | 2024-01-19, 10:21:44.239288 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000282 | 2024-01-19, 10:21:44.239307 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000283 | 2024-01-19, 10:21:44.239331 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000284 | 2024-01-19, 10:21:44.239363 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000285 | 2024-01-19, 10:21:44.239406 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000286 | 2024-01-19, 10:21:44.239458 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000287 | 2024-01-19, 10:21:44.239510 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000288 | 2024-01-19, 10:21:44.239553 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000289 | 2024-01-19, 10:21:44.239599 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000290 | 2024-01-19, 10:21:44.239639 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000291 | 2024-01-19, 10:21:44.239675 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000292 | 2024-01-19, 10:21:44.239714 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000293 | 2024-01-19, 10:21:44.239757 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000294 | 2024-01-19, 10:21:44.239800 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000295 | 2024-01-19, 10:21:44.239838 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000296 | 2024-01-19, 10:21:44.239880 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000297 | 2024-01-19, 10:21:44.239919 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000298 | 2024-01-19, 10:21:44.239962 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000299 | 2024-01-19, 10:21:44.240009 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000300 | 2024-01-19, 10:21:44.240054 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000301 | 2024-01-19, 10:21:44.240098 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000302 | 2024-01-19, 10:21:44.240142 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000303 | 2024-01-19, 10:21:44.240183 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000304 | 2024-01-19, 10:21:44.240242 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000305 | 2024-01-19, 10:21:44.240282 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000306 | 2024-01-19, 10:21:44.240327 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000307 | 2024-01-19, 10:21:44.240365 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000308 | 2024-01-19, 10:21:44.240395 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000309 | 2024-01-19, 10:21:44.240425 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000310 | 2024-01-19, 10:21:44.240455 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000311 | 2024-01-19, 10:21:44.240482 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000312 | 2024-01-19, 10:21:44.240509 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000313 | 2024-01-19, 10:21:44.240536 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000314 | 2024-01-19, 10:21:44.240560 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000315 | 2024-01-19, 10:21:44.240586 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000316 | 2024-01-19, 10:21:44.240607 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000317 | 2024-01-19, 10:21:44.240622 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000318 | 2024-01-19, 10:21:44.240636 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000319 | 2024-01-19, 10:21:44.240650 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000320 | 2024-01-19, 10:21:44.240666 [info] - ---- RAY HIT ON LAUNCH [496] ----
+0000321 | 2024-01-19, 10:21:44.240695 [info] - Surface 12682136550675316761 hit after travelling 0.35 units
+0000322 | 2024-01-19, 10:21:44.240708 [info] - ---- RAY HIT ON LAUNCH [497] ----
+0000323 | 2024-01-19, 10:21:44.243551 [info] - ---- RAY HIT ON LAUNCH [498] ----
+0000324 | 2024-01-19, 10:21:44.243573 [info] - Surface 12682136550675316761 hit after travelling 0.3 units
+0000325 | 2024-01-19, 10:21:44.243586 [info] - ---- RAY HIT ON LAUNCH [499] ----
+0000326 | 2024-01-19, 10:21:44.246525 [info] - ---- RAY HIT ON LAUNCH [500] ----
+0000327 | 2024-01-19, 10:21:44.246551 [info] - Surface 12682136550675316760 hit after travelling 0.35 units
+0000328 | 2024-01-19, 10:21:44.246564 [info] - ---- RAY HIT ON LAUNCH [501] ----
+0000329 | 2024-01-19, 10:21:44.246570 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000330 | 2024-01-19, 10:21:44.246584 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000331 | 2024-01-19, 10:21:44.246599 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000332 | 2024-01-19, 10:21:44.246619 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000333 | 2024-01-19, 10:21:44.246638 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000334 | 2024-01-19, 10:21:44.246662 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000335 | 2024-01-19, 10:21:44.246696 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000336 | 2024-01-19, 10:21:44.246724 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000337 | 2024-01-19, 10:21:44.246757 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000338 | 2024-01-19, 10:21:44.246795 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000339 | 2024-01-19, 10:21:44.246828 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000340 | 2024-01-19, 10:21:44.246864 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000341 | 2024-01-19, 10:21:44.246903 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000342 | 2024-01-19, 10:21:44.246941 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000343 | 2024-01-19, 10:21:44.246976 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000344 | 2024-01-19, 10:21:44.247010 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000345 | 2024-01-19, 10:21:44.247043 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000346 | 2024-01-19, 10:21:44.247081 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000347 | 2024-01-19, 10:21:44.247119 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000348 | 2024-01-19, 10:21:44.247154 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000349 | 2024-01-19, 10:21:44.247388 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000350 | 2024-01-19, 10:21:44.247420 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000351 | 2024-01-19, 10:21:44.247451 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000352 | 2024-01-19, 10:21:44.247479 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000353 | 2024-01-19, 10:21:44.247510 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000354 | 2024-01-19, 10:21:44.247552 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000355 | 2024-01-19, 10:21:44.247581 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000356 | 2024-01-19, 10:21:44.247608 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000357 | 2024-01-19, 10:21:44.247635 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000358 | 2024-01-19, 10:21:44.247658 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000359 | 2024-01-19, 10:21:44.247681 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000360 | 2024-01-19, 10:21:44.247703 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000361 | 2024-01-19, 10:21:44.247722 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000362 | 2024-01-19, 10:21:44.247743 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000363 | 2024-01-19, 10:21:44.247759 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000364 | 2024-01-19, 10:21:44.247771 [info] - ---- RAY HIT ON LAUNCH [552] ----
+0000365 | 2024-01-19, 10:21:44.247799 [info] - Surface 12682136550675316760 hit after travelling 0.35 units
+0000366 | 2024-01-19, 10:21:44.247811 [info] - ---- RAY HIT ON LAUNCH [553] ----
+0000367 | 2024-01-19, 10:21:44.247818 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000368 | 2024-01-19, 10:21:44.247834 [info] - ---- RAY HIT ON LAUNCH [554] ----
+0000369 | 2024-01-19, 10:21:44.247867 [info] - Surface 12682136550675316760 hit after travelling 0.35 units
+0000370 | 2024-01-19, 10:21:44.247887 [info] - ---- RAY HIT ON LAUNCH [555] ----
+0000371 | 2024-01-19, 10:21:44.251040 [info] - ---- RAY HIT ON LAUNCH [556] ----
+0000372 | 2024-01-19, 10:21:44.251072 [info] - Surface 12682136550675316761 hit after travelling 0.3 units
+0000373 | 2024-01-19, 10:21:44.251089 [info] - ---- RAY HIT ON LAUNCH [557] ----
+0000374 | 2024-01-19, 10:21:44.254035 [info] - ---- RAY HIT ON LAUNCH [558] ----
+0000375 | 2024-01-19, 10:21:44.254062 [info] - Surface 12682136550675316761 hit after travelling 0.35 units
+0000376 | 2024-01-19, 10:21:44.254074 [info] - ---- RAY HIT ON LAUNCH [559] ----
+0000377 | 2024-01-19, 10:21:44.254080 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000378 | 2024-01-19, 10:21:44.254095 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000379 | 2024-01-19, 10:21:44.254109 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000380 | 2024-01-19, 10:21:44.254130 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000381 | 2024-01-19, 10:21:44.254150 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000382 | 2024-01-19, 10:21:44.254169 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000383 | 2024-01-19, 10:21:44.254192 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000384 | 2024-01-19, 10:21:44.254215 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000385 | 2024-01-19, 10:21:44.254244 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000386 | 2024-01-19, 10:21:44.254272 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000387 | 2024-01-19, 10:21:44.254306 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000388 | 2024-01-19, 10:21:44.254336 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000389 | 2024-01-19, 10:21:44.254371 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000390 | 2024-01-19, 10:21:44.254410 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000391 | 2024-01-19, 10:21:44.254448 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000392 | 2024-01-19, 10:21:44.254485 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000393 | 2024-01-19, 10:21:44.254524 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000394 | 2024-01-19, 10:21:44.254564 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000395 | 2024-01-19, 10:21:44.254609 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000396 | 2024-01-19, 10:21:44.254654 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000397 | 2024-01-19, 10:21:44.254698 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000398 | 2024-01-19, 10:21:44.254742 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000399 | 2024-01-19, 10:21:44.254783 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000400 | 2024-01-19, 10:21:44.254827 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000401 | 2024-01-19, 10:21:44.254870 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000402 | 2024-01-19, 10:21:44.254909 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000403 | 2024-01-19, 10:21:44.254948 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000404 | 2024-01-19, 10:21:44.254988 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000405 | 2024-01-19, 10:21:44.255023 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000406 | 2024-01-19, 10:21:44.255054 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000407 | 2024-01-19, 10:21:44.255105 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000408 | 2024-01-19, 10:21:44.255132 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000409 | 2024-01-19, 10:21:44.255158 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000410 | 2024-01-19, 10:21:44.255188 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000411 | 2024-01-19, 10:21:44.255214 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000412 | 2024-01-19, 10:21:44.255237 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000413 | 2024-01-19, 10:21:44.255260 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000414 | 2024-01-19, 10:21:44.255289 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000415 | 2024-01-19, 10:21:44.255311 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000416 | 2024-01-19, 10:21:44.255335 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000417 | 2024-01-19, 10:21:44.255352 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000418 | 2024-01-19, 10:21:44.255370 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000419 | 2024-01-19, 10:21:44.255388 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000420 | 2024-01-19, 10:21:44.255405 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000421 | 2024-01-19, 10:21:44.255420 [info] - ---- RAY HIT ON LAUNCH [603] ----
+0000422 | 2024-01-19, 10:21:44.255466 [info] - Surface 12682136550675316761 hit after travelling 0.35 units
+0000423 | 2024-01-19, 10:21:44.255492 [info] - ---- RAY HIT ON LAUNCH [604] ----
+0000424 | 2024-01-19, 10:21:44.258587 [info] - ---- RAY HIT ON LAUNCH [605] ----
+0000425 | 2024-01-19, 10:21:44.258624 [info] - Surface 12682136550675316761 hit after travelling 0.3 units
+0000426 | 2024-01-19, 10:21:44.258650 [info] - ---- RAY HIT ON LAUNCH [606] ----
+0000427 | 2024-01-19, 10:21:44.261610 [info] - ---- RAY HIT ON LAUNCH [607] ----
+0000428 | 2024-01-19, 10:21:44.261636 [info] - Surface 12682136550675316761 hit after travelling 0.35 units
+0000429 | 2024-01-19, 10:21:44.261650 [info] - ---- RAY HIT ON LAUNCH [608] ----
+0000430 | 2024-01-19, 10:21:44.264519 [info] - ---- RAY HIT ON LAUNCH [609] ----
+0000431 | 2024-01-19, 10:21:44.264547 [info] - Surface 12682136550675316761 hit after travelling 0.35 units
+0000432 | 2024-01-19, 10:21:44.264566 [info] - ---- RAY HIT ON LAUNCH [610] ----
+0000433 | 2024-01-19, 10:21:44.264572 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000434 | 2024-01-19, 10:21:44.264593 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000435 | 2024-01-19, 10:21:44.264608 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000436 | 2024-01-19, 10:21:44.264636 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000437 | 2024-01-19, 10:21:44.264675 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000438 | 2024-01-19, 10:21:44.264701 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000439 | 2024-01-19, 10:21:44.264733 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000440 | 2024-01-19, 10:21:44.264764 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000441 | 2024-01-19, 10:21:44.264792 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000442 | 2024-01-19, 10:21:44.264819 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000443 | 2024-01-19, 10:21:44.264850 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000444 | 2024-01-19, 10:21:44.265022 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000445 | 2024-01-19, 10:21:44.265040 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000446 | 2024-01-19, 10:21:44.265058 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000447 | 2024-01-19, 10:21:44.265078 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000448 | 2024-01-19, 10:21:44.265093 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000449 | 2024-01-19, 10:21:44.265108 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000450 | 2024-01-19, 10:21:44.265123 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000451 | 2024-01-19, 10:21:44.265135 [info] - ---- RAY HIT ON LAUNCH [639] ----
+0000452 | 2024-01-19, 10:21:44.265160 [info] - Surface 12682136550675316761 hit after travelling 0.3 units
+0000453 | 2024-01-19, 10:21:44.265173 [info] - ---- RAY HIT ON LAUNCH [640] ----
+0000454 | 2024-01-19, 10:21:44.268037 [info] - ---- RAY HIT ON LAUNCH [641] ----
+0000455 | 2024-01-19, 10:21:44.268059 [info] - Surface 12682136550675316761 hit after travelling 0.3 units
+0000456 | 2024-01-19, 10:21:44.268072 [info] - ---- RAY HIT ON LAUNCH [642] ----
+0000457 | 2024-01-19, 10:21:44.270948 [info] - ---- RAY HIT ON LAUNCH [643] ----
+0000458 | 2024-01-19, 10:21:44.270975 [info] - Surface 12682136550675316761 hit after travelling 0.35 units
+0000459 | 2024-01-19, 10:21:44.270988 [info] - ---- RAY HIT ON LAUNCH [644] ----
+0000460 | 2024-01-19, 10:21:44.273847 [info] - ---- RAY HIT ON LAUNCH [645] ----
+0000461 | 2024-01-19, 10:21:44.273875 [info] - Surface 12682136550675316761 hit after travelling 0.35 units
+0000462 | 2024-01-19, 10:21:44.273896 [info] - ---- RAY HIT ON LAUNCH [646] ----
+0000463 | 2024-01-19, 10:21:44.273903 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000464 | 2024-01-19, 10:21:44.273919 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000465 | 2024-01-19, 10:21:44.273940 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000466 | 2024-01-19, 10:21:44.273959 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000467 | 2024-01-19, 10:21:44.273978 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000468 | 2024-01-19, 10:21:44.273998 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000469 | 2024-01-19, 10:21:44.274021 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000470 | 2024-01-19, 10:21:44.274045 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000471 | 2024-01-19, 10:21:44.274069 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000472 | 2024-01-19, 10:21:44.274097 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000473 | 2024-01-19, 10:21:44.274125 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000474 | 2024-01-19, 10:21:44.274152 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000475 | 2024-01-19, 10:21:44.274184 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000476 | 2024-01-19, 10:21:44.274215 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000477 | 2024-01-19, 10:21:44.274246 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000478 | 2024-01-19, 10:21:44.274281 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000479 | 2024-01-19, 10:21:44.274314 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000480 | 2024-01-19, 10:21:44.274354 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000481 | 2024-01-19, 10:21:44.274391 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000482 | 2024-01-19, 10:21:44.274429 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000483 | 2024-01-19, 10:21:44.274471 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000484 | 2024-01-19, 10:21:44.274513 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000485 | 2024-01-19, 10:21:44.274554 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000486 | 2024-01-19, 10:21:44.274599 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000487 | 2024-01-19, 10:21:44.274647 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000488 | 2024-01-19, 10:21:44.274692 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000489 | 2024-01-19, 10:21:44.274740 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000490 | 2024-01-19, 10:21:44.274790 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000491 | 2024-01-19, 10:21:44.274835 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000492 | 2024-01-19, 10:21:44.274882 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000493 | 2024-01-19, 10:21:44.274931 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000494 | 2024-01-19, 10:21:44.274972 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000495 | 2024-01-19, 10:21:44.275024 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000496 | 2024-01-19, 10:21:44.275077 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000497 | 2024-01-19, 10:21:44.275121 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000498 | 2024-01-19, 10:21:44.275172 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000499 | 2024-01-19, 10:21:44.275216 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000500 | 2024-01-19, 10:21:44.275251 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000501 | 2024-01-19, 10:21:44.275286 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000502 | 2024-01-19, 10:21:44.275323 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000503 | 2024-01-19, 10:21:44.275354 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000504 | 2024-01-19, 10:21:44.275386 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000505 | 2024-01-19, 10:21:44.275418 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000506 | 2024-01-19, 10:21:44.275445 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000507 | 2024-01-19, 10:21:44.275473 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000508 | 2024-01-19, 10:21:44.275500 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000509 | 2024-01-19, 10:21:44.275522 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000510 | 2024-01-19, 10:21:44.275546 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000511 | 2024-01-19, 10:21:44.275570 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000512 | 2024-01-19, 10:21:44.275595 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000513 | 2024-01-19, 10:21:44.275614 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000514 | 2024-01-19, 10:21:44.275634 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000515 | 2024-01-19, 10:21:44.275653 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000516 | 2024-01-19, 10:21:44.275668 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000517 | 2024-01-19, 10:21:44.275682 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000518 | 2024-01-19, 10:21:44.275695 [info] - ---- RAY HIT ON LAUNCH [701] ----
+0000519 | 2024-01-19, 10:21:44.275729 [info] - Surface 12682136550675316759 hit after travelling 0.4 units
+0000520 | 2024-01-19, 10:21:44.275747 [info] - ---- RAY HIT ON LAUNCH [702] ----
+0000521 | 2024-01-19, 10:21:44.278591 [info] - ---- RAY HIT ON LAUNCH [703] ----
+0000522 | 2024-01-19, 10:21:44.278603 [info] - Surface 12682136550675316764 hit after travelling 0.15 units
+0000523 | 2024-01-19, 10:21:44.278620 [info] - ---- RAY HIT ON LAUNCH [704] ----
+0000524 | 2024-01-19, 10:21:44.278660 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000525 | 2024-01-19, 10:21:44.278675 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000526 | 2024-01-19, 10:21:44.278705 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000527 | 2024-01-19, 10:21:44.278719 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000528 | 2024-01-19, 10:21:44.278731 [info] - ---- RAY HIT ON LAUNCH [711] ----
+0000529 | 2024-01-19, 10:21:44.278750 [info] - Surface 12682136550675316761 hit after travelling 0.25 units
+0000530 | 2024-01-19, 10:21:44.278762 [info] - ---- RAY HIT ON LAUNCH [712] ----
+0000531 | 2024-01-19, 10:21:44.281710 [info] - ---- RAY HIT ON LAUNCH [713] ----
+0000532 | 2024-01-19, 10:21:44.281747 [info] - Surface 12682136550675316761 hit after travelling 0.3 units
+0000533 | 2024-01-19, 10:21:44.281788 [info] - ---- RAY HIT ON LAUNCH [714] ----
+0000534 | 2024-01-19, 10:21:44.281794 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000535 | 2024-01-19, 10:21:44.281852 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000536 | 2024-01-19, 10:21:44.281876 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000537 | 2024-01-19, 10:21:44.281904 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000538 | 2024-01-19, 10:21:44.281933 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000539 | 2024-01-19, 10:21:44.281958 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000540 | 2024-01-19, 10:21:44.281985 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000541 | 2024-01-19, 10:21:44.282017 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000542 | 2024-01-19, 10:21:44.282044 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000543 | 2024-01-19, 10:21:44.282077 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000544 | 2024-01-19, 10:21:44.282108 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000545 | 2024-01-19, 10:21:44.282140 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000546 | 2024-01-19, 10:21:44.282175 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000547 | 2024-01-19, 10:21:44.282210 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000548 | 2024-01-19, 10:21:44.282246 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000549 | 2024-01-19, 10:21:44.282284 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000550 | 2024-01-19, 10:21:44.282323 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000551 | 2024-01-19, 10:21:44.282362 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000552 | 2024-01-19, 10:21:44.282406 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000553 | 2024-01-19, 10:21:44.282448 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000554 | 2024-01-19, 10:21:44.282494 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000555 | 2024-01-19, 10:21:44.282541 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000556 | 2024-01-19, 10:21:44.282587 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000557 | 2024-01-19, 10:21:44.282634 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000558 | 2024-01-19, 10:21:44.282683 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000559 | 2024-01-19, 10:21:44.282731 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000560 | 2024-01-19, 10:21:44.282780 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000561 | 2024-01-19, 10:21:44.282828 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000562 | 2024-01-19, 10:21:44.282878 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000563 | 2024-01-19, 10:21:44.282927 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000564 | 2024-01-19, 10:21:44.282977 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000565 | 2024-01-19, 10:21:44.283020 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000566 | 2024-01-19, 10:21:44.283063 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000567 | 2024-01-19, 10:21:44.283106 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000568 | 2024-01-19, 10:21:44.283147 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000569 | 2024-01-19, 10:21:44.283187 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000570 | 2024-01-19, 10:21:44.283228 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000571 | 2024-01-19, 10:21:44.283267 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000572 | 2024-01-19, 10:21:44.283311 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000573 | 2024-01-19, 10:21:44.283348 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000574 | 2024-01-19, 10:21:44.283397 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000575 | 2024-01-19, 10:21:44.283441 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000576 | 2024-01-19, 10:21:44.283488 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000577 | 2024-01-19, 10:21:44.283529 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000578 | 2024-01-19, 10:21:44.283577 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000579 | 2024-01-19, 10:21:44.283617 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000580 | 2024-01-19, 10:21:44.283654 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000581 | 2024-01-19, 10:21:44.283808 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000582 | 2024-01-19, 10:21:44.283880 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000583 | 2024-01-19, 10:21:44.283929 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000584 | 2024-01-19, 10:21:44.283980 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000585 | 2024-01-19, 10:21:44.284030 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000586 | 2024-01-19, 10:21:44.284102 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000587 | 2024-01-19, 10:21:44.284387 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000588 | 2024-01-19, 10:21:44.284428 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000589 | 2024-01-19, 10:21:44.284468 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000590 | 2024-01-19, 10:21:44.284512 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000591 | 2024-01-19, 10:21:44.284560 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000592 | 2024-01-19, 10:21:44.284605 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000593 | 2024-01-19, 10:21:44.284647 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000594 | 2024-01-19, 10:21:44.284686 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000595 | 2024-01-19, 10:21:44.284721 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000596 | 2024-01-19, 10:21:44.284750 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000597 | 2024-01-19, 10:21:44.284781 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000598 | 2024-01-19, 10:21:44.284807 [info] - ---- RAY HIT ON LAUNCH [812] ----
+0000599 | 2024-01-19, 10:21:44.284839 [info] - Surface 12682136550675316761 hit after travelling 0.4 units
+0000600 | 2024-01-19, 10:21:44.284853 [info] - ---- RAY HIT ON LAUNCH [813] ----
+0000601 | 2024-01-19, 10:21:44.287696 [info] - ---- RAY HIT ON LAUNCH [814] ----
+0000602 | 2024-01-19, 10:21:44.287724 [info] - Surface 12682136550675316761 hit after travelling 0.35 units
+0000603 | 2024-01-19, 10:21:44.287744 [info] - ---- RAY HIT ON LAUNCH [815] ----
+0000604 | 2024-01-19, 10:21:44.287755 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000605 | 2024-01-19, 10:21:44.287770 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000606 | 2024-01-19, 10:21:44.287785 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000607 | 2024-01-19, 10:21:44.287800 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000608 | 2024-01-19, 10:21:44.287814 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000609 | 2024-01-19, 10:21:44.287833 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000610 | 2024-01-19, 10:21:44.287852 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000611 | 2024-01-19, 10:21:44.287878 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000612 | 2024-01-19, 10:21:44.287898 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000613 | 2024-01-19, 10:21:44.287927 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000614 | 2024-01-19, 10:21:44.287950 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000615 | 2024-01-19, 10:21:44.287974 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000616 | 2024-01-19, 10:21:44.287997 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000617 | 2024-01-19, 10:21:44.288019 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000618 | 2024-01-19, 10:21:44.288047 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000619 | 2024-01-19, 10:21:44.288074 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000620 | 2024-01-19, 10:21:44.288101 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000621 | 2024-01-19, 10:21:44.288132 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000622 | 2024-01-19, 10:21:44.288162 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000623 | 2024-01-19, 10:21:44.288193 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000624 | 2024-01-19, 10:21:44.288228 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000625 | 2024-01-19, 10:21:44.288261 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000626 | 2024-01-19, 10:21:44.288295 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000627 | 2024-01-19, 10:21:44.288334 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000628 | 2024-01-19, 10:21:44.288371 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000629 | 2024-01-19, 10:21:44.288400 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000630 | 2024-01-19, 10:21:44.288427 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000631 | 2024-01-19, 10:21:44.288458 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000632 | 2024-01-19, 10:21:44.288488 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000633 | 2024-01-19, 10:21:44.288522 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000634 | 2024-01-19, 10:21:44.288555 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000635 | 2024-01-19, 10:21:44.288592 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000636 | 2024-01-19, 10:21:44.288628 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000637 | 2024-01-19, 10:21:44.288668 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000638 | 2024-01-19, 10:21:44.288711 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000639 | 2024-01-19, 10:21:44.288753 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000640 | 2024-01-19, 10:21:44.288797 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000641 | 2024-01-19, 10:21:44.288843 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000642 | 2024-01-19, 10:21:44.288880 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000643 | 2024-01-19, 10:21:44.288914 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000644 | 2024-01-19, 10:21:44.288945 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000645 | 2024-01-19, 10:21:44.288973 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000646 | 2024-01-19, 10:21:44.288997 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000647 | 2024-01-19, 10:21:44.289017 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000648 | 2024-01-19, 10:21:44.289032 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000649 | 2024-01-19, 10:21:44.289045 [info] - ---- RAY HIT ON LAUNCH [860] ----
+0000650 | 2024-01-19, 10:21:44.289073 [info] - Surface 12682136550675316761 hit after travelling 0.35 units
+0000651 | 2024-01-19, 10:21:44.289087 [info] - ---- RAY HIT ON LAUNCH [861] ----
+0000652 | 2024-01-19, 10:21:44.291924 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000653 | 2024-01-19, 10:21:44.291940 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000654 | 2024-01-19, 10:21:44.291990 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000655 | 2024-01-19, 10:21:44.292010 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000656 | 2024-01-19, 10:21:44.292025 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000657 | 2024-01-19, 10:21:44.292037 [info] - ---- RAY HIT ON LAUNCH [869] ----
+0000658 | 2024-01-19, 10:21:44.292066 [info] - Surface 12682136550675316761 hit after travelling 0.35 units
+0000659 | 2024-01-19, 10:21:44.292078 [info] - ---- RAY HIT ON LAUNCH [870] ----
+0000660 | 2024-01-19, 10:21:44.294911 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000661 | 2024-01-19, 10:21:44.294933 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000662 | 2024-01-19, 10:21:44.294958 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000663 | 2024-01-19, 10:21:44.294987 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000664 | 2024-01-19, 10:21:44.295020 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000665 | 2024-01-19, 10:21:44.295055 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000666 | 2024-01-19, 10:21:44.295100 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000667 | 2024-01-19, 10:21:44.295145 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000668 | 2024-01-19, 10:21:44.295187 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000669 | 2024-01-19, 10:21:44.295222 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000670 | 2024-01-19, 10:21:44.295253 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000671 | 2024-01-19, 10:21:44.295282 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000672 | 2024-01-19, 10:21:44.295306 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000673 | 2024-01-19, 10:21:44.295326 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000674 | 2024-01-19, 10:21:44.295341 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000675 | 2024-01-19, 10:21:44.295353 [info] - ---- RAY HIT ON LAUNCH [886] ----
+0000676 | 2024-01-19, 10:21:44.295383 [info] - Surface 12682136550675316761 hit after travelling 0.35 units
+0000677 | 2024-01-19, 10:21:44.295400 [info] - ---- RAY HIT ON LAUNCH [887] ----
+0000678 | 2024-01-19, 10:21:44.298201 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000679 | 2024-01-19, 10:21:44.298222 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000680 | 2024-01-19, 10:21:44.298248 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000681 | 2024-01-19, 10:21:44.298276 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000682 | 2024-01-19, 10:21:44.298304 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000683 | 2024-01-19, 10:21:44.298502 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000684 | 2024-01-19, 10:21:44.298547 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000685 | 2024-01-19, 10:21:44.298589 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000686 | 2024-01-19, 10:21:44.298629 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000687 | 2024-01-19, 10:21:44.298671 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000688 | 2024-01-19, 10:21:44.298708 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000689 | 2024-01-19, 10:21:44.298746 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000690 | 2024-01-19, 10:21:44.298785 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000691 | 2024-01-19, 10:21:44.298819 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000692 | 2024-01-19, 10:21:44.298853 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000693 | 2024-01-19, 10:21:44.298889 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000694 | 2024-01-19, 10:21:44.298921 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000695 | 2024-01-19, 10:21:44.298951 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000696 | 2024-01-19, 10:21:44.298978 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000697 | 2024-01-19, 10:21:44.299001 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000698 | 2024-01-19, 10:21:44.299024 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000699 | 2024-01-19, 10:21:44.299047 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000700 | 2024-01-19, 10:21:44.299067 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000701 | 2024-01-19, 10:21:44.299086 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000702 | 2024-01-19, 10:21:44.299100 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000703 | 2024-01-19, 10:21:44.299115 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000704 | 2024-01-19, 10:21:44.299130 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000705 | 2024-01-19, 10:21:44.299149 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000706 | 2024-01-19, 10:21:44.299172 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000707 | 2024-01-19, 10:21:44.299201 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000708 | 2024-01-19, 10:21:44.299223 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000709 | 2024-01-19, 10:21:44.299256 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000710 | 2024-01-19, 10:21:44.299286 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000711 | 2024-01-19, 10:21:44.299316 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000712 | 2024-01-19, 10:21:44.299351 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000713 | 2024-01-19, 10:21:44.299384 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000714 | 2024-01-19, 10:21:44.299421 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000715 | 2024-01-19, 10:21:44.299468 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000716 | 2024-01-19, 10:21:44.299525 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000717 | 2024-01-19, 10:21:44.299582 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000718 | 2024-01-19, 10:21:44.299622 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000719 | 2024-01-19, 10:21:44.299673 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000720 | 2024-01-19, 10:21:44.299717 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000721 | 2024-01-19, 10:21:44.299766 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000722 | 2024-01-19, 10:21:44.299816 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000723 | 2024-01-19, 10:21:44.299860 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000724 | 2024-01-19, 10:21:44.300087 [info] - Surface 12682136550675316763 hit after travelling 0.6 units
+0000725 | 2024-01-19, 10:21:44.300134 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000726 | 2024-01-19, 10:21:44.300181 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000727 | 2024-01-19, 10:21:44.300230 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000728 | 2024-01-19, 10:21:44.300273 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000729 | 2024-01-19, 10:21:44.300318 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000730 | 2024-01-19, 10:21:44.300371 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000731 | 2024-01-19, 10:21:44.300419 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000732 | 2024-01-19, 10:21:44.300466 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000733 | 2024-01-19, 10:21:44.300510 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000734 | 2024-01-19, 10:21:44.300556 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000735 | 2024-01-19, 10:21:44.300595 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000736 | 2024-01-19, 10:21:44.300629 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000737 | 2024-01-19, 10:21:44.300660 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000738 | 2024-01-19, 10:21:44.300691 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000739 | 2024-01-19, 10:21:44.300722 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000740 | 2024-01-19, 10:21:44.300749 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000741 | 2024-01-19, 10:21:44.300778 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000742 | 2024-01-19, 10:21:44.300820 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000743 | 2024-01-19, 10:21:44.300862 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000744 | 2024-01-19, 10:21:44.300907 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000745 | 2024-01-19, 10:21:44.300955 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000746 | 2024-01-19, 10:21:44.300999 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000747 | 2024-01-19, 10:21:44.301046 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000748 | 2024-01-19, 10:21:44.301099 [info] - Surface 12682136550675316763 hit after travelling 0.6 units
+0000749 | 2024-01-19, 10:21:44.301154 [info] - Surface 12682136550675316763 hit after travelling 0.6 units
+0000750 | 2024-01-19, 10:21:44.301211 [info] - Surface 12682136550675316763 hit after travelling 0.65 units
+0000751 | 2024-01-19, 10:21:44.301573 [info] - Surface 12682136550675316763 hit after travelling 0.6 units
+0000752 | 2024-01-19, 10:21:44.302069 [info] - Surface 12682136550675316763 hit after travelling 0.6 units
+0000753 | 2024-01-19, 10:21:44.302119 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000754 | 2024-01-19, 10:21:44.302162 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000755 | 2024-01-19, 10:21:44.302210 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000756 | 2024-01-19, 10:21:44.302261 [info] - Surface 12682136550675316763 hit after travelling 0.6 units
+0000757 | 2024-01-19, 10:21:44.302359 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000758 | 2024-01-19, 10:21:44.302404 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000759 | 2024-01-19, 10:21:44.302442 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000760 | 2024-01-19, 10:21:44.302476 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000761 | 2024-01-19, 10:21:44.302508 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000762 | 2024-01-19, 10:21:44.302532 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000763 | 2024-01-19, 10:21:44.302551 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000764 | 2024-01-19, 10:21:44.302574 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000765 | 2024-01-19, 10:21:44.302602 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000766 | 2024-01-19, 10:21:44.302636 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000767 | 2024-01-19, 10:21:44.302675 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000768 | 2024-01-19, 10:21:44.302742 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000769 | 2024-01-19, 10:21:44.302788 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000770 | 2024-01-19, 10:21:44.302873 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000771 | 2024-01-19, 10:21:44.302917 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000772 | 2024-01-19, 10:21:44.302947 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000773 | 2024-01-19, 10:21:44.302985 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000774 | 2024-01-19, 10:21:44.303016 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000775 | 2024-01-19, 10:21:44.303051 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000776 | 2024-01-19, 10:21:44.303078 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000777 | 2024-01-19, 10:21:44.303109 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000778 | 2024-01-19, 10:21:44.303135 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000779 | 2024-01-19, 10:21:44.303161 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000780 | 2024-01-19, 10:21:44.303175 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000781 | 2024-01-19, 10:21:44.303199 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000782 | 2024-01-19, 10:21:44.303212 [info] - ---- RAY HIT ON LAUNCH [1044] ----
+0000783 | 2024-01-19, 10:21:44.303238 [info] - Surface 12682136550675316760 hit after travelling 0.35 units
+0000784 | 2024-01-19, 10:21:44.303250 [info] - ---- RAY HIT ON LAUNCH [1045] ----
+0000785 | 2024-01-19, 10:21:44.303255 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000786 | 2024-01-19, 10:21:44.303270 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000787 | 2024-01-19, 10:21:44.303283 [info] - ---- RAY HIT ON LAUNCH [1047] ----
+0000788 | 2024-01-19, 10:21:44.303304 [info] - Surface 12682136550675316761 hit after travelling 0.3 units
+0000789 | 2024-01-19, 10:21:44.303316 [info] - ---- RAY HIT ON LAUNCH [1048] ----
+0000790 | 2024-01-19, 10:21:44.303322 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000791 | 2024-01-19, 10:21:44.303343 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000792 | 2024-01-19, 10:21:44.303368 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000793 | 2024-01-19, 10:21:44.303399 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000794 | 2024-01-19, 10:21:44.303435 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000795 | 2024-01-19, 10:21:44.303473 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000796 | 2024-01-19, 10:21:44.303520 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000797 | 2024-01-19, 10:21:44.303554 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000798 | 2024-01-19, 10:21:44.303591 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000799 | 2024-01-19, 10:21:44.303622 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000800 | 2024-01-19, 10:21:44.303655 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000801 | 2024-01-19, 10:21:44.303680 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000802 | 2024-01-19, 10:21:44.303710 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000803 | 2024-01-19, 10:21:44.303731 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000804 | 2024-01-19, 10:21:44.303760 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000805 | 2024-01-19, 10:21:44.303775 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000806 | 2024-01-19, 10:21:44.303794 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000807 | 2024-01-19, 10:21:44.303807 [info] - ---- RAY HIT ON LAUNCH [1065] ----
+0000808 | 2024-01-19, 10:21:44.303835 [info] - Surface 12682136550675316761 hit after travelling 0.3 units
+0000809 | 2024-01-19, 10:21:44.303848 [info] - ---- RAY HIT ON LAUNCH [1066] ----
+0000810 | 2024-01-19, 10:21:44.303854 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000811 | 2024-01-19, 10:21:44.303869 [info] - ---- RAY HIT ON LAUNCH [1067] ----
+0000812 | 2024-01-19, 10:21:44.303895 [info] - Surface 12682136550675316761 hit after travelling 0.3 units
+0000813 | 2024-01-19, 10:21:44.303910 [info] - ---- RAY HIT ON LAUNCH [1068] ----
+0000814 | 2024-01-19, 10:21:44.306833 [info] - ---- RAY HIT ON LAUNCH [1069] ----
+0000815 | 2024-01-19, 10:21:44.306862 [info] - Surface 12682136550675316760 hit after travelling 0.35 units
+0000816 | 2024-01-19, 10:21:44.306883 [info] - ---- RAY HIT ON LAUNCH [1070] ----
+0000817 | 2024-01-19, 10:21:44.306895 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000818 | 2024-01-19, 10:21:44.306915 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000819 | 2024-01-19, 10:21:44.306945 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000820 | 2024-01-19, 10:21:44.306981 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000821 | 2024-01-19, 10:21:44.307021 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000822 | 2024-01-19, 10:21:44.307061 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000823 | 2024-01-19, 10:21:44.307095 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000824 | 2024-01-19, 10:21:44.307126 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000825 | 2024-01-19, 10:21:44.307157 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000826 | 2024-01-19, 10:21:44.307184 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000827 | 2024-01-19, 10:21:44.307209 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000828 | 2024-01-19, 10:21:44.307232 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000829 | 2024-01-19, 10:21:44.307252 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000830 | 2024-01-19, 10:21:44.307272 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000831 | 2024-01-19, 10:21:44.307299 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000832 | 2024-01-19, 10:21:44.307312 [info] - ---- RAY HIT ON LAUNCH [1085] ----
+0000833 | 2024-01-19, 10:21:44.307342 [info] - Surface 12682136550675316760 hit after travelling 0.35 units
+0000834 | 2024-01-19, 10:21:44.307355 [info] - ---- RAY HIT ON LAUNCH [1086] ----
+0000835 | 2024-01-19, 10:21:44.307366 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000836 | 2024-01-19, 10:21:44.307381 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000837 | 2024-01-19, 10:21:44.307395 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000838 | 2024-01-19, 10:21:44.307407 [info] - ---- RAY HIT ON LAUNCH [1089] ----
+0000839 | 2024-01-19, 10:21:44.307435 [info] - Surface 12682136550675316760 hit after travelling 0.35 units
+0000840 | 2024-01-19, 10:21:44.307452 [info] - ---- RAY HIT ON LAUNCH [1090] ----
+0000841 | 2024-01-19, 10:21:44.310390 [info] - ---- RAY HIT ON LAUNCH [1091] ----
+0000842 | 2024-01-19, 10:21:44.310421 [info] - Surface 12682136550675316761 hit after travelling 0.3 units
+0000843 | 2024-01-19, 10:21:44.310443 [info] - ---- RAY HIT ON LAUNCH [1092] ----
+0000844 | 2024-01-19, 10:21:44.313589 [info] - ---- RAY HIT ON LAUNCH [1093] ----
+0000845 | 2024-01-19, 10:21:44.313611 [info] - Surface 12682136550675316761 hit after travelling 0.3 units
+0000846 | 2024-01-19, 10:21:44.313624 [info] - ---- RAY HIT ON LAUNCH [1094] ----
+0000847 | 2024-01-19, 10:21:44.313630 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000848 | 2024-01-19, 10:21:44.313645 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000849 | 2024-01-19, 10:21:44.313660 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000850 | 2024-01-19, 10:21:44.313674 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000851 | 2024-01-19, 10:21:44.313689 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000852 | 2024-01-19, 10:21:44.313709 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000853 | 2024-01-19, 10:21:44.313729 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000854 | 2024-01-19, 10:21:44.313749 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000855 | 2024-01-19, 10:21:44.313774 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000856 | 2024-01-19, 10:21:44.313799 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000857 | 2024-01-19, 10:21:44.313825 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000858 | 2024-01-19, 10:21:44.313849 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000859 | 2024-01-19, 10:21:44.313873 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000860 | 2024-01-19, 10:21:44.313894 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000861 | 2024-01-19, 10:21:44.313914 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000862 | 2024-01-19, 10:21:44.313938 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000863 | 2024-01-19, 10:21:44.313987 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000864 | 2024-01-19, 10:21:44.314013 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000865 | 2024-01-19, 10:21:44.314043 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000866 | 2024-01-19, 10:21:44.314075 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000867 | 2024-01-19, 10:21:44.314105 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000868 | 2024-01-19, 10:21:44.314129 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000869 | 2024-01-19, 10:21:44.314161 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000870 | 2024-01-19, 10:21:44.314197 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000871 | 2024-01-19, 10:21:44.314221 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000872 | 2024-01-19, 10:21:44.314240 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000873 | 2024-01-19, 10:21:44.314259 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000874 | 2024-01-19, 10:21:44.314278 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000875 | 2024-01-19, 10:21:44.314297 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000876 | 2024-01-19, 10:21:44.314312 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000877 | 2024-01-19, 10:21:44.314325 [info] - ---- RAY HIT ON LAUNCH [1124] ----
+0000878 | 2024-01-19, 10:21:44.314347 [info] - Surface 12682136550675316761 hit after travelling 0.3 units
+0000879 | 2024-01-19, 10:21:44.314361 [info] - ---- RAY HIT ON LAUNCH [1125] ----
+0000880 | 2024-01-19, 10:21:44.317476 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000881 | 2024-01-19, 10:21:44.317504 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000882 | 2024-01-19, 10:21:44.317538 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000883 | 2024-01-19, 10:21:44.317579 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000884 | 2024-01-19, 10:21:44.317621 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000885 | 2024-01-19, 10:21:44.317656 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000886 | 2024-01-19, 10:21:44.317689 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000887 | 2024-01-19, 10:21:44.317725 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000888 | 2024-01-19, 10:21:44.317781 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000889 | 2024-01-19, 10:21:44.317829 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000890 | 2024-01-19, 10:21:44.317885 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000891 | 2024-01-19, 10:21:44.317948 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000892 | 2024-01-19, 10:21:44.318834 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000893 | 2024-01-19, 10:21:44.318879 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000894 | 2024-01-19, 10:21:44.318924 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000895 | 2024-01-19, 10:21:44.318970 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000896 | 2024-01-19, 10:21:44.319007 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000897 | 2024-01-19, 10:21:44.319051 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000898 | 2024-01-19, 10:21:44.319091 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000899 | 2024-01-19, 10:21:44.319127 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000900 | 2024-01-19, 10:21:44.319161 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000901 | 2024-01-19, 10:21:44.319198 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000902 | 2024-01-19, 10:21:44.319226 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000903 | 2024-01-19, 10:21:44.319254 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000904 | 2024-01-19, 10:21:44.319284 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000905 | 2024-01-19, 10:21:44.319318 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000906 | 2024-01-19, 10:21:44.319339 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000907 | 2024-01-19, 10:21:44.319361 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000908 | 2024-01-19, 10:21:44.319388 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000909 | 2024-01-19, 10:21:44.319403 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000910 | 2024-01-19, 10:21:44.319419 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000911 | 2024-01-19, 10:21:44.319455 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000912 | 2024-01-19, 10:21:44.319493 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000913 | 2024-01-19, 10:21:44.319534 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000914 | 2024-01-19, 10:21:44.319638 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000915 | 2024-01-19, 10:21:44.319683 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000916 | 2024-01-19, 10:21:44.319722 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000917 | 2024-01-19, 10:21:44.319763 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000918 | 2024-01-19, 10:21:44.319810 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000919 | 2024-01-19, 10:21:44.319850 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000920 | 2024-01-19, 10:21:44.319894 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000921 | 2024-01-19, 10:21:44.319943 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000922 | 2024-01-19, 10:21:44.319994 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000923 | 2024-01-19, 10:21:44.322166 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000924 | 2024-01-19, 10:21:44.322201 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000925 | 2024-01-19, 10:21:44.322240 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000926 | 2024-01-19, 10:21:44.322286 [info] - Surface 12682136550675316763 hit after travelling 0.5 units
+0000927 | 2024-01-19, 10:21:44.322335 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000928 | 2024-01-19, 10:21:44.322502 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000929 | 2024-01-19, 10:21:44.322616 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000930 | 2024-01-19, 10:21:44.322663 [info] - Surface 12682136550675316763 hit after travelling 0.55 units
+0000931 | 2024-01-19, 10:21:44.322697 [info] - Surface 12682136550675316763 hit after travelling 0.35 units
+0000932 | 2024-01-19, 10:21:44.322737 [info] - Surface 12682136550675316763 hit after travelling 0.45 units
+0000933 | 2024-01-19, 10:21:44.322764 [info] - Surface 12682136550675316763 hit after travelling 0.25 units
+0000934 | 2024-01-19, 10:21:44.322804 [info] - Surface 12682136550675316763 hit after travelling 0.4 units
+0000935 | 2024-01-19, 10:21:44.322824 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000936 | 2024-01-19, 10:21:44.322855 [info] - Surface 12682136550675316763 hit after travelling 0.3 units
+0000937 | 2024-01-19, 10:21:44.322867 [info] - ---- RAY HIT ON LAUNCH [1250] ----
+0000938 | 2024-01-19, 10:21:44.322896 [info] - Surface 12682136550675316760 hit after travelling 0.35 units
+0000939 | 2024-01-19, 10:21:44.322916 [info] - ---- RAY HIT ON LAUNCH [1251] ----
+0000940 | 2024-01-19, 10:21:44.322932 [info] - Surface 12682136550675316763 hit after travelling 0.2 units
+0000941 | 2024-01-19, 10:21:44.322953 [info] - Surface 12682136550675316763 hit after travelling 0.15 units
+0000942 | 2024-01-19, 10:21:44.322965 [info] - ---- RAY HIT ON LAUNCH [1253] ----
+0000943 | 2024-01-19, 10:21:44.322985 [info] - Surface 12682136550675316761 hit after travelling 0.25 units
+0000944 | 2024-01-19, 10:21:44.322997 [info] - ---- RAY HIT ON LAUNCH [1254] ----
+0000945 | 2024-01-19, 10:21:44.326478 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000946 | 2024-01-19, 10:21:44.326498 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000947 | 2024-01-19, 10:21:44.326517 [info] - Surface 12682136550675316763 hit after travelling 0.1 units
+0000948 | 2024-01-19, 10:21:44.326534 [info] - ---- RAY HIT ON LAUNCH [1258] ----
+0000949 | 2024-01-19, 10:21:44.326555 [info] - Surface 12682136550675316760 hit after travelling 0.2 units
+0000950 | 2024-01-19, 10:21:44.329493 [info] - ---- RAY HIT ON LAUNCH [1260] ----

@@ -393,6 +393,7 @@ void equData::init_interp_splines()
     }
   }
 
+
   double f_pts[nw];
   double psi_1dpts[nw];
   std::copy(eqdsk.fpol.begin(), eqdsk.fpol.end(), f_pts);
