@@ -23,6 +23,10 @@ find_package(Boost REQUIRED COMPONENTS ${Boost_PACKAGES})
 find_package(OpenMP REQUIRED)
 
 
+# ADDRESS SANITIZATION flags
+#set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+#set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+
 #include(${CMAKE_SOURCE_DIR}/cmake/SetBuildType.cmake)
 
 # Set debugging symbols
@@ -89,10 +93,10 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 # Set the build type environment variable
 ############################################################
 if(BUILD_TYPE STREQUAL "TEST")
-  set(BUILD_TYPE_COMPILE_FLAGS "-g;-O0;--coverage")
+  set(BUILD_TYPE_COMPILE_FLAGS "-g;-O0;--coverage;")
   set(TEST_LIBRARIES "gcov")
 elseif(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
-  set(BUILD_TYPE_COMPILE_FLAGS "-g;-O0")
+  set(BUILD_TYPE_COMPILE_FLAGS "-g;-O0;")
   set(TEST_LIBRARIES "")
 elseif(BUILD_TYPE STREQUAL "RELEASE")
   set(BUILD_TYPE_COMPILE_FLAGS "-O2")

@@ -15,7 +15,6 @@
 
 using moab::DagMC;
 using moab::OrientedBoxTreeTool;
-moab::DagMC* DAGInstance;
 
 
 class pointSource{

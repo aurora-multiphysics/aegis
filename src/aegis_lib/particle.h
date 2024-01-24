@@ -33,6 +33,7 @@ class particleBase
   void set_pos(std::vector<double> newPosition); // set new particle position
   void set_pos(double newPosition[]); // overload for C-style array
   std::vector<double> get_pos(std::string coordType); // return STL vector of the current position
+  double get_psi(equData &EquData); // get psi value at current pos
   void set_dir(equData &EquData); // set unit drection vector and Bfield at current position
   std::vector<double> get_dir(std::string coordType); // return STL vector of unit direction
   void check_if_in_bfield(equData &Equdata); // check if in magnetic field

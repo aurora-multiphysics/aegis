@@ -164,17 +164,10 @@ std::vector<double> triSource::centroid()
 }
 
 
-
-void triSource::dagmcInstance(moab::DagMC* DAG)
-{
-  DAGInstance = DAG;
-  DAGInstance->write_mesh("dag.out", 1);
-}
-
 double triSource::dot_product(std::vector<double> externalVector) 
 {
   double product = 0;
-  for (int i; i<3; i++)
+  for (int i=0; i<3; i++)
   {
     product = product + externalVector[i]*this->unitNormal[i];
   }
