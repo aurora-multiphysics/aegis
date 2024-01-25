@@ -88,9 +88,9 @@ class AegisClass
   double psiref = 0.0;
 
   std::unique_ptr<moab::DagMC> DAG;
-  moab::Range surfs;
-  moab::Range vols;
-  moab::Range facets;
+  moab::Range surfsList;
+  moab::Range volsList;
+  moab::Range facetsList;
   int numFacets = 0;
   int numNodes = 0;
   moab::EntityHandle prevSurf;
@@ -98,13 +98,14 @@ class AegisClass
   moab::EntityHandle volID; 
   double nextSurfDist = 0.0; // distance to next surface
   DagMC::RayHistory history;
-  moab::EntityHandle intersectedTri;
+  moab::EntityHandle intersectedFacet;
   int rayOrientation = 1; // rays are fired along surface normals
 
   equData bFieldData;
   bool plotBFieldRZ = false;
   bool plotBFieldXYZ = false;
   
+  std::unique_ptr<surfaceIntegrator> integrator;
   double BdotN = 0.0; // dot product of magnetic field and triangle surface normal
   double Q = 0.0; // heatflux incident on surface triangle
   double psi = 0.0; // value of psi at current position

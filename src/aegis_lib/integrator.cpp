@@ -20,7 +20,7 @@ surfaceIntegrator::surfaceIntegrator(moab::Range const &Facets)
   for (auto i:Facets)
   {
     facetEntities.push_back(i);
-    nRays[i] = 0;
+    particlesShadowedBy[i] = 0;
     powFac[i] = 0;
   }
 
@@ -36,7 +36,7 @@ surfaceIntegrator::surfaceIntegrator(std::vector<EntityHandle> const &Facets)
   for (auto i:Facets)
   {
     facetEntities.push_back(i);
-    nRays[i] = 0;
+    particlesShadowedBy[i] = 0;
     powFac[i] = 0;
   }
 
@@ -44,19 +44,64 @@ surfaceIntegrator::surfaceIntegrator(std::vector<EntityHandle> const &Facets)
 
 void surfaceIntegrator::count_hit(EntityHandle facet_hit)
 {
-  nRays[facet_hit] +=1;
-  raysHit +=1;
+  particlesShadowedBy[facet_hit] +=1;
+  nParticlesShadowed +=1;
 }
 
 void surfaceIntegrator::count_lost_ray()
 {
-  raysLost += 1;
+  nParticlesLost += 1;
 }
 
 void surfaceIntegrator::store_heat_flux(EntityHandle facet, double heatflux)
 {
   powFac[facet] += heatflux; // tally accumulated heatflux on facet
-  if (heatflux > 0 ) {raysHeatDep += 1;} 
+  if (heatflux > 0 ) {nParticlesHeatDep += 1;} 
+}
+
+void surfaceIntegrator::count_particle(EntityHandle facet, int terminationState, double heatflux = 0.0)
+{
+
+  enum particleState{
+    DEPOSITING = 0,
+    SHADOWED = 1,
+    LOST = 2,
+    MAXLENGTH = 3  
+  };
+
+  if (heatflux < 0.0){
+    throw std::invalid_argument("Heatflux cannot be a negative value");
+  }
+
+  // count number of particles that reach each state and store the associated heatflux
+  switch(terminationState){
+    case DEPOSITING:
+      nParticlesHeatDep += 1;
+      break;
+  
+    case SHADOWED:
+      nParticlesShadowed += 1;
+      if (heatflux > 0.0) {
+        throw std::invalid_argument("Heatflux should be 0 for SHADOWED particles");
+      }
+      break;
+
+    case LOST:
+      nParticlesLost += 1;
+      if (heatflux > 0.0) {
+        throw std::invalid_argument("Heatflux should be 0 for LOST particles");
+      }
+      break;
+
+    case MAXLENGTH:
+      nParticlesMaxLength += 1;
+      if (heatflux > 0.0) {
+        throw std::invalid_argument("Heatflux should be 0 for particles that have reached MAX LENGTH");
+      }
+      break;
+  }
+
+  powFac[facet] += heatflux;
 }
 
 
@@ -175,3 +220,17 @@ void surfaceIntegrator::piecewise_multilinear_out(std::unordered_map<moab::Entit
 
 
 }
+
+void surfaceIntegrator::print_particle_stats(){ // return number of particles depositing, shadowed, lost etc.
+
+  // note that this function implicitly assumes only a single particle is launched per facet. Will need to update if that changes in the future
+
+  LOG_WARNING << "Number of particles launched = " << nFacets;
+  LOG_WARNING << "Number of shadowed particle intersections = " << nParticlesShadowed;
+  LOG_WARNING << "Number of particles depositing power from omp = " << nParticlesHeatDep;
+  LOG_WARNING << "Number of particles lost from magnetic domain = " << nParticlesLost;
+  LOG_WARNING << "Number of particles terminated upon reaching max tracking length = " << nParticlesMaxLength; 
+
+
+
+};

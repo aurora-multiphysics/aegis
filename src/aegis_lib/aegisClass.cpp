@@ -48,9 +48,9 @@ void AegisClass::Execute(){
   DAG = std::make_unique<moab::DagMC>();
   DAG->load_file(dagmcInputFile.c_str());
   DAG->init_OBBTree();
-  DAG->setup_geometry(surfs, vols);
-  DAG->moab_instance()->get_entities_by_type(0, MBTRI, facets);
-  numFacets = facets.size();
+  DAG->setup_geometry(surfsList, volsList);
+  DAG->moab_instance()->get_entities_by_type(0, MBTRI, facetsList);
+  numFacets = facetsList.size();
   std::cout << "Number of Triangles in Geometry " << numFacets << std::endl;
   volID = DAG->entity_by_index(3,1);
 
@@ -93,19 +93,19 @@ void AegisClass::Execute(){
   
   std::vector<double> triCoords(9);
   std::vector<double> triA(3), triB(3), triC(3);
-  //integrator = new surfaceIntegrator(facets);
+  integrator = std::make_unique<surfaceIntegrator>(facetsList);
   // loop over all facets
   int facetCounter = 0;
   std::ofstream aegisOUT("aegis_new_OUT.txt");
 
   traceEnded = false;
 
-  for (auto i:facets){
+  for (auto facet:facetsList){
     facetCounter +=1;
     particleBase particle;
 
     std::vector<moab::EntityHandle> triNodes;
-    DAG->moab_instance()->get_adjacencies(&i, 1, 0, false, triNodes);
+    DAG->moab_instance()->get_adjacencies(&facet, 1, 0, false, triNodes);
     DAG->moab_instance()->get_coords(&triNodes[0], triNodes.size(), triCoords.data());
 
     for (int j=0; j<3; j++){
@@ -113,7 +113,7 @@ void AegisClass::Execute(){
       triB[j] = triCoords[j+3];
       triC[j] = triCoords[j+6];
     }
-    triSource Tri(triA, triB, triC, i); 
+    triSource Tri(triA, triB, triC, facet); 
     vtkInterface.arrays["Normal"]->InsertNextTuple3(Tri.unitNormal[0], Tri.unitNormal[1], Tri.unitNormal[2]);
 
     if (particleLaunchPos == "fixed"){
@@ -122,7 +122,7 @@ void AegisClass::Execute(){
     else{
       particle.set_pos(Tri.random_pt());
     }
-    //integrator->launchPositions[i] = particle.get_pos("cart");
+    integrator->launchPositions[facet] = particle.get_pos("cart");
     
     particle.check_if_in_bfield(bFieldData); // if out of bounds skip to next triangle
     if (particle.outOfBounds){
@@ -161,7 +161,7 @@ void AegisClass::Execute(){
     DAG->ray_fire(volID, particle.launchPos.data(), particle.dir.data(), nextSurf, nextSurfDist, &history,trackStepSize,rayOrientation);
     if (nextSurf != 0) 
     {
-      history.get_last_intersection(intersectedTri);
+      history.get_last_intersection(intersectedFacet);
       history.rollback_last_intersection();
       DAG->next_vol(nextSurf, volID, volID);
       LOG_INFO << "---- RAY HIT ON LAUNCH [" << facetCounter << "] ----";
@@ -181,12 +181,14 @@ void AegisClass::Execute(){
         newPt[1] = particle.pos[1] + particle.dir[1] * nextSurfDist;
         newPt[2] = particle.pos[2] + particle.dir[2] * nextSurfDist;
 
-        history.get_last_intersection(intersectedTri);
+        history.get_last_intersection(intersectedFacet);
+        integrator->count_hit(intersectedFacet);
         LOG_INFO << "Surface " << nextSurf << " hit after travelling " << trackLength << " units";
         history.rollback_last_intersection();
         history.reset();
 
         vtkInterface.arrays["Q"]->InsertNextTuple1(0.0);
+        integrator->store_heat_flux(facet,0.0);
         psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
         traceEnded = true;
         break;
@@ -201,8 +203,9 @@ void AegisClass::Execute(){
       particle.check_if_in_bfield(bFieldData);
       if (particle.outOfBounds){
         LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";
-        
+        integrator->count_lost_ray();
         vtkInterface.arrays["Q"]->InsertNextTuple1(0.0);
+        integrator->store_heat_flux(facet,0.0);
         psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
         traceEnded = true;
         break;
@@ -216,6 +219,7 @@ void AegisClass::Execute(){
       if (particle.atMidplane != 0){
         
         vtkInterface.arrays["Q"]->InsertNextTuple1(Q);
+        integrator->store_heat_flux(facet,Q);
         psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
         traceEnded = true;
         break;
@@ -226,6 +230,7 @@ void AegisClass::Execute(){
     if (traceEnded == false){
       
       vtkInterface.arrays["Q"]->InsertNextTuple1(0.0);
+      integrator->store_heat_flux(facet,0.0);
       psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
       LOG_INFO << "Fieldline trace reached maximum length before intersection";
       traceEnded = true;
@@ -233,7 +238,10 @@ void AegisClass::Execute(){
 
   }
 
+
+
   vtkInterface.write_unstructuredGrid(vtkInputFile.c_str(), "out.vtk");
+  integrator->print_particle_stats();
 
   clock_t end = clock();
   double elapsed = double(end - start)/CLOCKS_PER_SEC;
