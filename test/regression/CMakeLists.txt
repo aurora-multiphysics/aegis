@@ -20,4 +20,4 @@ target_link_libraries(regression_tests ${VTK_LIBRARIES})
 #install(TARGETS regression_tests DESTINATION bin)
 
 include(GoogleTest)
-gtest_discover_tests(regression_tests WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/test/Data")
+gtest_discover_tests(regression_tests WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/test/data")
