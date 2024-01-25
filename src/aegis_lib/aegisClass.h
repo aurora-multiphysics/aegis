@@ -51,28 +51,8 @@
 #include "integrator.h"
 #include "coordtfm.h"
 #include "alglib/interpolation.h"
-#include "dagAegis.h"
 #include "particle.h"
 #include "vtkAegis.h"
-
-// #include <vtkCellArray.h>
-// #include <vtkNew.h>
-// #include <vtkPoints.h>
-// #include <vtkPolyData.h>
-// #include <vtkXMLPolyDataWriter.h>
-// #include <vtkCellArray.h>
-// #include <vtkCellData.h>
-// #include <vtkDoubleArray.h>
-// #include <vtkPolyLine.h>
-// #include <vtkMultiBlockDataSet.h>
-// #include <vtkXMLMultiBlockDataWriter.h>
-// #include <vtkCompositeDataSet.h>
-// #include <vtkInformation.h>
-// #include <vtkSTLReader.h>
-// #include <vtkUnstructuredGrid.h>
-// #include <vtkUnstructuredGridReader.h>
-// #include <vtkUnstructuredGridWriter.h>
-// #include <vtkAppendFilter.h>
 
 
 
@@ -81,6 +61,8 @@ using namespace moab;
 class AegisClass  
 {
   public:
+
+
   void Execute(); 
   int num_facets();
   std::vector<std::pair<double,double>> psiQ_values;
@@ -105,7 +87,7 @@ class AegisClass
   double fscale = 1.0;
   double psiref = 0.0;
 
-  moab::DagMC* DAG = nullptr;
+  std::unique_ptr<moab::DagMC> DAG;
   moab::Range surfs;
   moab::Range vols;
   moab::Range facets;

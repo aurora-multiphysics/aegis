@@ -49,7 +49,6 @@
 #include "coordtfm.h"
 #include "alglib/interpolation.h"
 #include "vtkAegis.h"
-#include "dagAegis.h"
 #include "particle.h"
 #include "aegisClass.h"
 

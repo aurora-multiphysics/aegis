@@ -45,7 +45,7 @@ void AegisClass::Execute(){
   psiref = runSettings.dValues["psiref"];
 
   // setup dagmc instance
-  DAG = new DagMC();
+  DAG = std::make_unique<moab::DagMC>();
   DAG->load_file(dagmcInputFile.c_str());
   DAG->init_OBBTree();
   DAG->setup_geometry(surfs, vols);
