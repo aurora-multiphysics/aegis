@@ -22,15 +22,12 @@ find_package(Boost REQUIRED COMPONENTS ${Boost_PACKAGES})
 
 find_package(OpenMP REQUIRED)
 
-
-# ADDRESS SANITIZATION flags
-#set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
-#set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
-
 #include(${CMAKE_SOURCE_DIR}/cmake/SetBuildType.cmake)
 
-# Set debugging symbols
+# Default to cpmpile with debugging symbols
 set(CMAKE_BUILD_TYPE DEBUG)
+
+#set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 
 # Import VTK
 find_package(VTK COMPONENTS REQUIRED
@@ -95,12 +92,32 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 if(BUILD_TYPE STREQUAL "TEST")
   set(BUILD_TYPE_COMPILE_FLAGS "-g;-O0;--coverage;")
   set(TEST_LIBRARIES "gcov")
+  message(STATUS "BUILD_TYPE SET TO TEST")
+
 elseif(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
   set(BUILD_TYPE_COMPILE_FLAGS "-g;-O0;")
   set(TEST_LIBRARIES "")
+  message(STATUS "BUILD_TYPE SET TO DEBUG")
+
 elseif(BUILD_TYPE STREQUAL "RELEASE")
   set(BUILD_TYPE_COMPILE_FLAGS "-O2")
   set(TEST_LIBRARIES "")
+  message(STATUS "BUILD_TYPE SET TO RELEASE")
+
+elseif(BUILD_TYPE STREQUAL "PROFILING")
+  set(BUILD_TYPE_COMPILE_FLAGS "-g;-O0;")
+  set(TEST_LIBRARIES "")
+  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg")
+  set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -pg")
+  message(STATUS "BUILD_TYPE SET TO PROFILING")
+
+elseif(BUILD_TYPE STREQUAL "ADDRESS-SANITIZE")
+  set(BUILD_TYPE_COMPILE_FLAGS "-g;-O0;")
+  set(TEST_LIBRARIES "")  
+  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+  set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+  message(STATUS "BUILD_TYPE SET TO ADDRESS-SANITIZE")
+
 endif()
 
 message(STATUS "BUILD_TYPE_COMPILE_FLAGS" ${BUILD_TYPE_COMPILE_FLAGS})

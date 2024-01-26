@@ -65,6 +65,7 @@ class AegisClass
 
   void Execute(); 
   int num_facets();
+  void particle_is_shadowed(EntityHandle facet, particleBase particle);
   std::vector<std::pair<double,double>> psiQ_values;
   
   protected:
@@ -111,6 +112,7 @@ class AegisClass
   double psi = 0.0; // value of psi at current position
   double psid = 0.0; // psi - psi_m
   bool traceEnded = false;
+  double psiOnSurface = 0.0;
 
   vtkAegis vtkInterface;
   const std::string branchShadowedPart = "Shadowed Particles";

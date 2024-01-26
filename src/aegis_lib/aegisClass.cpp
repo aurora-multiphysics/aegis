@@ -252,6 +252,20 @@ void AegisClass::Execute(){
 
 }
 
+// void AegisClass::particle_is_shadowed(EntityHandle facet, particleBase particle) {
+
+//   history.get_last_intersection(intersectedFacet);
+//   integrator->count_hit(intersectedFacet);
+//   LOG_INFO << "Surface " << nextSurf << " hit after travelling " << trackLength << " units";
+//   history.rollback_last_intersection();
+//   history.reset();
+
+//   vtkInterface.arrays["Q"]->InsertNextTuple1(0.0);
+//   integrator->store_heat_flux(facet,0.0);
+//   psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
+//   traceEnded = true;
+// }
+
 int AegisClass::num_facets(){
   return numFacets;
 }
