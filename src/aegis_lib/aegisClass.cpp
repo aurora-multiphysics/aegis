@@ -77,6 +77,21 @@ void AegisClass::Execute(){
   bFieldData.psi_limiter(vertexList);
   bFieldData.write_bfield(plotBFieldRZ, plotBFieldXYZ);
 
+
+  vtkNew<vtkMultiBlockDataSet> multiBlockRoot, multiBlockBranch;
+  std::map<std::string, vtkNew<vtkMultiBlockDataSet>> vtkParticleTracks;
+
+  const char* branchShadowedPart = "Shadowed Particles";
+  const char* branchLostPart = "Lost Particles";
+  const char* branchDepositingPart = "Depositing Particles";
+  const char* branchMaxLengthPart = "Max Length Particles";
+
+  multiBlockRoot->SetBlock(0, multiBlockBranch); // set block 
+  multiBlockRoot->GetMetaData(static_cast<int>(0)) // name block
+                ->Set(vtkCompositeDataSet::NAME(), "Particle Tracks");
+  LOG_INFO << "Initialising particle_tracks root ";
+
+
   // Initialise VTK  
   vtkInterface.new_vtkArray("Q", 1);
   vtkInterface.new_vtkArray("B.n_direction", 1);
@@ -135,6 +150,12 @@ void AegisClass::Execute(){
       continue;
     }
 
+    vtkNew<vtkPoints> vtkpoints;
+    int vtkPointCounter = 0;
+
+    vtkpoints->InsertNextPoint(particle.launchPos[0], particle.launchPos[1], particle.launchPos[2]);
+    vtkPointCounter +=1;
+
     particle.set_dir(bFieldData);
     polarPos = coordTfm::cart_to_polar(particle.launchPos, "forwards");
 
@@ -170,6 +191,15 @@ void AegisClass::Execute(){
     double trackLength = trackStepSize;
 
 
+    for (int j=0; j<3; ++j)
+    {
+      newPt[j] = particle.launchPos[j] + particle.dir[j]*trackStepSize;
+    }
+
+    vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
+    vtkPointCounter +=1;
+
+
     // loop along particle track
     for (int j=0; j<maxTrackSteps; ++j){
       history.reset();
@@ -187,6 +217,23 @@ void AegisClass::Execute(){
         history.rollback_last_intersection();
         history.reset();
 
+        vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
+        vtkPointCounter +=1;
+        // if block does not exist, create it
+        if (vtkParticleTracks.find(branchShadowedPart) == vtkParticleTracks.end())
+        {
+          int staticCast = vtkInterface.multiBlockCounters.size();
+          multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchShadowedPart]); // set block 
+          multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
+                          ->Set(vtkCompositeDataSet::NAME(), branchShadowedPart); 
+          std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchShadowedPart << std::endl;
+          vtkInterface.multiBlockCounters[branchShadowedPart] = 0;
+        }  
+        vtkNew<vtkPolyData> polydataTrack;
+        polydataTrack = vtkInterface.new_track(branchShadowedPart, vtkpoints, 0.0);
+        vtkParticleTracks[branchShadowedPart]->SetBlock(vtkInterface.multiBlockCounters[branchShadowedPart], polydataTrack);
+
+
         vtkInterface.arrays["Q"]->InsertNextTuple1(0.0);
         integrator->store_heat_flux(facet,0.0);
         psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
@@ -199,11 +246,28 @@ void AegisClass::Execute(){
         newPt[2] = particle.pos[2] + particle.dir[2] * trackStepSize;
       }
       
+      vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
+      vtkPointCounter +=1; 
+
       particle.set_pos(newPt);
       particle.check_if_in_bfield(bFieldData);
       if (particle.outOfBounds){
         LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";
         integrator->count_lost_ray();
+
+        if (vtkParticleTracks.find(branchLostPart) == vtkParticleTracks.end())
+        {
+          int staticCast = vtkInterface.multiBlockCounters.size();
+          multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchLostPart]); // set block 
+          multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
+                          ->Set(vtkCompositeDataSet::NAME(), branchLostPart); 
+          std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchLostPart << std::endl;
+          vtkInterface.multiBlockCounters[branchLostPart] = 0;
+        }  
+        vtkNew<vtkPolyData> polydataTrack;
+        polydataTrack = vtkInterface.new_track(branchLostPart, vtkpoints, 0.0);
+        vtkParticleTracks[branchLostPart]->SetBlock(vtkInterface.multiBlockCounters[branchLostPart], polydataTrack);
+
         vtkInterface.arrays["Q"]->InsertNextTuple1(0.0);
         integrator->store_heat_flux(facet,0.0);
         psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
@@ -218,6 +282,19 @@ void AegisClass::Execute(){
       particle.check_if_midplane_reached(bFieldData.zcen, bFieldData.rbdry, userROutrBdry);
       if (particle.atMidplane != 0){
         
+        if (vtkParticleTracks.find(branchDepositingPart) == vtkParticleTracks.end())
+        {
+          int staticCast = vtkInterface.multiBlockCounters.size();
+          multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchDepositingPart]); // set block 
+          multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
+                          ->Set(vtkCompositeDataSet::NAME(), branchDepositingPart); 
+          std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchDepositingPart << std::endl;
+          vtkInterface.multiBlockCounters[branchDepositingPart] = 0;
+        }  
+        vtkNew<vtkPolyData> polydataTrack;
+        polydataTrack = vtkInterface.new_track(branchDepositingPart, vtkpoints, Q);
+        vtkParticleTracks[branchDepositingPart]->SetBlock(vtkInterface.multiBlockCounters[branchDepositingPart], polydataTrack);
+
         vtkInterface.arrays["Q"]->InsertNextTuple1(Q);
         integrator->store_heat_flux(facet,Q);
         psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
@@ -228,6 +305,18 @@ void AegisClass::Execute(){
     } 
 
     if (traceEnded == false){
+      if (vtkParticleTracks.find(branchMaxLengthPart) == vtkParticleTracks.end())
+      {
+        int staticCast = vtkInterface.multiBlockCounters.size();
+        multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchMaxLengthPart]); // set block 
+        multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
+                        ->Set(vtkCompositeDataSet::NAME(), branchMaxLengthPart); 
+        std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchMaxLengthPart << std::endl;
+        vtkInterface.multiBlockCounters[branchMaxLengthPart] = 0;
+      }  
+      vtkNew<vtkPolyData> polydataTrack;
+      polydataTrack = vtkInterface.new_track(branchMaxLengthPart, vtkpoints, 0.0);
+      vtkParticleTracks[branchMaxLengthPart]->SetBlock(vtkInterface.multiBlockCounters[branchMaxLengthPart], polydataTrack);
       
       vtkInterface.arrays["Q"]->InsertNextTuple1(0.0);
       integrator->store_heat_flux(facet,0.0);
@@ -241,6 +330,12 @@ void AegisClass::Execute(){
 
 
   vtkInterface.write_unstructuredGrid(vtkInputFile.c_str(), "out.vtk");
+
+  vtkNew<vtkXMLMultiBlockDataWriter> vtkMBWriter;
+  vtkMBWriter->SetFileName("particle_tracks.vtm");
+  vtkMBWriter->SetInputData(multiBlockRoot);
+  vtkMBWriter->Write();
+
   integrator->print_particle_stats();
 
   clock_t end = clock();
