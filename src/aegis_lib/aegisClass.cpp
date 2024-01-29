@@ -25,6 +25,7 @@ void AegisClass::Execute(){
   trackStepSize = runSettings.dValues["dsTrack"];
   maxTrackSteps = runSettings.iValues["nTrack"];
   particleLaunchPos = runSettings.sValues["launchPos"];
+  drawParticleTracks = runSettings.sValues["trace"];
 
   if (particleLaunchPos == "fixed")
   {
@@ -78,27 +79,23 @@ void AegisClass::Execute(){
   bFieldData.write_bfield(plotBFieldRZ, plotBFieldXYZ);
 
 
-  vtkNew<vtkMultiBlockDataSet> multiBlockRoot, multiBlockBranch;
-  std::map<std::string, vtkNew<vtkMultiBlockDataSet>> vtkParticleTracks;
-
-  const char* branchShadowedPart = "Shadowed Particles";
-  const char* branchLostPart = "Lost Particles";
-  const char* branchDepositingPart = "Depositing Particles";
-  const char* branchMaxLengthPart = "Max Length Particles";
-
-  multiBlockRoot->SetBlock(0, multiBlockBranch); // set block 
-  multiBlockRoot->GetMetaData(static_cast<int>(0)) // name block
-                ->Set(vtkCompositeDataSet::NAME(), "Particle Tracks");
-  LOG_INFO << "Initialising particle_tracks root ";
-
 
   // Initialise VTK  
-  vtkInterface.new_vtkArray("Q", 1);
-  vtkInterface.new_vtkArray("B.n_direction", 1);
-  vtkInterface.new_vtkArray("Normal", 3);
-  vtkInterface.new_vtkArray("B_field", 3);
-  vtkInterface.new_vtkArray("Psi_Start", 1);
-  vtkInterface.new_vtkArray("B.n", 1);
+
+  std::string branchShadowedPart = "Shadowed Particles";
+  std::string branchLostPart = "Lost Particles";
+  std::string branchDepositingPart = "Depositing Particles";
+  std::string branchMaxLengthPart = "Max Length Particles";
+
+  vtkInterface = std::make_unique<vtkAegis>(drawParticleTracks);
+  vtkInterface->init_Ptrack_root();
+
+  vtkInterface->new_vtkArray("Q", 1);
+  vtkInterface->new_vtkArray("B.n_direction", 1);
+  vtkInterface->new_vtkArray("Normal", 3);
+  vtkInterface->new_vtkArray("B_field", 3);
+  vtkInterface->new_vtkArray("Psi_Start", 1);
+  vtkInterface->new_vtkArray("B.n", 1);
 
 
   double phi = 0.0;
@@ -129,7 +126,7 @@ void AegisClass::Execute(){
       triC[j] = triCoords[j+6];
     }
     triSource Tri(triA, triB, triC, facet); 
-    vtkInterface.arrays["Normal"]->InsertNextTuple3(Tri.unitNormal[0], Tri.unitNormal[1], Tri.unitNormal[2]);
+    vtkInterface->arrays["Normal"]->InsertNextTuple3(Tri.unitNormal[0], Tri.unitNormal[1], Tri.unitNormal[2]);
 
     if (particleLaunchPos == "fixed"){
       particle.set_pos(Tri.centroid());
@@ -142,42 +139,38 @@ void AegisClass::Execute(){
     particle.check_if_in_bfield(bFieldData); // if out of bounds skip to next triangle
     if (particle.outOfBounds){
       LOG_INFO << "Particle start is out of magnetic field bounds. Skipping to next triangle. Check correct eqdsk is being used for the given geometry";
-      vtkInterface.arrays["B_field"]->InsertNextTuple3(0,0,0);
-      vtkInterface.arrays["Psi_Start"]->InsertNextTuple1(0);
-      vtkInterface.arrays["B.n"]->InsertNextTuple1(0);
-      vtkInterface.arrays["B.n_direction"]->InsertNextTuple1(0);
-      vtkInterface.arrays["Q"]->InsertNextTuple1(0.0);
+      vtkInterface->arrays["B_field"]->InsertNextTuple3(0,0,0);
+      vtkInterface->arrays["Psi_Start"]->InsertNextTuple1(0);
+      vtkInterface->arrays["B.n"]->InsertNextTuple1(0);
+      vtkInterface->arrays["B.n_direction"]->InsertNextTuple1(0);
+      vtkInterface->arrays["Q"]->InsertNextTuple1(0.0);
       continue;
     }
 
-    vtkNew<vtkPoints> vtkpoints;
-    int vtkPointCounter = 0;
-
-    vtkpoints->InsertNextPoint(particle.launchPos[0], particle.launchPos[1], particle.launchPos[2]);
-    vtkPointCounter +=1;
+    vtkInterface->update_vtkPoints(particle.launchPos);
 
     particle.set_dir(bFieldData);
     polarPos = coordTfm::cart_to_polar(particle.launchPos, "forwards");
 
-    vtkInterface.arrays["B_field"]->InsertNextTuple3(particle.BfieldXYZ[0], particle.BfieldXYZ[1], particle.BfieldXYZ[2]);
+    vtkInterface->arrays["B_field"]->InsertNextTuple3(particle.BfieldXYZ[0], particle.BfieldXYZ[1], particle.BfieldXYZ[2]);
     BdotN = Tri.dot_product(particle.BfieldXYZ);
     psi = particle.get_psi(bFieldData); 
     psid = psi + bFieldData.psibdry; 
 
-    vtkInterface.arrays["Psi_Start"]->InsertNextTuple1(psi);
-    vtkInterface.arrays["B.n"]->InsertNextTuple1(BdotN);
+    vtkInterface->arrays["Psi_Start"]->InsertNextTuple1(psi);
+    vtkInterface->arrays["B.n"]->InsertNextTuple1(BdotN);
     particle.align_dir_to_surf(BdotN);
 
     if (BdotN < 0){
-      vtkInterface.arrays["B.n_direction"]->InsertNextTuple1(-1.0);
+      vtkInterface->arrays["B.n_direction"]->InsertNextTuple1(-1.0);
     }
     else if (BdotN > 0){
-      vtkInterface.arrays["B.n_direction"]->InsertNextTuple1(1.0);
+      vtkInterface->arrays["B.n_direction"]->InsertNextTuple1(1.0);
     }
     Q = bFieldData.omp_power_dep(psid, powerSOL, lambdaQ, BdotN, "exp");
     double psiOnSurface = psi;
     
-    
+    DAG->find_volume(particle.pos.data(), volID, particle.dir.data());
     // Start ray tracing
     DAG->ray_fire(volID, particle.launchPos.data(), particle.dir.data(), nextSurf, nextSurfDist, &history,trackStepSize,rayOrientation);
     if (nextSurf != 0) 
@@ -196,8 +189,7 @@ void AegisClass::Execute(){
       newPt[j] = particle.launchPos[j] + particle.dir[j]*trackStepSize;
     }
 
-    vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
-    vtkPointCounter +=1;
+    vtkInterface->update_vtkPoints(particle.launchPos);
 
 
     // loop along particle track
@@ -216,28 +208,16 @@ void AegisClass::Execute(){
         LOG_INFO << "Surface " << nextSurf << " hit after travelling " << trackLength << " units";
         history.rollback_last_intersection();
         history.reset();
+        double heatflux = 0.0;
 
-        vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
-        vtkPointCounter +=1;
-        // if block does not exist, create it
-        if (vtkParticleTracks.find(branchShadowedPart) == vtkParticleTracks.end())
-        {
-          int staticCast = vtkInterface.multiBlockCounters.size();
-          multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchShadowedPart]); // set block 
-          multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
-                          ->Set(vtkCompositeDataSet::NAME(), branchShadowedPart); 
-          std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchShadowedPart << std::endl;
-          vtkInterface.multiBlockCounters[branchShadowedPart] = 0;
-        }  
-        vtkNew<vtkPolyData> polydataTrack;
-        polydataTrack = vtkInterface.new_track(branchShadowedPart, vtkpoints, 0.0);
-        vtkParticleTracks[branchShadowedPart]->SetBlock(vtkInterface.multiBlockCounters[branchShadowedPart], polydataTrack);
+        vtkInterface->update_vtkPoints(particle.launchPos);
+        vtkInterface->write_particle_track(branchShadowedPart, heatflux);
 
-
-        vtkInterface.arrays["Q"]->InsertNextTuple1(0.0);
-        integrator->store_heat_flux(facet,0.0);
-        psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
+        vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
+        integrator->store_heat_flux(facet,heatflux);
         traceEnded = true;
+
+        psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
         break;
       }
       else{
@@ -246,32 +226,20 @@ void AegisClass::Execute(){
         newPt[2] = particle.pos[2] + particle.dir[2] * trackStepSize;
       }
       
-      vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
-      vtkPointCounter +=1; 
+      vtkInterface->update_vtkPoints(particle.launchPos);
 
       particle.set_pos(newPt);
       particle.check_if_in_bfield(bFieldData);
       if (particle.outOfBounds){
         LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";
         integrator->count_lost_ray();
-
-        if (vtkParticleTracks.find(branchLostPart) == vtkParticleTracks.end())
-        {
-          int staticCast = vtkInterface.multiBlockCounters.size();
-          multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchLostPart]); // set block 
-          multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
-                          ->Set(vtkCompositeDataSet::NAME(), branchLostPart); 
-          std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchLostPart << std::endl;
-          vtkInterface.multiBlockCounters[branchLostPart] = 0;
-        }  
-        vtkNew<vtkPolyData> polydataTrack;
-        polydataTrack = vtkInterface.new_track(branchLostPart, vtkpoints, 0.0);
-        vtkParticleTracks[branchLostPart]->SetBlock(vtkInterface.multiBlockCounters[branchLostPart], polydataTrack);
-
-        vtkInterface.arrays["Q"]->InsertNextTuple1(0.0);
-        integrator->store_heat_flux(facet,0.0);
-        psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
+        double heatflux = 0.0;
+        vtkInterface->write_particle_track(branchLostPart, heatflux);
+        vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
+        integrator->store_heat_flux(facet,heatflux);        
         traceEnded = true;
+
+        psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
         break;
       }
       else{
@@ -280,60 +248,39 @@ void AegisClass::Execute(){
       }
 
       particle.check_if_midplane_reached(bFieldData.zcen, bFieldData.rbdry, userROutrBdry);
-      if (particle.atMidplane != 0){
-        
-        if (vtkParticleTracks.find(branchDepositingPart) == vtkParticleTracks.end())
-        {
-          int staticCast = vtkInterface.multiBlockCounters.size();
-          multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchDepositingPart]); // set block 
-          multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
-                          ->Set(vtkCompositeDataSet::NAME(), branchDepositingPart); 
-          std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchDepositingPart << std::endl;
-          vtkInterface.multiBlockCounters[branchDepositingPart] = 0;
-        }  
-        vtkNew<vtkPolyData> polydataTrack;
-        polydataTrack = vtkInterface.new_track(branchDepositingPart, vtkpoints, Q);
-        vtkParticleTracks[branchDepositingPart]->SetBlock(vtkInterface.multiBlockCounters[branchDepositingPart], polydataTrack);
-
-        vtkInterface.arrays["Q"]->InsertNextTuple1(Q);
-        integrator->store_heat_flux(facet,Q);
-        psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
+      if (particle.atMidplane != 0){ 
+        double heatflux = Q;
+        vtkInterface->write_particle_track(branchDepositingPart, heatflux);
+        vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
+        integrator->store_heat_flux(facet,heatflux);        
         traceEnded = true;
+        
+        psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
         break;
       }
 
     } 
 
     if (traceEnded == false){
-      if (vtkParticleTracks.find(branchMaxLengthPart) == vtkParticleTracks.end())
-      {
-        int staticCast = vtkInterface.multiBlockCounters.size();
-        multiBlockBranch->SetBlock(staticCast, vtkParticleTracks[branchMaxLengthPart]); // set block 
-        multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
-                        ->Set(vtkCompositeDataSet::NAME(), branchMaxLengthPart); 
-        std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchMaxLengthPart << std::endl;
-        vtkInterface.multiBlockCounters[branchMaxLengthPart] = 0;
-      }  
-      vtkNew<vtkPolyData> polydataTrack;
-      polydataTrack = vtkInterface.new_track(branchMaxLengthPart, vtkpoints, 0.0);
-      vtkParticleTracks[branchMaxLengthPart]->SetBlock(vtkInterface.multiBlockCounters[branchMaxLengthPart], polydataTrack);
-      
-      vtkInterface.arrays["Q"]->InsertNextTuple1(0.0);
-      integrator->store_heat_flux(facet,0.0);
-      psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
+      double heatflux = 0.0;
+      vtkInterface->write_particle_track(branchMaxLengthPart, heatflux);
+      vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
+      integrator->store_heat_flux(facet,heatflux);
       LOG_INFO << "Fieldline trace reached maximum length before intersection";
       traceEnded = true;
+
+      psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
     }
 
   }
 
 
 
-  vtkInterface.write_unstructuredGrid(vtkInputFile.c_str(), "out.vtk");
+  vtkInterface->write_unstructuredGrid(vtkInputFile.c_str(), "out.vtk");
 
   vtkNew<vtkXMLMultiBlockDataWriter> vtkMBWriter;
   vtkMBWriter->SetFileName("particle_tracks.vtm");
-  vtkMBWriter->SetInputData(multiBlockRoot);
+  vtkMBWriter->SetInputData(vtkInterface->multiBlockRoot);
   vtkMBWriter->Write();
 
   integrator->print_particle_stats();
@@ -355,7 +302,7 @@ void AegisClass::Execute(){
 //   history.rollback_last_intersection();
 //   history.reset();
 
-//   vtkInterface.arrays["Q"]->InsertNextTuple1(0.0);
+//   vtkInterface->arrays["Q"]->InsertNextTuple1(0.0);
 //   integrator->store_heat_flux(facet,0.0);
 //   psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
 //   traceEnded = true;
