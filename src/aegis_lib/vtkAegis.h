@@ -24,12 +24,8 @@
 class vtkAegis
 {
   public:
-  vtkSmartPointer<vtkUnstructuredGrid> unstructuredGrid;
-  std::map<std::string, int> multiBlockCounters; // map of various counters for each branch
   std::unordered_map<std::string, vtkSmartPointer<vtkDoubleArray>> arrays; ; // map of vtkDoubleArrays
-  std::map<std::string, vtkSmartPointer<vtkMultiBlockDataSet>> particleTracks;
-  vtkSmartPointer<vtkMultiBlockDataSet> multiBlockRoot;
-  vtkSmartPointer<vtkMultiBlockDataSet> multiBlockBranch;
+
   int vtkPointCounter;
   vtkSmartPointer<vtkPoints> vtkpoints;
 
@@ -39,11 +35,17 @@ class vtkAegis
   vtkNew<vtkPolyData> new_track(std::string branchName, vtkPoints* vtkpoints, double heatflux);
   void new_vtkArray(std::string arrName, int nComponents);
   void add_vtkArrays(std::string vtk_input_file);
-  void write_unstructuredGrid(std::string vtk_input_file, const char* fileName);
+  void write_unstructuredGrid(std::string vtk_input_file, std::string fileName);
   void write_particle_track(std::string branchName, double heatflux);
-  void update_vtkPoints(const std::vector<double> &newPosition);
+  void write_multiBlockData(std::string fileName);
 
   private:
+  std::map<std::string, vtkSmartPointer<vtkMultiBlockDataSet>> particleTracks;
+  vtkSmartPointer<vtkMultiBlockDataSet> multiBlockRoot;
+  vtkSmartPointer<vtkMultiBlockDataSet> multiBlockBranch;
+  vtkSmartPointer<vtkUnstructuredGrid> unstructuredGrid;
+  std::map<std::string, int> multiBlockCounters; // map of various counters for each branch
+
   bool drawParticleTracks = false;
 
 };

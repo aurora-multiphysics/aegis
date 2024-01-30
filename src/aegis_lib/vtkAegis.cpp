@@ -7,7 +7,8 @@ vtkAegis::vtkAegis(std::string particleTrace)
   this->unstructuredGrid = vtkSmartPointer<vtkUnstructuredGrid>::New();
   if (particleTrace == "yes") {
     this->drawParticleTracks = true;
-    }
+    this->vtkpoints = vtkSmartPointer<vtkPoints>::New();
+  }
 }
 
 void vtkAegis::init_Ptrack_root()
@@ -39,7 +40,7 @@ void vtkAegis::init_Ptrack_branch(std::string branchName)
 vtkNew<vtkPolyData> vtkAegis::new_track(std::string branchName, vtkPoints* vtkpoints, double heatflux)
 {
   vtkNew<vtkPolyLine> vtkpolyline;
-  int nVTKPts = vtkpoints->GetNumberOfPoints();
+  int nVTKPts = this->vtkpoints->GetNumberOfPoints();
   vtkpolyline->GetPointIds()->SetNumberOfIds(nVTKPts);
   for (unsigned int i=0; i<nVTKPts; i++)
   {
@@ -51,7 +52,7 @@ vtkNew<vtkPolyData> vtkAegis::new_track(std::string branchName, vtkPoints* vtkpo
   vtkcellarray->InsertNextCell(vtkpolyline);
 
   vtkSmartPointer<vtkPolyData> vtkpolydata;
-  vtkPolydata->SetPoints(vtkpoints);
+  vtkPolydata->SetPoints(this->vtkpoints);
   vtkPolydata->SetLines(vtkcellarray);
 
   vtkNew<vtkDoubleArray> vtkHeatflux;
@@ -100,11 +101,11 @@ void vtkAegis::add_vtkArrays(std::string vtk_input_file) // read stl and add arr
   }
 }
 
-void vtkAegis::write_unstructuredGrid(std::string vtk_input_file, const char* fileName)
+void vtkAegis::write_unstructuredGrid(std::string vtk_input_file, std::string fileName)
 {
   this->add_vtkArrays(vtk_input_file);
   vtkNew<vtkUnstructuredGridWriter> vtkUstrWriter;
-  vtkUstrWriter->SetFileName(fileName);
+  vtkUstrWriter->SetFileName(fileName.data());
   vtkUstrWriter->SetInputData(this->unstructuredGrid);
   vtkUstrWriter->Write();
 }
@@ -115,12 +116,14 @@ void vtkAegis::write_particle_track(std::string branchName, double heatflux){
   else{
     this->init_Ptrack_branch(branchName);
     vtkNew<vtkPolyData> polydataTrack;
-    polydataTrack = this->new_track(branchName, vtkpoints, heatflux);
+    polydataTrack = this->new_track(branchName, this->vtkpoints, heatflux);
     this->particleTracks[branchName]->SetBlock(multiBlockCounters[branchName], polydataTrack);
   }
 }
 
-void vtkAegis::update_vtkPoints(const std::vector<double> &newPosition){
-  this->vtkPointCounter += 1;
-  this->vtkpoints->InsertNextPoint(newPosition[0], newPosition[1], newPosition[2]);
+void vtkAegis::write_multiBlockData(std::string fileName){
+  vtkNew<vtkXMLMultiBlockDataWriter> vtkMBWriter;
+  vtkMBWriter->SetFileName("particle_tracks.vtm");
+  vtkMBWriter->SetInputData(this->multiBlockRoot);
+  vtkMBWriter->Write();
 }

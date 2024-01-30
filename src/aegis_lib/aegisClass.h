@@ -62,12 +62,16 @@ class AegisClass
 {
   public:
 
-
   void Execute(); 
+  void init_solve();
+  void init_geometry();
   int num_facets();
-  void particle_is_shadowed(EntityHandle facet, particleBase particle);
-  std::vector<std::pair<double,double>> psiQ_values;
+  std::vector<std::pair<double,double>> psiQ_values; // for l2 norm test
   moab::Range select_target_surface();
+  void max_length_termination(const moab::EntityHandle &facet);
+  void midplane_termination(const moab::EntityHandle &facet);
+  void lost_termination(const moab::EntityHandle &facet);
+  void shadowed_termination(const moab::EntityHandle &facet);
 
   protected:
 
@@ -102,6 +106,7 @@ class AegisClass
   DagMC::RayHistory history;
   moab::EntityHandle intersectedFacet;
   int rayOrientation = 1; // rays are fired along surface normals
+  double trackLength = 0.0;
 
   equData bFieldData;
   bool plotBFieldRZ = false;

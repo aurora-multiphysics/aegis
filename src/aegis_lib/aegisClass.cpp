@@ -1,82 +1,14 @@
 #include "aegisClass.h"
 
 
-// void Aegis::setup_dagmc(
-  
-// )
-
-
-// void Aegis::setup_equillibrium(){
-  
-// }
 
 void AegisClass::Execute(){
+  
+  this->init_solve();
 
-  clock_t start = clock(); // start clock time
+  this->init_geometry();
 
-  // set parameters
-  runSettings.load_params(); 
-  runSettings.print_params();
-  dagmcInputFile = runSettings.sValues["DAGMC_input"];
-  vtkInputFile = runSettings.sValues["VTK_input"];
-  eqdskInputFile = runSettings.sValues["eqdsk_file"];
-  powerSOL = runSettings.dValues["Psol"];
-  lambdaQ = runSettings.dValues["lambda_q"];
-  trackStepSize = runSettings.dValues["dsTrack"];
-  maxTrackSteps = runSettings.iValues["nTrack"];
-  particleLaunchPos = runSettings.sValues["launchPos"];
-  drawParticleTracks = runSettings.sValues["trace"];
 
-  if (particleLaunchPos == "fixed")
-  {
-    LOG_WARNING << "Launching from triangle centroid/barycentre";
-  }
-  else
-  {
-    LOG_WARNING << "Launching from random positions in triangles";
-  }
-
-  userROutrBdry = runSettings.dValues["rOutrBdry"];
-  LOG_WARNING << "User set R value at Outer midplane = " << userROutrBdry << std::endl;
-
-  drawParticleTracks = runSettings.sValues["trace"];
-  rmove = runSettings.dValues["rmove"];
-  zmove = runSettings.dValues["zmove"];
-  fscale = runSettings.dValues["fscale"];
-  psiref = runSettings.dValues["psiref"];
-
-  // setup dagmc instance
-  DAG = std::make_unique<moab::DagMC>();
-  DAG->load_file(dagmcInputFile.c_str());
-  DAG->init_OBBTree();
-  DAG->setup_geometry(surfsList, volsList);
-  DAG->moab_instance()->get_entities_by_type(0, MBTRI, facetsList);
-  numFacets = facetsList.size();
-  std::cout << "Number of Triangles in Geometry " << numFacets << std::endl;
-  volID = DAG->entity_by_index(3,1);
-
-  // setup B Field data
-  bFieldData.read_eqdsk(eqdskInputFile);
-  bFieldData.move(rmove, zmove, fscale);
-  bFieldData.psibdry = psiref; // abstract out to function
-  bFieldData.init_interp_splines();
-  bFieldData.centre(1);
-
-  std::vector<double> vertexCoordinates;
-  DAG->moab_instance()->get_vertex_coordinates(vertexCoordinates);
-  LOG_WARNING << "NUMBER OF NODES = " <<  vertexCoordinates.size() << std::endl;
-  int numNodes = vertexCoordinates.size()/3;
-  std::vector<std::vector<double>> vertexList(numNodes, std::vector<double> (3));
-
-  for (int i = 0; i<numNodes; i++)
-  {
-    vertexList[i][0] = vertexCoordinates[i];
-    vertexList[i][1] = vertexCoordinates[i + numNodes];
-    vertexList[i][2] = vertexCoordinates[i + numNodes*2];
-  }
-
-  bFieldData.psi_limiter(vertexList);
-  bFieldData.write_bfield(plotBFieldRZ, plotBFieldXYZ);
 
 
 
@@ -87,7 +19,6 @@ void AegisClass::Execute(){
   std::string branchDepositingPart = "Depositing Particles";
   std::string branchMaxLengthPart = "Max Length Particles";
 
-  vtkInterface = std::make_unique<vtkAegis>(drawParticleTracks);
   vtkInterface->init_Ptrack_root();
 
   vtkInterface->new_vtkArray("Q", 1);
@@ -146,14 +77,14 @@ void AegisClass::Execute(){
       vtkInterface->arrays["Q"]->InsertNextTuple1(0.0);
       continue;
     }
-
-    vtkInterface->update_vtkPoints(particle.launchPos);
+    vtkNew<vtkPoints> vtkpoints;
+    vtkpoints->InsertNextPoint(particle.launchPos[0], particle.launchPos[1], particle.launchPos[2]);
 
     particle.set_dir(bFieldData);
     polarPos = coordTfm::cart_to_polar(particle.launchPos, "forwards");
 
     vtkInterface->arrays["B_field"]->InsertNextTuple3(particle.BfieldXYZ[0], particle.BfieldXYZ[1], particle.BfieldXYZ[2]);
-    BdotN = Tri.dot_product(particle.BfieldXYZ);
+    BdotN = Tri.dot_product(particle.BfieldXYZ); 
     psi = particle.get_psi(bFieldData); 
     psid = psi + bFieldData.psibdry; 
 
@@ -181,16 +112,14 @@ void AegisClass::Execute(){
       LOG_INFO << "---- RAY HIT ON LAUNCH [" << facetCounter << "] ----";
     }
     history.reset();
-    double trackLength = trackStepSize;
-
+    trackLength = trackStepSize;
 
     for (int j=0; j<3; ++j)
     {
       newPt[j] = particle.launchPos[j] + particle.dir[j]*trackStepSize;
     }
 
-    vtkInterface->update_vtkPoints(particle.launchPos);
-
+    vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
 
     // loop along particle track
     for (int j=0; j<maxTrackSteps; ++j){
@@ -203,21 +132,7 @@ void AegisClass::Execute(){
         newPt[1] = particle.pos[1] + particle.dir[1] * nextSurfDist;
         newPt[2] = particle.pos[2] + particle.dir[2] * nextSurfDist;
 
-        history.get_last_intersection(intersectedFacet);
-        integrator->count_hit(intersectedFacet);
-        LOG_INFO << "Surface " << nextSurf << " hit after travelling " << trackLength << " units";
-        history.rollback_last_intersection();
-        history.reset();
-        double heatflux = 0.0;
-
-        vtkInterface->update_vtkPoints(particle.launchPos);
-        vtkInterface->write_particle_track(branchShadowedPart, heatflux);
-
-        vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
-        integrator->store_heat_flux(facet,heatflux);
-        traceEnded = true;
-
-        psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
+        this->shadowed_termination(facet);
         break;
       }
       else{
@@ -226,20 +141,12 @@ void AegisClass::Execute(){
         newPt[2] = particle.pos[2] + particle.dir[2] * trackStepSize;
       }
       
-      vtkInterface->update_vtkPoints(particle.launchPos);
+      vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
 
       particle.set_pos(newPt);
       particle.check_if_in_bfield(bFieldData);
       if (particle.outOfBounds){
-        LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";
-        integrator->count_lost_ray();
-        double heatflux = 0.0;
-        vtkInterface->write_particle_track(branchLostPart, heatflux);
-        vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
-        integrator->store_heat_flux(facet,heatflux);        
-        traceEnded = true;
-
-        psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
+        this->lost_termination(facet);
         break;
       }
       else{
@@ -248,65 +155,147 @@ void AegisClass::Execute(){
       }
 
       particle.check_if_midplane_reached(bFieldData.zcen, bFieldData.rbdry, userROutrBdry);
+      
       if (particle.atMidplane != 0){ 
-        double heatflux = Q;
-        vtkInterface->write_particle_track(branchDepositingPart, heatflux);
-        vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
-        integrator->store_heat_flux(facet,heatflux);        
-        traceEnded = true;
-        
-        psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
+        this->midplane_termination(facet);
         break;
       }
-
     } 
-
     if (traceEnded == false){
-      double heatflux = 0.0;
-      vtkInterface->write_particle_track(branchMaxLengthPart, heatflux);
-      vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
-      integrator->store_heat_flux(facet,heatflux);
-      LOG_INFO << "Fieldline trace reached maximum length before intersection";
-      traceEnded = true;
-
-      psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
+      this->max_length_termination(facet);
     }
+  }
+  // write out data and print final
+  vtkInterface->write_unstructuredGrid(vtkInputFile, "out.vtk");
+  if (drawParticleTracks == "yes"){
+    vtkInterface->write_multiBlockData("particle_tracks.vtm");
+  }
+  integrator->print_particle_stats();
+}
 
+void AegisClass::init_solve(){
+  
+  clock_t start = clock(); // start clock time
+
+  // set runtime parameters
+  runSettings.load_params(); 
+  runSettings.print_params();
+  dagmcInputFile = runSettings.sValues["DAGMC_input"];
+  vtkInputFile = runSettings.sValues["VTK_input"];
+  eqdskInputFile = runSettings.sValues["eqdsk_file"];
+  powerSOL = runSettings.dValues["Psol"];
+  lambdaQ = runSettings.dValues["lambda_q"];
+  trackStepSize = runSettings.dValues["dsTrack"];
+  maxTrackSteps = runSettings.iValues["nTrack"];
+  particleLaunchPos = runSettings.sValues["launchPos"];
+  drawParticleTracks = runSettings.sValues["trace"];
+
+  if (particleLaunchPos == "fixed")
+  {
+    LOG_WARNING << "Launching from triangle centroid/barycentre";
+  }
+  else
+  {
+    LOG_WARNING << "Launching from random positions in triangles";
   }
 
+  userROutrBdry = runSettings.dValues["rOutrBdry"];
+  LOG_WARNING << "User set R value at Outer midplane = " << userROutrBdry << std::endl;
 
+  drawParticleTracks = runSettings.sValues["trace"];
+  rmove = runSettings.dValues["rmove"];
+  zmove = runSettings.dValues["zmove"];
+  fscale = runSettings.dValues["fscale"];
+  psiref = runSettings.dValues["psiref"];
 
-  vtkInterface->write_unstructuredGrid(vtkInputFile.c_str(), "out.vtk");
+  //initialise memeory for smart pointers
+  DAG = std::make_unique<moab::DagMC>();
+  vtkInterface = std::make_unique<vtkAegis>(drawParticleTracks);
+}
 
-  vtkNew<vtkXMLMultiBlockDataWriter> vtkMBWriter;
-  vtkMBWriter->SetFileName("particle_tracks.vtm");
-  vtkMBWriter->SetInputData(vtkInterface->multiBlockRoot);
-  vtkMBWriter->Write();
+void AegisClass::init_geometry(){
+  // setup dagmc instance
+  DAG->load_file(dagmcInputFile.c_str());
+  DAG->init_OBBTree();
+  DAG->setup_geometry(surfsList, volsList);
+  DAG->moab_instance()->get_entities_by_type(0, MBTRI, facetsList);
+  numFacets = facetsList.size();
+  std::cout << "Number of Triangles in Geometry " << numFacets << std::endl;
+  volID = DAG->entity_by_index(3,1);
 
-  integrator->print_particle_stats();
+  // setup B Field data
+  bFieldData.read_eqdsk(eqdskInputFile);
+  bFieldData.move(rmove, zmove, fscale);
+  bFieldData.psibdry = psiref; // abstract out to function
+  bFieldData.init_interp_splines();
+  bFieldData.centre(1);
 
-  clock_t end = clock();
-  double elapsed = double(end - start)/CLOCKS_PER_SEC;
+  std::vector<double> vertexCoordinates;
+  DAG->moab_instance()->get_vertex_coordinates(vertexCoordinates);
+  LOG_WARNING << "NUMBER OF NODES = " <<  vertexCoordinates.size() << std::endl;
+  int numNodes = vertexCoordinates.size()/3;
+  std::vector<std::vector<double>> vertexList(numNodes, std::vector<double> (3));
 
-  std::cout << "------------------------------------------------------" << std::endl;
-  std::cout << "Elapsed Aegis run time = " << elapsed << std::endl;
-  std::cout << "------------------------------------------------------" << std::endl;
+  for (int i = 0; i<numNodes; i++)
+  {
+    vertexList[i][0] = vertexCoordinates[i];
+    vertexList[i][1] = vertexCoordinates[i + numNodes];
+    vertexList[i][2] = vertexCoordinates[i + numNodes*2];
+  }
+
+  bFieldData.psi_limiter(vertexList);
+  bFieldData.write_bfield(plotBFieldRZ, plotBFieldXYZ);
+}
+
+void AegisClass::max_length_termination(const moab::EntityHandle &facet){
+  double heatflux = 0.0;
+  vtkInterface->write_particle_track(branchMaxLengthPart, heatflux);
+  vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
+  integrator->store_heat_flux(facet,heatflux);
+  LOG_INFO << "Fieldline trace reached maximum length before intersection";
+  traceEnded = true;
+
+  psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
 
 }
 
-// void AegisClass::particle_is_shadowed(EntityHandle facet, particleBase particle) {
+void AegisClass::midplane_termination(const moab::EntityHandle &facet){
+  double heatflux = Q;
+  vtkInterface->write_particle_track(branchDepositingPart, heatflux);
+  vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
+  integrator->store_heat_flux(facet,heatflux);        
+  traceEnded = true;
+  
+  psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
+}
 
-//   history.get_last_intersection(intersectedFacet);
-//   integrator->count_hit(intersectedFacet);
-//   LOG_INFO << "Surface " << nextSurf << " hit after travelling " << trackLength << " units";
-//   history.rollback_last_intersection();
-//   history.reset();
+void AegisClass::lost_termination(const moab::EntityHandle &facet){
+  LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";
+  integrator->count_lost_ray();
+  double heatflux = 0.0;
+  vtkInterface->write_particle_track(branchLostPart, heatflux);
+  vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
+  integrator->store_heat_flux(facet,heatflux);        
+  traceEnded = true;
 
-//   vtkInterface->arrays["Q"]->InsertNextTuple1(0.0);
-//   integrator->store_heat_flux(facet,0.0);
-//   psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
-//   traceEnded = true;
-// }
+  psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
+}
+
+void AegisClass::shadowed_termination(const moab::EntityHandle &facet){
+  history.get_last_intersection(intersectedFacet);
+  integrator->count_hit(intersectedFacet);
+  LOG_INFO << "Surface " << nextSurf << " hit after travelling " << trackLength << " units";
+  history.rollback_last_intersection();
+  history.reset();
+  double heatflux = 0.0;
+  vtkInterface->write_particle_track(branchShadowedPart, heatflux);
+
+  vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
+  integrator->store_heat_flux(facet,heatflux);
+  traceEnded = true;
+
+  psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
+}
 
 int AegisClass::num_facets(){
   return numFacets;
