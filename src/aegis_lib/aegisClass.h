@@ -68,11 +68,11 @@ class AegisClass
   int num_facets();
   std::vector<std::pair<double,double>> psiQ_values; // for l2 norm test
   moab::Range select_target_surface();
-  void max_length_termination(const moab::EntityHandle &facet);
-  void midplane_termination(const moab::EntityHandle &facet);
-  void lost_termination(const moab::EntityHandle &facet);
-  void shadowed_termination(const moab::EntityHandle &facet);
-
+  void max_length_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history);
+  void midplane_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history);
+  void lost_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history);
+  void shadowed_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history);
+  void ray_hit_on_launch(particleBase &particle, DagMC::RayHistory &history);
   protected:
 
 
@@ -103,10 +103,10 @@ class AegisClass
   moab::EntityHandle nextSurf;
   moab::EntityHandle volID; 
   double nextSurfDist = 0.0; // distance to next surface
-  DagMC::RayHistory history;
   moab::EntityHandle intersectedFacet;
   int rayOrientation = 1; // rays are fired along surface normals
   double trackLength = 0.0;
+  int facetCounter = 0;
 
   equData bFieldData;
   bool plotBFieldRZ = false;

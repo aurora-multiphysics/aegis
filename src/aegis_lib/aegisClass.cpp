@@ -38,8 +38,6 @@ void AegisClass::Execute(){
   std::vector<double> triA(3), triB(3), triC(3);
   integrator = std::make_unique<surfaceIntegrator>(facetsList);
   // loop over all facets
-  int facetCounter = 0;
-  std::ofstream aegisOUT("aegis_new_OUT.txt");
 
   traceEnded = false;
 
@@ -77,8 +75,8 @@ void AegisClass::Execute(){
       vtkInterface->arrays["Q"]->InsertNextTuple1(0.0);
       continue;
     }
-    vtkNew<vtkPoints> vtkpoints;
-    vtkpoints->InsertNextPoint(particle.launchPos[0], particle.launchPos[1], particle.launchPos[2]);
+    vtkInterface->vtkpoints = vtkSmartPointer<vtkPoints>::New();
+    vtkInterface->vtkpoints->InsertNextPoint(particle.launchPos[0], particle.launchPos[1], particle.launchPos[2]);
 
     particle.set_dir(bFieldData);
     polarPos = coordTfm::cart_to_polar(particle.launchPos, "forwards");
@@ -101,17 +99,10 @@ void AegisClass::Execute(){
     Q = bFieldData.omp_power_dep(psid, powerSOL, lambdaQ, BdotN, "exp");
     double psiOnSurface = psi;
     
-    DAG->find_volume(particle.pos.data(), volID, particle.dir.data());
+//    DAG->find_volume(particle.pos.data(), volID, particle.dir.data());
     // Start ray tracing
-    DAG->ray_fire(volID, particle.launchPos.data(), particle.dir.data(), nextSurf, nextSurfDist, &history,trackStepSize,rayOrientation);
-    if (nextSurf != 0) 
-    {
-      history.get_last_intersection(intersectedFacet);
-      history.rollback_last_intersection();
-      DAG->next_vol(nextSurf, volID, volID);
-      LOG_INFO << "---- RAY HIT ON LAUNCH [" << facetCounter << "] ----";
-    }
-    history.reset();
+    DagMC::RayHistory history;
+    this->ray_hit_on_launch(particle, history);
     trackLength = trackStepSize;
 
     for (int j=0; j<3; ++j)
@@ -119,7 +110,7 @@ void AegisClass::Execute(){
       newPt[j] = particle.launchPos[j] + particle.dir[j]*trackStepSize;
     }
 
-    vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
+    vtkInterface->vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
 
     // loop along particle track
     for (int j=0; j<maxTrackSteps; ++j){
@@ -132,7 +123,7 @@ void AegisClass::Execute(){
         newPt[1] = particle.pos[1] + particle.dir[1] * nextSurfDist;
         newPt[2] = particle.pos[2] + particle.dir[2] * nextSurfDist;
 
-        this->shadowed_termination(facet);
+        this->shadowed_termination(facet, history);
         break;
       }
       else{
@@ -141,12 +132,12 @@ void AegisClass::Execute(){
         newPt[2] = particle.pos[2] + particle.dir[2] * trackStepSize;
       }
       
-      vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
+      vtkInterface->vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
 
       particle.set_pos(newPt);
       particle.check_if_in_bfield(bFieldData);
       if (particle.outOfBounds){
-        this->lost_termination(facet);
+        this->lost_termination(facet, history);
         break;
       }
       else{
@@ -157,12 +148,12 @@ void AegisClass::Execute(){
       particle.check_if_midplane_reached(bFieldData.zcen, bFieldData.rbdry, userROutrBdry);
       
       if (particle.atMidplane != 0){ 
-        this->midplane_termination(facet);
+        this->midplane_termination(facet, history);
         break;
       }
     } 
     if (traceEnded == false){
-      this->max_length_termination(facet);
+      this->max_length_termination(facet, history);
     }
   }
   // write out data and print final
@@ -247,7 +238,7 @@ void AegisClass::init_geometry(){
   bFieldData.write_bfield(plotBFieldRZ, plotBFieldXYZ);
 }
 
-void AegisClass::max_length_termination(const moab::EntityHandle &facet){
+void AegisClass::max_length_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history){
   double heatflux = 0.0;
   vtkInterface->write_particle_track(branchMaxLengthPart, heatflux);
   vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
@@ -259,7 +250,7 @@ void AegisClass::max_length_termination(const moab::EntityHandle &facet){
 
 }
 
-void AegisClass::midplane_termination(const moab::EntityHandle &facet){
+void AegisClass::midplane_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history){
   double heatflux = Q;
   vtkInterface->write_particle_track(branchDepositingPart, heatflux);
   vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
@@ -269,7 +260,7 @@ void AegisClass::midplane_termination(const moab::EntityHandle &facet){
   psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
 }
 
-void AegisClass::lost_termination(const moab::EntityHandle &facet){
+void AegisClass::lost_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history){
   LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";
   integrator->count_lost_ray();
   double heatflux = 0.0;
@@ -281,7 +272,7 @@ void AegisClass::lost_termination(const moab::EntityHandle &facet){
   psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
 }
 
-void AegisClass::shadowed_termination(const moab::EntityHandle &facet){
+void AegisClass::shadowed_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history){
   history.get_last_intersection(intersectedFacet);
   integrator->count_hit(intersectedFacet);
   LOG_INFO << "Surface " << nextSurf << " hit after travelling " << trackLength << " units";
@@ -295,6 +286,22 @@ void AegisClass::shadowed_termination(const moab::EntityHandle &facet){
   traceEnded = true;
 
   psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
+}
+
+void AegisClass::ray_hit_on_launch(particleBase &particle, DagMC::RayHistory &history){
+  //DAG->find_volume(particle.pos.data(), volID, particle.dir.data());
+  DAG->ray_fire(volID, particle.launchPos.data(), particle.dir.data(), nextSurf, nextSurfDist, &history,trackStepSize,rayOrientation);
+  if (nextSurf != 0) 
+  {
+    history.get_last_intersection(intersectedFacet);
+    history.rollback_last_intersection();
+    DAG->next_vol(nextSurf, volID, volID);
+    LOG_INFO << "---- RAY HIT ON LAUNCH [" << facetCounter << "] ----";
+  }
+  history.reset();
+  particle.update_vectors(trackStepSize, bFieldData);
+  vtkInterface->vtkpoints->InsertNextPoint(particle.pos[0], particle.pos[1], particle.pos[2]);
+  
 }
 
 int AegisClass::num_facets(){

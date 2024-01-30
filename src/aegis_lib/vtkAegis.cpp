@@ -7,7 +7,6 @@ vtkAegis::vtkAegis(std::string particleTrace)
   this->unstructuredGrid = vtkSmartPointer<vtkUnstructuredGrid>::New();
   if (particleTrace == "yes") {
     this->drawParticleTracks = true;
-    this->vtkpoints = vtkSmartPointer<vtkPoints>::New();
   }
 }
 
