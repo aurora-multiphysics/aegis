@@ -1,26 +1,15 @@
 #include "aegisClass.h"
 
-
-
 void AegisClass::Execute(){
-  
   this->init_solve();
-
   this->init_geometry();
-
-
-
-
-
+  
   // Initialise VTK  
-
   std::string branchShadowedPart = "Shadowed Particles";
   std::string branchLostPart = "Lost Particles";
   std::string branchDepositingPart = "Depositing Particles";
   std::string branchMaxLengthPart = "Max Length Particles";
-
   vtkInterface->init_Ptrack_root();
-
   vtkInterface->new_vtkArray("Q", 1);
   vtkInterface->new_vtkArray("B.n_direction", 1);
   vtkInterface->new_vtkArray("Normal", 3);
@@ -28,23 +17,18 @@ void AegisClass::Execute(){
   vtkInterface->new_vtkArray("Psi_Start", 1);
   vtkInterface->new_vtkArray("B.n", 1);
 
-
-  double phi = 0.0;
   std::vector<double> Bfield; 
   std::vector<double> polarPos(3);
-  std::vector<double> newPt(3);
-  
+  std::vector<double> newPt(3);  
   std::vector<double> triCoords(9);
   std::vector<double> triA(3), triB(3), triC(3);
-  integrator = std::make_unique<surfaceIntegrator>(facetsList);
-  // loop over all facets
-
+  moab::Range targetSurfaceList = this->select_target_surface();
+  integrator = std::make_unique<surfaceIntegrator>(targetSurfaceList);
   traceEnded = false;
-
-  for (auto facet:facetsList){
+  std::ofstream particleFinalPos ("particleFinalPos.txt");
+  for (auto facet:targetSurfaceList){ // loop over all facets
     facetCounter +=1;
     particleBase particle;
-
     std::vector<moab::EntityHandle> triNodes;
     DAG->moab_instance()->get_adjacencies(&facet, 1, 0, false, triNodes);
     DAG->moab_instance()->get_coords(&triNodes[0], triNodes.size(), triCoords.data());
@@ -75,6 +59,8 @@ void AegisClass::Execute(){
       vtkInterface->arrays["Q"]->InsertNextTuple1(0.0);
       continue;
     }
+    std::ofstream launchPos ("launch_pos.txt");
+    launchPos << particle.launchPos[0] << " " << particle.launchPos[1] << " " << particle.launchPos[2] << std::endl;
     vtkInterface->vtkpoints = vtkSmartPointer<vtkPoints>::New();
     vtkInterface->vtkpoints->InsertNextPoint(particle.launchPos[0], particle.launchPos[1], particle.launchPos[2]);
 
@@ -99,7 +85,7 @@ void AegisClass::Execute(){
     Q = bFieldData.omp_power_dep(psid, powerSOL, lambdaQ, BdotN, "exp");
     double psiOnSurface = psi;
     
-//    DAG->find_volume(particle.pos.data(), volID, particle.dir.data());
+    DAG->find_volume(particle.pos.data(), volID, particle.dir.data());
     // Start ray tracing
     DagMC::RayHistory history;
     this->ray_hit_on_launch(particle, history);
@@ -109,7 +95,6 @@ void AegisClass::Execute(){
     {
       newPt[j] = particle.launchPos[j] + particle.dir[j]*trackStepSize;
     }
-
     vtkInterface->vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
 
     // loop along particle track
@@ -144,10 +129,10 @@ void AegisClass::Execute(){
         particle.set_dir(bFieldData);
         particle.align_dir_to_surf(BdotN);
       }
-
       particle.check_if_midplane_reached(bFieldData.zcen, bFieldData.rbdry, userROutrBdry);
       
-      if (particle.atMidplane != 0){ 
+      if (particle.atMidplane != 0 && !noDeposition){ 
+        particleFinalPos << particle.pos[0] << " " << particle.pos[1] << " " << particle.pos[2] << std::endl; 
         this->midplane_termination(facet, history);
         break;
       }
@@ -172,7 +157,7 @@ void AegisClass::init_solve(){
   runSettings.load_params(); 
   runSettings.print_params();
   dagmcInputFile = runSettings.sValues["DAGMC_input"];
-  vtkInputFile = runSettings.sValues["VTK_input"];
+  vtkInputFile = "target_facets.stl";
   eqdskInputFile = runSettings.sValues["eqdsk_file"];
   powerSOL = runSettings.dValues["Psol"];
   lambdaQ = runSettings.dValues["lambda_q"];
@@ -180,6 +165,8 @@ void AegisClass::init_solve(){
   maxTrackSteps = runSettings.iValues["nTrack"];
   particleLaunchPos = runSettings.sValues["launchPos"];
   drawParticleTracks = runSettings.sValues["trace"];
+  std::string noDep = runSettings.sValues["no_deposition"];
+  if (noDep == "yes") {noDeposition = true;}
 
   if (particleLaunchPos == "fixed")
   {
@@ -193,11 +180,11 @@ void AegisClass::init_solve(){
   userROutrBdry = runSettings.dValues["rOutrBdry"];
   LOG_WARNING << "User set R value at Outer midplane = " << userROutrBdry << std::endl;
 
-  drawParticleTracks = runSettings.sValues["trace"];
   rmove = runSettings.dValues["rmove"];
   zmove = runSettings.dValues["zmove"];
   fscale = runSettings.dValues["fscale"];
   psiref = runSettings.dValues["psiref"];
+
 
   //initialise memeory for smart pointers
   DAG = std::make_unique<moab::DagMC>();
@@ -250,7 +237,7 @@ void AegisClass::max_length_termination(const moab::EntityHandle &facet, DagMC::
 
 }
 
-void AegisClass::midplane_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history){
+void AegisClass::midplane_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history){  
   double heatflux = Q;
   vtkInterface->write_particle_track(branchDepositingPart, heatflux);
   vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
@@ -302,6 +289,57 @@ void AegisClass::ray_hit_on_launch(particleBase &particle, DagMC::RayHistory &hi
   particle.update_vectors(trackStepSize, bFieldData);
   vtkInterface->vtkpoints->InsertNextPoint(particle.pos[0], particle.pos[1], particle.pos[2]);
   
+}
+
+// Get triangles from the surface(s) of interest
+moab::Range AegisClass::select_target_surface(){ 
+
+  moab::Range targetFacets; // range containing all of the triangles in the surface of interest
+  // can specify particular surfaces of interest
+  EntityHandle targetSurf; // surface of interest
+  targetSurf = surfsList[0];
+
+  std::unordered_map<EntityHandle, moab::Range> surfFacets;
+  moab::Range surfFacetsKeys;
+  int numTargetFacets = 0;
+  if (runSettings.vValues["surfs"][0] != 0)
+  {
+    for (auto &s:runSettings.vValues["surfs"])
+    {
+      targetSurf = DAG->entity_by_id(2,s); // surface of interest
+      DAG->moab_instance()->get_entities_by_type(targetSurf, MBTRI, surfFacets[targetSurf]);
+      std::cout << "Surface ID [" << DAG->get_entity_id(s) << "] " << "No. of elements " << surfFacets[s].size() << std::endl;
+      surfFacetsKeys.insert(targetSurf);
+      numTargetFacets += surfFacets[targetSurf].size();
+      targetFacets.merge(surfFacets[targetSurf]);         
+    }
+    LOG_WARNING << "Surface IDs provided. Launching from surfaces given by global IDs:";
+    for (auto i:runSettings.vValues["surfs"])
+    {LOG_WARNING << "Surface ID - " << i << " ";}
+  }
+  else
+  {
+    targetFacets = facetsList;
+    for (auto &s:surfsList)
+    {
+      DAG->moab_instance()->get_entities_by_type(s, MBTRI, surfFacets[s]);
+      surfFacetsKeys.insert(s);
+      std::cout << "Surface ID [" << DAG->get_entity_id(s) << "] " << "No. of elements " << surfFacets[s].size() << std::endl;
+      numTargetFacets += surfFacets[s].size();             
+      targetFacets.merge(surfFacets[s]);  
+    }
+    LOG_WARNING << "No surface ID provided. Launching from all surfaces by default. WARNING - Will take a significant amount of time for larger geometry sets";
+  }
+  LOG_WARNING << "Total Number of Triangles rays launched from = "
+              << numTargetFacets;
+  moab::EntityHandle targetFacetsSet;
+  moab::Range target_facets;
+  DAG->moab_instance()->create_meshset(MESHSET_SET, targetFacetsSet);
+  DAG->moab_instance()->add_entities(targetFacetsSet, targetFacets);
+  target_facets.insert(targetFacetsSet);
+  DAG->moab_instance()->write_file("target_facets.stl", NULL, NULL, target_facets);
+
+  return targetFacets;
 }
 
 int AegisClass::num_facets(){

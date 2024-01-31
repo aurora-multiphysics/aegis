@@ -92,6 +92,8 @@ class AegisClass
   double zmove = 0.0;
   double fscale = 1.0;
   double psiref = 0.0;
+  bool noDeposition = false;
+  
 
   std::unique_ptr<moab::DagMC> DAG;
   moab::Range surfsList;

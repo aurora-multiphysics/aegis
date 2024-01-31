@@ -153,3 +153,21 @@ void particleBase::check_if_midplane_reached(double zcen, double rInrBdry, doubl
   }
 }
 
+// TERMINATE AT ZCEN ????
+//   if (startZ > zcen)
+//   {
+//     if (z < zcen)
+//     {
+//       if (r <= rInrBdry) {this->atMidplane = 1;}
+//       else if (r >= rOutrBdry) {this->atMidplane = 2;}
+//     }
+//   }
+//   else if (startZ < zcen)
+//   {
+//     if (z > zcen)
+//     {
+//       if (r <= rInrBdry) {this->atMidplane = 1;}
+//       else if (r >= rOutrBdry) {this->atMidplane = 2;}
+//     }
+//   }
+// }
