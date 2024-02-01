@@ -349,7 +349,7 @@ TEST_F(aegisUnitTest, read_facets) {
   // Ensure all integrator attributes which handle facets are all the correct size
   EXPECT_EQ(integrator.nFacets, 2240);
   EXPECT_EQ(integrator.facetEntities.size(), 2240);
-  EXPECT_EQ(integrator.nRays.size(), 2240);
+  EXPECT_EQ(integrator.particlesShadowedBy.size(), 2240);
   EXPECT_EQ(integrator.powFac.size(), 2240);
 }
 
@@ -401,13 +401,13 @@ TEST_F(aegisUnitTest, count_ray_facet_hits){
   DAG->ray_fire(vol_h, spatialSource.r, other_dir, next_surf, next_surf_dist, &history, 0, 1);
   history.get_last_intersection(otherFacet);
   integrator.count_hit(otherFacet);
-  EXPECT_EQ(integrator.nRays[otherFacet], 1);
+  EXPECT_EQ(integrator.particlesShadowedBy[otherFacet], 1);
 
   history.reset();
   DAG->ray_fire(vol_h, spatialSource.r, spatialSource.dir, next_surf, next_surf_dist, &history, 0, 1);
   history.get_last_intersection(facetHit);
   integrator.count_hit(facetHit);
-  EXPECT_EQ(integrator.nRays[facetHit], 101);
+  EXPECT_EQ(integrator.particlesShadowedBy[facetHit], 101);
 }
 
 TEST_F(aegisUnitTest, cart_polar_coord_transform){

@@ -16,7 +16,7 @@ dsTrack [d] 0.05
 Psol [d] 7.5e+06
 lambda_q [d] 0.012
 psiref [d] -2.1628794
-rOutrBdry [d] 8.17385
+rOutrBdry [d] 8.07385
 rmove [d] -0.006
 # Vector<int> Valued Aegis Run Parameters
 surfs [v] 0

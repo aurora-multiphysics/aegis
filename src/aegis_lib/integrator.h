@@ -43,13 +43,15 @@ class surfaceIntegrator
 {
   public:
 
-  int raysTotal=0; // Total number of rays fired into geometry
-  int raysHit=0; // Number of rays hit shadowing
-  int raysLost=0;
-  int raysHeatDep=0;
+  int nParticlesTotal=0; // Total number of rays fired into geometry
+  int nParticlesShadowed=0; // Number of particles shadowed
+  int nParticlesLost=0; // number of particles lost from magnetic domain
+  int nParticlesHeatDep=0; // number of particles despositing heat
+  int nParticlesMaxLength=0; // number of particles reached max termination length
+
   int nFacets=0; // Number of facets in geometry
   std::vector<EntityHandle> facetEntities; // list of all entity handles in geometry
-  std::unordered_map<EntityHandle, int> nRays; // Number of rays intersected with a given surface EntityHandle
+  std::unordered_map<EntityHandle, int> particlesShadowedBy; // Number of rays intersected with a given surface EntityHandle
   std::unordered_map<EntityHandle, double> powFac; // power assigned to each facet
   std::unordered_map<EntityHandle, std::vector<double>> launchPositions; // launch positions on each facet
 
@@ -60,6 +62,7 @@ class surfaceIntegrator
   void count_hit(EntityHandle facet_hit); // count hits belonging to each facet
   void count_lost_ray();
   void store_heat_flux(EntityHandle facet, double heatflux); // store the power associated with a particular facet
+  void count_particle(EntityHandle facet, int terminationState, double heatflux);
 
   void ray_reflect_dir(double const prev_dir[3], double const surface_normal[3], // get reflected dir
                          double reflected_dir[3]); 
@@ -70,6 +73,8 @@ class surfaceIntegrator
 
   void csv_out(std::unordered_map<moab::EntityHandle, double> const &map);
   void piecewise_multilinear_out(std::unordered_map<moab::EntityHandle, double> const &map);
+
+  void print_particle_stats(); // return number of particles depositing, shadowed, lost, etc...
 
 
 /// TODO - Create a class that holds the unordered map and a string for the name of the map

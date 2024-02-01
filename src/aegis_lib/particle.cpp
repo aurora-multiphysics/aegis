@@ -59,6 +59,17 @@ std::vector<double> particleBase::get_pos(std::string coordType) // return STL v
   }
 }
 
+double particleBase::get_psi(equData &EquData) // return double of psi at current pos
+{
+  std::vector<double> currentPosition;
+  double psi;
+  currentPosition = coordTfm::cart_to_polar(this->pos, "forwards");
+  currentPosition = coordTfm::polar_to_flux(currentPosition, "forwards", EquData);
+  psi = currentPosition[0];
+
+  return psi;
+}
+
 void particleBase::set_dir(equData &EquData) // Set unit direction vector along cartesian magnetic field vector
 {
   this->check_if_in_bfield(EquData);
@@ -142,3 +153,21 @@ void particleBase::check_if_midplane_reached(double zcen, double rInrBdry, doubl
   }
 }
 
+// TERMINATE AT ZCEN ????
+//   if (startZ > zcen)
+//   {
+//     if (z < zcen)
+//     {
+//       if (r <= rInrBdry) {this->atMidplane = 1;}
+//       else if (r >= rOutrBdry) {this->atMidplane = 2;}
+//     }
+//   }
+//   else if (startZ < zcen)
+//   {
+//     if (z > zcen)
+//     {
+//       if (r <= rInrBdry) {this->atMidplane = 1;}
+//       else if (r >= rOutrBdry) {this->atMidplane = 2;}
+//     }
+//   }
+// }

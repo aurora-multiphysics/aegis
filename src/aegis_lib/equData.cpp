@@ -24,6 +24,10 @@ eqdskData equData::get_eqdsk_struct()
 // Read eqdsk file
 void equData::read_eqdsk(std::string filename)
 {
+    std::cout << "------------------------------------------------------" << std::endl;
+    std::cout << "--------------------READING EQDSK---------------------" << std::endl;
+    std::cout << "------------------------------------------------------" << std::endl;
+
     LOG_TRACE << "-----equData.read_eqdsk()-----";
     eqdsk_file.open(filename);
     std::stringstream header_ss;
@@ -382,7 +386,7 @@ void equData::init_interp_splines()
   }
 
 // loop over (R,Z) creating for spline knots
-  double psi_pts[nw*nh];
+  std::vector<double> psi_pts(nw*nh);
   int count = 0;
   for (int i=0; i<nw; i++) // flatten Psi(R,Z) array into Psi(index)
   {
@@ -393,41 +397,29 @@ void equData::init_interp_splines()
     }
   }
 
-
-  double f_pts[nw];
-  double psi_1dpts[nw];
-  std::copy(eqdsk.fpol.begin(), eqdsk.fpol.end(), f_pts);
+  std::vector<double> psi_1dpts;
+  psi_1dpts.reserve(nw);
 
   // loop over R to create 1d knots of psi
-  psi_1dpts[0] = psiaxis;
+  psi_1dpts.push_back(psiaxis);
+
   dpsi = rsig*dpsi; // set correct sign of dpsi depending on if increase/decrease outwards
-  std::ofstream psi1d_out("psi_1d_pts.txt");
-  for (int i=1; i<nh; i++)
+  for (int i=1; i<nw; i++)
   {
-    psi_1dpts[i] = psi_1dpts[i-1]+dpsi;
-    std::cout << psi_1dpts[i] << std::endl;
+    psi_1dpts.push_back(psi_1dpts[i-1]+dpsi);
   }
-
-  // std::cout << "--------FPOL---------" << std::endl;
-
-  // for (int i=0; i<nw; i++)
-  // {
-  //   //f_pts[i] = eqdsk.fpol[i];
-  //   std::cout << f_pts[i] << " " << std::endl;
-  // }
-  // std::cout << "--------FPOL---------" << std::endl;
 
   // set 1d arrays for R grid, Z grid and Psi grids
   r_grid.setcontent(nw, r_pts.data());
   z_grid.setcontent(nh, z_pts.data());
-  psi_grid.setcontent(count, psi_pts);
-  psi_1dgrid.setcontent(nw, psi_1dpts);
+  psi_grid.setcontent(count, psi_pts.data());
+  psi_1dgrid.setcontent(nw, psi_1dpts.data());
   f_grid.setcontent(nw, eqdsk.fpol.data());
 
-  for (int i=0 ; i<nh; i++)
-  {
-    psi1d_out << psi_1dgrid[i] << std::endl;
-  }
+//  for (int i=0 ; i<nh; i++)
+//  {
+//    psi1d_out << psi_1dgrid[i] << std::endl;
+//  }
 
 
   // Construct the spline interpolant for flux function psi(R,Z)
@@ -444,11 +436,6 @@ void equData::init_interp_splines()
   Z = 0.41;
   PSI = 0;
   PSI = alglib::spline2dcalc(psiSpline, R, Z);
-
-  std::cout << "-----------------" << std::endl;
-  std::cout << "PSI TEST VALUE psi(6, 0.41) = " << PSI << std::endl;
-  std::cout << "-----------------" << std::endl;
-
 
   // create 1d spline for f(psi) aka eqdsk.fpol
   //alglib::spline1dbuildlinear(f_grid,)
@@ -920,24 +907,24 @@ void equData::write_bfield(bool plotRZ, bool plotXYZ)
 }
 
 // get toroidal ripple term in magnetic field from external file or otherwise. By default use MAST term
-std::vector<double> equData::b_ripple(std::vector<double> pos, std::vector<double> bField)
-{
-  LOG_TRACE << "-----equData.b_ripple()-----";
-  std::vector<double> bRipple(3); // toroidal ripple term
-  double zr; // local R
-  double zz; // local Z
-  double zphi; // local phi
-  double zh; // local H
-  double zdhdr; // frac{partial H}{partial R}
-  double zdhdz; // frac{partial H}{partial Z}
+// std::vector<double> equData::b_ripple(std::vector<double> pos, std::vector<double> bField)
+// {
+//   LOG_TRACE << "-----equData.b_ripple()-----";
+//   std::vector<double> bRipple(3); // toroidal ripple term
+//   double zr; // local R
+//   double zz; // local Z
+//   double zphi; // local phi
+//   double zh; // local H
+//   double zdhdr; // frac{partial H}{partial R}
+//   double zdhdz; // frac{partial H}{partial Z}
 
-  // eventually can add in the ability to read in files but for now this will just define the MAST ripple
-
-
+//   // eventually can add in the ability to read in files but for now this will just define the MAST ripple
 
 
 
-}
+
+
+// }
 
 
 
@@ -1233,7 +1220,7 @@ double equData::omp_power_dep(double psi, double Psol, double lambda_q, double b
   //std::cout << "FPFAC = " << fpfac << std::endl;
   //std::cout << "RBLFAC = " << rblfac << std::endl;
     //std::cout << psi << std::endl;
-  return heatFlux;
+  return std::fabs(heatFlux);
 }
 
 
@@ -1307,6 +1294,10 @@ void equData::psi_limiter(std::vector<std::vector<double>> vertices)
 void equData::move(double rmove, double zmove, double fscale)
 {
   double zgfac; // geometrical factor
+  std::cout << "BField Data has been moved and scaled by:" << std::endl;
+  std::cout << "RMOVE = " << rmove << std::endl;
+  std::cout << "ZMOVE = " << zmove << std::endl;
+  std::cout << "FSCALE = " << fscale << std::endl;
 
   // move (R,Z) values
   rmin = rmin + rmove;
@@ -1317,7 +1308,7 @@ void equData::move(double rmove, double zmove, double fscale)
   eqdsk.zqcen = eqdsk.zqcen + zmove;
 
   zgfac = eqdsk.rqcen/(eqdsk.rqcen-rmove);
-  std::cout << "ZGFAC = " << zgfac << std::endl;
+  std::cout << "MOVE FUNCTION INCOMPLETE. NEED TO FIX" << std::endl;
   // adjust \f$ f \f$ approximately (should use R instead of R_c,
   // but then f becomes a function of \f$ \theta \f$)
 
