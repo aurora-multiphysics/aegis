@@ -52,7 +52,7 @@
 #include "coordtfm.h"
 #include "alglib/interpolation.h"
 #include "particle.h"
-#include "vtkAegis.h"
+#include "VtkInterface.h"
 
 
 
@@ -92,10 +92,11 @@ class AegisClass
   double zmove = 0.0;
   double fscale = 1.0;
   double psiref = 0.0;
-  bool noDeposition = false;
-  
+  bool noMidplaneTermination = false;
+
 
   std::unique_ptr<moab::DagMC> DAG;
+  std::unique_ptr<moab::DagMC> polarDAG;
   moab::Range surfsList;
   moab::Range volsList;
   moab::Range facetsList;
@@ -122,12 +123,11 @@ class AegisClass
   bool traceEnded = false;
   double psiOnSurface = 0.0;
 
-  std::unique_ptr<vtkAegis> vtkInterface;
+  std::unique_ptr<VtkInterface> vtkInterface;
   const std::string branchShadowedPart = "Shadowed Particles";
   const std::string branchLostPart = "Lost Particles";
   const std::string branchDepositingPart = "Depositing Particles";
   const std::string branchMaxLengthPart = "Max Length Particles";
-
   
 
 };

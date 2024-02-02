@@ -9,7 +9,10 @@
 #include <set>
 #include <variant>
 #include <unordered_map>
-#include <moab/Core.hpp>
+#include "DagMC.hpp"
+#include "moab/Core.hpp"
+#include "moab/Interface.hpp"
+#include <moab/OrientedBoxTreeTool.hpp>
 
 #include "coordtfm.h"
 #include "equData.h"
@@ -21,6 +24,9 @@ class particleBase
   private:
   double power = 0.0; // power associated with particle
   double lengthTravelled = 0.0; // total length travelled by particle
+  bool directionUp = false; 
+  std::vector<double> previousPos;
+  //DagMC::RayHistory history; // stores entity handles of surfaces crossed and facets hit
 
   public:
   std::vector<double> Bfield; // magnetic field at current pos
@@ -42,6 +48,7 @@ class particleBase
   void update_vectors(double distanceTravelled); // update position  
   void update_vectors(double distanceTravelled, equData &EquData); // overload to update dir as well
   void check_if_midplane_reached(double zcen, double rInrBdry, double rOutrBdry); // check if particle has reached inner or outer midplane and set value of atMidplane
+
 };
 
 

@@ -1,31 +1,22 @@
 #include "aegisClass.h"
 
 void AegisClass::Execute(){
-  this->init_solve();
-  this->init_geometry();
-  
-  // Initialise VTK  
-  std::string branchShadowedPart = "Shadowed Particles";
-  std::string branchLostPart = "Lost Particles";
-  std::string branchDepositingPart = "Depositing Particles";
-  std::string branchMaxLengthPart = "Max Length Particles";
-  vtkInterface->init_Ptrack_root();
-  vtkInterface->new_vtkArray("Q", 1);
-  vtkInterface->new_vtkArray("B.n_direction", 1);
-  vtkInterface->new_vtkArray("Normal", 3);
-  vtkInterface->new_vtkArray("B_field", 3);
-  vtkInterface->new_vtkArray("Psi_Start", 1);
-  vtkInterface->new_vtkArray("B.n", 1);
+  init_solve();
+  init_geometry();
+
+  vtkInterface->init();  
+//  polarDAG = std::make_unique<moab::DagMC>(DAG->moab_instance());
 
   std::vector<double> Bfield; 
   std::vector<double> polarPos(3);
   std::vector<double> newPt(3);  
   std::vector<double> triCoords(9);
   std::vector<double> triA(3), triB(3), triC(3);
-  moab::Range targetSurfaceList = this->select_target_surface();
+  moab::Range targetSurfaceList = select_target_surface();
   integrator = std::make_unique<surfaceIntegrator>(targetSurfaceList);
   traceEnded = false;
   std::ofstream particleFinalPos ("particleFinalPos.txt");
+
   for (auto facet:targetSurfaceList){ // loop over all facets
     facetCounter +=1;
     particleBase particle;
@@ -39,7 +30,7 @@ void AegisClass::Execute(){
       triC[j] = triCoords[j+6];
     }
     triSource Tri(triA, triB, triC, facet); 
-    vtkInterface->arrays["Normal"]->InsertNextTuple3(Tri.unitNormal[0], Tri.unitNormal[1], Tri.unitNormal[2]);
+    vtkInterface->insert_next_uStrGrid("Normal", Tri.unitNormal);
 
     if (particleLaunchPos == "fixed"){
       particle.set_pos(Tri.centroid());
@@ -52,77 +43,65 @@ void AegisClass::Execute(){
     particle.check_if_in_bfield(bFieldData); // if out of bounds skip to next triangle
     if (particle.outOfBounds){
       LOG_INFO << "Particle start is out of magnetic field bounds. Skipping to next triangle. Check correct eqdsk is being used for the given geometry";
-      vtkInterface->arrays["B_field"]->InsertNextTuple3(0,0,0);
-      vtkInterface->arrays["Psi_Start"]->InsertNextTuple1(0);
-      vtkInterface->arrays["B.n"]->InsertNextTuple1(0);
-      vtkInterface->arrays["B.n_direction"]->InsertNextTuple1(0);
-      vtkInterface->arrays["Q"]->InsertNextTuple1(0.0);
+      vtkInterface->insert_next_uStrGrid("B_field", {0.0, 0.0, 0.0});
+      vtkInterface->insert_next_uStrGrid("Psi_Start", 0.0);
+      vtkInterface->insert_next_uStrGrid("B.n", 0.0);
+      vtkInterface->insert_next_uStrGrid("B.n_direction", 0.0);
+      vtkInterface->insert_next_uStrGrid("Q", 0.0);
       continue;
     }
     std::ofstream launchPos ("launch_pos.txt");
     launchPos << particle.launchPos[0] << " " << particle.launchPos[1] << " " << particle.launchPos[2] << std::endl;
-    vtkInterface->vtkpoints = vtkSmartPointer<vtkPoints>::New();
-    vtkInterface->vtkpoints->InsertNextPoint(particle.launchPos[0], particle.launchPos[1], particle.launchPos[2]);
+    vtkInterface->init_new_vtkPoints();
+    vtkInterface->insert_next_point_in_track(particle.launchPos);
 
     particle.set_dir(bFieldData);
     polarPos = coordTfm::cart_to_polar(particle.launchPos, "forwards");
 
-    vtkInterface->arrays["B_field"]->InsertNextTuple3(particle.BfieldXYZ[0], particle.BfieldXYZ[1], particle.BfieldXYZ[2]);
+    vtkInterface->insert_next_uStrGrid("B_field", particle.BfieldXYZ);
     BdotN = Tri.dot_product(particle.BfieldXYZ); 
     psi = particle.get_psi(bFieldData); 
     psid = psi + bFieldData.psibdry; 
 
-    vtkInterface->arrays["Psi_Start"]->InsertNextTuple1(psi);
-    vtkInterface->arrays["B.n"]->InsertNextTuple1(BdotN);
+    vtkInterface->insert_next_uStrGrid("Psi_Start", psi);
+    vtkInterface->insert_next_uStrGrid("B.n", BdotN);
     particle.align_dir_to_surf(BdotN);
 
     if (BdotN < 0){
-      vtkInterface->arrays["B.n_direction"]->InsertNextTuple1(-1.0);
+      vtkInterface->insert_next_uStrGrid("B.n_direction", -1.0);
     }
     else if (BdotN > 0){
-      vtkInterface->arrays["B.n_direction"]->InsertNextTuple1(1.0);
+      vtkInterface->insert_next_uStrGrid("B.n_direction", 1.0);
     }
     Q = bFieldData.omp_power_dep(psid, powerSOL, lambdaQ, BdotN, "exp");
     double psiOnSurface = psi;
     
-    DAG->find_volume(particle.pos.data(), volID, particle.dir.data());
     // Start ray tracing
     DagMC::RayHistory history;
-    this->ray_hit_on_launch(particle, history);
+    ray_hit_on_launch(particle, history);
     trackLength = trackStepSize;
 
-    for (int j=0; j<3; ++j)
-    {
-      newPt[j] = particle.launchPos[j] + particle.dir[j]*trackStepSize;
-    }
-    vtkInterface->vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
+    particle.update_vectors(trackStepSize, bFieldData);
+    vtkInterface->insert_next_point_in_track(particle.pos);
 
     // loop along particle track
     for (int j=0; j<maxTrackSteps; ++j){
-      history.reset();
       trackLength += trackStepSize;
       DAG->ray_fire(volID, particle.pos.data(), particle.dir.data(), nextSurf, nextSurfDist, &history, trackStepSize, rayOrientation);
 
       if (nextSurf != 0){
-        newPt[0] = particle.pos[0] + particle.dir[0] * nextSurfDist;
-        newPt[1] = particle.pos[1] + particle.dir[1] * nextSurfDist;
-        newPt[2] = particle.pos[2] + particle.dir[2] * nextSurfDist;
-
-        this->shadowed_termination(facet, history);
+        particle.update_vectors(nextSurfDist); // update position to surface intersection point
+        shadowed_termination(facet, history);
         break;
       }
       else{
-        newPt[0] = particle.pos[0] + particle.dir[0] * trackStepSize;
-        newPt[1] = particle.pos[1] + particle.dir[1] * trackStepSize;
-        newPt[2] = particle.pos[2] + particle.dir[2] * trackStepSize;
+        particle.update_vectors(trackStepSize); // update position by stepsize
       }
       
-      vtkInterface->vtkpoints->InsertNextPoint(newPt[0], newPt[1], newPt[2]);
-
-      particle.set_pos(newPt);
+      vtkInterface->insert_next_point_in_track(particle.pos);
       particle.check_if_in_bfield(bFieldData);
       if (particle.outOfBounds){
-        this->lost_termination(facet, history);
+        lost_termination(facet, history);
         break;
       }
       else{
@@ -131,14 +110,14 @@ void AegisClass::Execute(){
       }
       particle.check_if_midplane_reached(bFieldData.zcen, bFieldData.rbdry, userROutrBdry);
       
-      if (particle.atMidplane != 0 && !noDeposition){ 
+      if (particle.atMidplane != 0 && !noMidplaneTermination){ 
         particleFinalPos << particle.pos[0] << " " << particle.pos[1] << " " << particle.pos[2] << std::endl; 
-        this->midplane_termination(facet, history);
+        midplane_termination(facet, history);
         break;
       }
     } 
     if (traceEnded == false){
-      this->max_length_termination(facet, history);
+      max_length_termination(facet, history);
     }
   }
   // write out data and print final
@@ -155,7 +134,7 @@ void AegisClass::init_solve(){
 
   // set runtime parameters
   runSettings.load_params(); 
-  runSettings.print_params();
+  //runSettings.print_params();
   dagmcInputFile = runSettings.sValues["DAGMC_input"];
   vtkInputFile = "target_facets.stl";
   eqdskInputFile = runSettings.sValues["eqdsk_file"];
@@ -166,7 +145,7 @@ void AegisClass::init_solve(){
   particleLaunchPos = runSettings.sValues["launchPos"];
   drawParticleTracks = runSettings.sValues["trace"];
   std::string noDep = runSettings.sValues["no_deposition"];
-  if (noDep == "yes") {noDeposition = true;}
+  if (noDep == "yes") {noMidplaneTermination = true;}
 
   if (particleLaunchPos == "fixed")
   {
@@ -188,7 +167,7 @@ void AegisClass::init_solve(){
 
   //initialise memeory for smart pointers
   DAG = std::make_unique<moab::DagMC>();
-  vtkInterface = std::make_unique<vtkAegis>(drawParticleTracks);
+  vtkInterface = std::make_unique<VtkInterface>(drawParticleTracks);
 }
 
 void AegisClass::init_geometry(){
@@ -228,7 +207,7 @@ void AegisClass::init_geometry(){
 void AegisClass::max_length_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history){
   double heatflux = 0.0;
   vtkInterface->write_particle_track(branchMaxLengthPart, heatflux);
-  vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
+  vtkInterface->insert_next_uStrGrid("Q", heatflux);
   integrator->store_heat_flux(facet,heatflux);
   LOG_INFO << "Fieldline trace reached maximum length before intersection";
   traceEnded = true;
@@ -240,7 +219,7 @@ void AegisClass::max_length_termination(const moab::EntityHandle &facet, DagMC::
 void AegisClass::midplane_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history){  
   double heatflux = Q;
   vtkInterface->write_particle_track(branchDepositingPart, heatflux);
-  vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
+  vtkInterface->insert_next_uStrGrid("Q", heatflux);
   integrator->store_heat_flux(facet,heatflux);        
   traceEnded = true;
   
@@ -252,7 +231,7 @@ void AegisClass::lost_termination(const moab::EntityHandle &facet, DagMC::RayHis
   integrator->count_lost_ray();
   double heatflux = 0.0;
   vtkInterface->write_particle_track(branchLostPart, heatflux);
-  vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
+  vtkInterface->insert_next_uStrGrid("Q", heatflux);
   integrator->store_heat_flux(facet,heatflux);        
   traceEnded = true;
 
@@ -263,12 +242,10 @@ void AegisClass::shadowed_termination(const moab::EntityHandle &facet, DagMC::Ra
   history.get_last_intersection(intersectedFacet);
   integrator->count_hit(intersectedFacet);
   LOG_INFO << "Surface " << nextSurf << " hit after travelling " << trackLength << " units";
-  history.rollback_last_intersection();
-  history.reset();
   double heatflux = 0.0;
   vtkInterface->write_particle_track(branchShadowedPart, heatflux);
 
-  vtkInterface->arrays["Q"]->InsertNextTuple1(heatflux);
+  vtkInterface->insert_next_uStrGrid("Q", heatflux);
   integrator->store_heat_flux(facet,heatflux);
   traceEnded = true;
 
@@ -281,14 +258,9 @@ void AegisClass::ray_hit_on_launch(particleBase &particle, DagMC::RayHistory &hi
   if (nextSurf != 0) 
   {
     history.get_last_intersection(intersectedFacet);
-    history.rollback_last_intersection();
     DAG->next_vol(nextSurf, volID, volID);
     LOG_INFO << "---- RAY HIT ON LAUNCH [" << facetCounter << "] ----";
   }
-  history.reset();
-  particle.update_vectors(trackStepSize, bFieldData);
-  vtkInterface->vtkpoints->InsertNextPoint(particle.pos[0], particle.pos[1], particle.pos[2]);
-  
 }
 
 // Get triangles from the surface(s) of interest
