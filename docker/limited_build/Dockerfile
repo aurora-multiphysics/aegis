@@ -9,8 +9,9 @@ RUN cd /$WORKDIR && \
     cd temp && \
     git clone https://github.com/aurora-multiphysics/aegis.git && \
     cd aegis && \
-    cmake -DDAGMC_DIR=/$WORKDIR/dagmc_bld/DAGMC/lib/cmake/dagmc/ && \
-
+    mkdir bld && \
+    cd bld && \
+    cmake ../ -DDAGMC_DIR=/$WORKDIR/dagmc_bld/DAGMC/lib/cmake/dagmc/ && \
     make && \
     make test
 
