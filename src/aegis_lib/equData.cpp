@@ -508,8 +508,8 @@ void equData::centre(int cenopt)
   switch (cenopt)
   {
   case 1:
-    this->rcen = eqdsk.rqcen;
-    this->zcen = eqdsk.zqcen;
+    rcen = eqdsk.rqcen;
+    zcen = eqdsk.zqcen;
     LOG_INFO << "(Rcen,Zcen) values taken from eqdsk (Rmaxis,Zmaxis)";
     break; // end case 1
 
@@ -592,14 +592,14 @@ void equData::centre(int cenopt)
       if ((zpp-zpg)*rsig < 0) {continue;}
       break;
     }
-    this->rcen = rmin+(igr-1)*dr;
-    this->zcen = zmin+(igz-1)*dz;
+    rcen = rmin+(igr-1)*dr;
+    zcen = zmin+(igz-1)*dz;
     
 
     LOG_INFO << "New (Rcen,Zcen) values calculated";
     break; // end case 2
   }
-  this->psicen = alglib::spline2dcalc(psiSpline, rcen, zcen);
+  psicen = alglib::spline2dcalc(psiSpline, rcen, zcen);
   LOG_WARNING << "Rcen value calculated from equData.centre() = " << rcen;
   LOG_WARNING << "Zcen value calculated from equData.centre() = " << zcen;
   LOG_WARNING << "Psicen value calculated from equData.centre() = " << psicen;
@@ -1280,13 +1280,13 @@ void equData::psi_limiter(std::vector<std::vector<double>> vertices)
   double zf = alglib::spline1dcalc(fSpline, zpsi);
   zbtotbdry = sqrt(std::max(0.0, (pow(zdpdr, 2) + pow(zdpdz, 2))));
 
-  this->rbdry = zr;
-  this->bpbdry = zbpbdry;
-  this->btotbdry = zbtotbdry;
+  rbdry = zr;
+  bpbdry = zbpbdry;
+  btotbdry = zbtotbdry;
 
-  std::cout << "PSI_LIMITER() RBDRY = " << this->rbdry << std::endl;
-  std::cout << "PSI_LIMITER() BPBDRY = " << this->bpbdry << std::endl;
-  std::cout << "PSI_LIMITER() BTOTBDRY = " << this->btotbdry << std::endl;
+  std::cout << "PSI_LIMITER() RBDRY = " << rbdry << std::endl;
+  std::cout << "PSI_LIMITER() BPBDRY = " << bpbdry << std::endl;
+  std::cout << "PSI_LIMITER() BTOTBDRY = " << btotbdry << std::endl;
 
 
 }

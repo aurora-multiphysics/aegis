@@ -112,14 +112,14 @@ triSource::triSource(std::vector<double> xyz1, std::vector<double> xyz2, std::ve
 
   // recover constant D in plane equation
   D = -(normalVec[0]*xyzA[0] + normalVec[1]*xyzA[1] + normalVec[2]*xyzA[2]);
-  this->normal = normalVec;
+  normal = normalVec;
   double magnitude = sqrt(pow(normalVec[0],2) + pow(normalVec[1],2) + pow(normalVec[2],2));
   normalVec[0] = normalVec[0]/magnitude;
   normalVec[1] = normalVec[1]/magnitude;
   normalVec[2] = normalVec[2]/magnitude; 
-  this->unitNormal = normalVec;
+  unitNormal = normalVec;
 
-  this->entityHandle = handle;
+  entityHandle = handle;
 
 }
 
@@ -169,7 +169,7 @@ double triSource::dot_product(std::vector<double> externalVector)
   double product = 0;
   for (int i=0; i<3; i++)
   {
-    product = product + externalVector[i]*this->unitNormal[i];
+    product = product + externalVector[i]*unitNormal[i];
   }
   return product;
 }
