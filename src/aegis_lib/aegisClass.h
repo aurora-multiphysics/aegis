@@ -58,25 +58,25 @@
 
 using namespace moab;
 
+
+
 class AegisClass  
 {
   public:
 
-  void Execute(); 
+  void Execute(std::string settingsFile); 
   void init_solve();
   void init_geometry();
   int num_facets();
   std::vector<std::pair<double,double>> psiQ_values; // for l2 norm test
   moab::Range select_target_surface();
-  void max_length_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history);
-  void midplane_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history);
-  void lost_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history);
-  void shadowed_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history);
+  void terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination);
   void ray_hit_on_launch(particleBase &particle, DagMC::RayHistory &history);
+
   protected:
 
-
   private:
+  std::string settingsFileName;
   settings runSettings;
   std::string dagmcInputFile;
   std::string vtkInputFile;
@@ -120,7 +120,6 @@ class AegisClass
   double Q = 0.0; // heatflux incident on surface triangle
   double psi = 0.0; // value of psi at current position
   double psid = 0.0; // psi - psi_m
-  bool traceEnded = false;
   double psiOnSurface = 0.0;
 
   std::unique_ptr<VtkInterface> vtkInterface;

@@ -9,9 +9,9 @@
 
 // Object for storing 
 
-void settings::load_params()
+void settings::load_params(std::string fileName)
 {
-  std::ifstream settingsFile("runSettings.txt");
+  std::ifstream settingsFile(fileName);
   std::string lineStr;
   while (getline(settingsFile, lineStr, '\n'))
   {

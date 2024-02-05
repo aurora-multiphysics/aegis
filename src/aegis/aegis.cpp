@@ -4,7 +4,7 @@ int main() {
   clock_t start = clock();
   
   AegisClass aegis;
-  aegis.Execute();
+  aegis.Execute("runSettings.txt");
 
   clock_t end = clock();
   double elapsed = double(end - start)/CLOCKS_PER_SEC;
