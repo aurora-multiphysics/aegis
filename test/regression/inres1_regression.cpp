@@ -76,7 +76,15 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
   }
 //-------------- RUN AEGIS -------------
   AegisClass aegis;
-  aegis.Execute("testSettings.txt");
+  std::string aegisConfig = "testSettings.txt";
+
+  if (std::filesystem::exists(aegisConfig)){
+    aegis.Execute(aegisConfig);
+  }
+
+  else {
+    FAIL() << "Cannot find '" << aegisConfig << "'";
+  }
 //-------------- RUN AEGIS -------------
 
   std::sort(aegis.psiQ_values.begin(), aegis.psiQ_values.end());
