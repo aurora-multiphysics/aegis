@@ -1,6 +1,7 @@
 #include "aegisClass.h"
 
-void AegisClass::Execute(){
+void AegisClass::Execute(std::string settingsFile){
+  settingsFileName = settingsFile;
   init_solve();
   init_geometry();
 
@@ -14,7 +15,6 @@ void AegisClass::Execute(){
   std::vector<double> triA(3), triB(3), triC(3);
   moab::Range targetSurfaceList = select_target_surface();
   integrator = std::make_unique<surfaceIntegrator>(targetSurfaceList);
-  traceEnded = false;
   std::ofstream particleFinalPos ("particleFinalPos.txt");
 
   for (auto facet:targetSurfaceList){ // loop over all facets
@@ -38,7 +38,7 @@ void AegisClass::Execute(){
     else{
       particle.set_pos(Tri.random_pt());
     }
-    integrator->launchPositions[facet] = particle.get_pos("cart");
+    integrator->set_launch_position(facet, particle.get_pos("cart"));
     
     particle.check_if_in_bfield(bFieldData); // if out of bounds skip to next triangle
     if (particle.outOfBounds){
@@ -74,7 +74,7 @@ void AegisClass::Execute(){
       vtkInterface->insert_next_uStrGrid("B.n_direction", 1.0);
     }
     Q = bFieldData.omp_power_dep(psid, powerSOL, lambdaQ, BdotN, "exp");
-    double psiOnSurface = psi;
+    psiOnSurface = psi;
     
     // Start ray tracing
     DagMC::RayHistory history;
@@ -91,7 +91,7 @@ void AegisClass::Execute(){
 
       if (nextSurf != 0){
         particle.update_vectors(nextSurfDist); // update position to surface intersection point
-        shadowed_termination(facet, history);
+        terminate_particle(facet, history, terminationState::SHADOWED);
         break;
       }
       else{
@@ -101,7 +101,7 @@ void AegisClass::Execute(){
       vtkInterface->insert_next_point_in_track(particle.pos);
       particle.check_if_in_bfield(bFieldData);
       if (particle.outOfBounds){
-        lost_termination(facet, history);
+        terminate_particle(facet, history, terminationState::LOST);
         break;
       }
       else{
@@ -112,13 +112,18 @@ void AegisClass::Execute(){
       
       if (particle.atMidplane != 0 && !noMidplaneTermination){ 
         particleFinalPos << particle.pos[0] << " " << particle.pos[1] << " " << particle.pos[2] << std::endl; 
-        midplane_termination(facet, history);
+        terminate_particle(facet, history, terminationState::DEPOSITING);
         break;
       }
+
+      if (j == (maxTrackSteps-1))
+      {
+        terminate_particle(facet, history, terminationState::MAXLENGTH);
+        break;
+      }
+
     } 
-    if (traceEnded == false){
-      max_length_termination(facet, history);
-    }
+
   }
   // write out data and print final
   vtkInterface->write_unstructuredGrid(vtkInputFile, "out.vtk");
@@ -133,7 +138,7 @@ void AegisClass::init_solve(){
   clock_t start = clock(); // start clock time
 
   // set runtime parameters
-  runSettings.load_params(); 
+  runSettings.load_params(settingsFileName); 
   //runSettings.print_params();
   dagmcInputFile = runSettings.sValues["DAGMC_input"];
   vtkInputFile = "target_facets.stl";
@@ -176,8 +181,7 @@ void AegisClass::init_geometry(){
   DAG->init_OBBTree();
   DAG->setup_geometry(surfsList, volsList);
   DAG->moab_instance()->get_entities_by_type(0, MBTRI, facetsList);
-  numFacets = facetsList.size();
-  std::cout << "Number of Triangles in Geometry " << numFacets << std::endl;
+  std::cout << "Number of Triangles in Geometry " << facetsList.size() << std::endl;
   volID = DAG->entity_by_index(3,1);
 
   // setup B Field data
@@ -204,56 +208,45 @@ void AegisClass::init_geometry(){
   bFieldData.write_bfield(plotBFieldRZ, plotBFieldXYZ);
 }
 
-void AegisClass::max_length_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history){
-  double heatflux = 0.0;
-  vtkInterface->write_particle_track(branchMaxLengthPart, heatflux);
-  vtkInterface->insert_next_uStrGrid("Q", heatflux);
-  integrator->store_heat_flux(facet,heatflux);
-  LOG_INFO << "Fieldline trace reached maximum length before intersection";
-  traceEnded = true;
 
-  psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
+void AegisClass::terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination){
+  double heatflux;
 
-}
+  switch(termination){
+    case terminationState::DEPOSITING:
+      heatflux = Q;
+      vtkInterface->write_particle_track(branchDepositingPart, heatflux);
+      integrator->count_particle(facet, termination, heatflux);
+      LOG_INFO << "Midplane reached. Depositing power";
+      break;
 
-void AegisClass::midplane_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history){  
-  double heatflux = Q;
-  vtkInterface->write_particle_track(branchDepositingPart, heatflux);
-  vtkInterface->insert_next_uStrGrid("Q", heatflux);
-  integrator->store_heat_flux(facet,heatflux);        
-  traceEnded = true;
-  
-  psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
-}
+    case terminationState::SHADOWED:
+      heatflux = 0.0;
+      history.get_last_intersection(intersectedFacet);
+      vtkInterface->write_particle_track(branchShadowedPart, heatflux);
+      integrator->count_particle(facet, termination, heatflux);
+      LOG_INFO << "Surface " << nextSurf << " hit after travelling " << trackLength << " units";
+      break;
 
-void AegisClass::lost_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history){
-  LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";
-  integrator->count_lost_ray();
-  double heatflux = 0.0;
-  vtkInterface->write_particle_track(branchLostPart, heatflux);
-  vtkInterface->insert_next_uStrGrid("Q", heatflux);
-  integrator->store_heat_flux(facet,heatflux);        
-  traceEnded = true;
+    case terminationState::LOST:
+      heatflux = 0.0;   
+      vtkInterface->write_particle_track(branchLostPart, heatflux);
+      integrator->count_particle(facet, termination, heatflux);    
+      LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";
+      break;
 
-  psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
-}
-
-void AegisClass::shadowed_termination(const moab::EntityHandle &facet, DagMC::RayHistory &history){
-  history.get_last_intersection(intersectedFacet);
-  integrator->count_hit(intersectedFacet);
-  LOG_INFO << "Surface " << nextSurf << " hit after travelling " << trackLength << " units";
-  double heatflux = 0.0;
-  vtkInterface->write_particle_track(branchShadowedPart, heatflux);
+    case terminationState::MAXLENGTH:
+      heatflux = 0.0;
+      vtkInterface->write_particle_track(branchMaxLengthPart, heatflux);
+      integrator->count_particle(facet, termination, heatflux);        
+      LOG_INFO << "Fieldline trace reached maximum length before intersection";
+  }
 
   vtkInterface->insert_next_uStrGrid("Q", heatflux);
-  integrator->store_heat_flux(facet,heatflux);
-  traceEnded = true;
-
-  psiQ_values.push_back(std::make_pair(psiOnSurface,Q));
+  psiQ_values.push_back(std::make_pair(psiOnSurface, Q));
 }
 
 void AegisClass::ray_hit_on_launch(particleBase &particle, DagMC::RayHistory &history){
-  //DAG->find_volume(particle.pos.data(), volID, particle.dir.data());
   DAG->ray_fire(volID, particle.launchPos.data(), particle.dir.data(), nextSurf, nextSurfDist, &history,trackStepSize,rayOrientation);
   if (nextSurf != 0) 
   {
@@ -311,6 +304,7 @@ moab::Range AegisClass::select_target_surface(){
   target_facets.insert(targetFacetsSet);
   DAG->moab_instance()->write_file("target_facets.stl", NULL, NULL, target_facets);
 
+  numFacets = targetFacets.size();
   return targetFacets;
 }
 

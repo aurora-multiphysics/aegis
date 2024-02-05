@@ -52,15 +52,11 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
 
  TEST_F(aegisRegressionTests, inres1)
  {
-
-  AegisClass aegis;
-  aegis.Execute();
-  
-  std::ifstream smardda_qValues_in("smardda_qvalues.txt");
+  std::string smarddaFile = "smardda_inres1_no_shadowQ.txt";
   double qvalue;
   std::vector<std::pair<double,double>> smardda_qValues;
   std::string line;
-  
+  std::ifstream smardda_qValues_in(smarddaFile);
   if (smardda_qValues_in)
   {
     while (std::getline(smardda_qValues_in, line, '\n'))
@@ -76,31 +72,41 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
   }
   else 
   {
-    FAIL() << "Cannot find 'smardda_qvalues.txt' file";
+    FAIL() << "Cannot find '" << smarddaFile << "'";
   }
+//-------------- RUN AEGIS -------------
+  AegisClass aegis;
+  aegis.Execute("testSettings.txt");
+//-------------- RUN AEGIS -------------
 
   std::sort(aegis.psiQ_values.begin(), aegis.psiQ_values.end());
   std::sort(smardda_qValues.begin(), smardda_qValues.end());
 
-  double Q_rel_sum;
   std::cout << std::endl << "Printing first 10 elements..." << std::endl;
   for (int i=0; i<10; i++)
   {
     std::cout << "Element - " << i << std::endl;
     std::cout << "PSI = " << aegis.psiQ_values[i].first << " Q = " << aegis.psiQ_values[i].second << " --> AEGIS" << std::endl;
     std::cout << "PSI = " << smardda_qValues[i].first << " Q = " << smardda_qValues[i].second << " --> SMARDDA" << std::endl;
-    Q_rel_sum += std::pow((aegis.psiQ_values[i].second - smardda_qValues[i].second), 2);
     std::cout << std::endl;
   }  
 
-  double L2_NORM = std::sqrt( (1.0/aegis.num_facets())*Q_rel_sum );
-  const double EXPECTED_L2_NORM = 14.0936;
+  double Q_rel_sum = 0.0;
 
-  L2_NORM = 13.5;
+  std::cout << aegis.num_facets();
+
+  for (int i=0; i<aegis.num_facets(); i++){
+    Q_rel_sum += std::pow((aegis.psiQ_values[i].second - smardda_qValues[i].second), 2);
+  }
+
+
+  double L2_NORM = std::sqrt( (1.0/aegis.num_facets())*Q_rel_sum );
+  const double EXPECTED_L2_NORM = 349791;
+
   const auto AEGIS_MAX = *std::max_element(aegis.psiQ_values.begin(),aegis.psiQ_values.end(),[](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
   const auto SMARDDA_MAX = *std::max_element(smardda_qValues.begin(),smardda_qValues.end(),[](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
 
-  double percentTol = 7; // 5% tolerance
+  double percentTol = 5; // 5% tolerance
   double MAX_REL_ERROR = fabs(std::fabs((AEGIS_MAX.second - SMARDDA_MAX.second)/SMARDDA_MAX.second)*100);
   double L2_NORM_ERROR = fabs(std::fabs((L2_NORM - EXPECTED_L2_NORM)/EXPECTED_L2_NORM)*100);
   std::cout << "---------------------------" << std::endl;

@@ -31,7 +31,7 @@ class settings{
     int nTrack;
     double dsTrack;
     double psiref; // reference psi value for psibdry
-    void load_params();
+    void load_params(std::string fileName);
     void print_params();
 };
 
