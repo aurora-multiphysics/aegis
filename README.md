@@ -35,8 +35,8 @@ Some example outputs from an Aegis run with the same magnetic equilibrium and ge
 **Left: Heatflux deposited across target surface with shadowing geometry shown around target**
 
 <p float="left">
-  <img src="https://github.com/aurora-multiphysics/aegis/blob/main/gh_images/heatflux_deposited.png" alt="Power Deposited" width="300"/>
-  <img src="https://github.com/aurora-multiphysics/aegis/blob/main/gh_images/particle_tracks.png" alt="Particle Tracks" width="300" /> 
+  <img src="https://github.com/aurora-multiphysics/aegis/blob/main/gh_images/heatflux_deposited.png" alt="Power Deposited" width="400"/>
+  <img src="https://github.com/aurora-multiphysics/aegis/blob/main/gh_images/particle_tracks.png" alt="Particle Tracks" width="400" /> 
 </p>
 
 **Right: Individual particle tracks (launched from cells in CAD mesh) coloured by their respective Heatflux with OMP and 2D magnetic equilibrium constructed from G-eqdsk read**
