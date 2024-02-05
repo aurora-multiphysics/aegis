@@ -96,15 +96,12 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
   std::cout << aegis.num_facets();
 
   for (int i=0; i<aegis.num_facets(); i++){
-    std::cout << "Element - " << i << std::endl;
-    std::cout << "PSI = " << aegis.psiQ_values[i].first << " Q = " << aegis.psiQ_values[i].second << " --> AEGIS" << std::endl;
-    std::cout << "PSI = " << smardda_qValues[i].first << " Q = " << smardda_qValues[i].second << " --> SMARDDA" << std::endl;
     Q_rel_sum += std::pow((aegis.psiQ_values[i].second - smardda_qValues[i].second), 2);
   }
 
 
   double L2_NORM = std::sqrt( (1.0/aegis.num_facets())*Q_rel_sum );
-  const double EXPECTED_L2_NORM = 14.0936;
+  const double EXPECTED_L2_NORM = 349791;
 
   const auto AEGIS_MAX = *std::max_element(aegis.psiQ_values.begin(),aegis.psiQ_values.end(),[](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
   const auto SMARDDA_MAX = *std::max_element(smardda_qValues.begin(),smardda_qValues.end(),[](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });

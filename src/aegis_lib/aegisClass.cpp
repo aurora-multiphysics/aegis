@@ -243,11 +243,10 @@ void AegisClass::terminate_particle(const moab::EntityHandle &facet, DagMC::RayH
   }
 
   vtkInterface->insert_next_uStrGrid("Q", heatflux);
-  psiQ_values.push_back(std::make_pair(psiOnSurface, heatflux));
+  psiQ_values.push_back(std::make_pair(psiOnSurface, Q));
 }
 
 void AegisClass::ray_hit_on_launch(particleBase &particle, DagMC::RayHistory &history){
-  //DAG->find_volume(particle.pos.data(), volID, particle.dir.data());
   DAG->ray_fire(volID, particle.launchPos.data(), particle.dir.data(), nextSurf, nextSurfDist, &history,trackStepSize,rayOrientation);
   if (nextSurf != 0) 
   {
