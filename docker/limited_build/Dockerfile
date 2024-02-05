@@ -13,8 +13,6 @@ RUN cd /$WORKDIR && \
     cd bld && \
     cmake ../ -DDAGMC_DIR=/$WORKDIR/dagmc_bld/DAGMC/lib/cmake/dagmc/ && \
     make && \
-    make test && \
-    tail -F Testing/Temporary/LastTest.log
-
+    make test 
 
     
