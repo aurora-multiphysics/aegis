@@ -14,18 +14,14 @@ int main(int argc, char **argv) {
   aegis.Execute("runSettings.txt");
 
 
-
-
-  double endTime = MPI_Wtime();
-  double totalTime = endTime - startTime;
-
-  if (rank == 0)
-  {
-    std::cout << "------------------------------------------------------" << std::endl;
-    std::cout << "Elapsed W Time = " << totalTime << " on number of processors: " << nprocs << std::endl;
-    std::cout << "------------------------------------------------------" << std::endl;
+  for (int i=0; i<nprocs; ++i){
+    if (rank == i)
+    {
+      double endTime = MPI_Wtime();
+      double totalTime = endTime - startTime;
+      std::cout << "Elapsed wall Time on process " << i << " = " << totalTime << std::endl; 
+    }
   }
- 
 
   MPI_Finalize();
 

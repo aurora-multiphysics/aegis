@@ -71,7 +71,8 @@ class AegisClass
   void terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination);
   void ray_hit_on_launch(particleBase &particle, DagMC::RayHistory &history);
   void print_particle_stats(std::array<int, 4> particleStats);
-
+  void mpi_particle_stats();
+  int rank, nprocs;
   int nFacets;
 
   protected:
@@ -112,6 +113,8 @@ class AegisClass
   int rayOrientation = 1; // rays are fired along surface normals
   double trackLength = 0.0;
   int facetCounter = 0;
+  std::vector<double> qValues;
+  std::vector<double> psiValues;
 
   equData bFieldData;
   bool plotBFieldRZ = false;

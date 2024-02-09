@@ -9,10 +9,10 @@ no_midplane_termination [s] no
 # Integer Valued Aegis Run Parameters
 cenopt [i] 2
 number_of_rays_launched_per_tri [i] 5
-nTrack [i] 10000
+nTrack [i] 1000000
 
 # Double Valued Aegis Run Parameters
-dsTrack [d] 0.05
+dsTrack [d] 0.005
 Psol [d] 7.5e+06
 lambda_q [d] 0.012
 psiref [d] -2.1628794

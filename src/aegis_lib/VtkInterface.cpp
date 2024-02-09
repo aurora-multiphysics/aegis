@@ -19,7 +19,6 @@ void VtkInterface::init_Ptrack_root()
     multiBlockRoot->SetBlock(0, multiBlockBranch); // set block 
     multiBlockRoot->GetMetaData(static_cast<int>(0)) // name block
                   ->Set(vtkCompositeDataSet::NAME(), "Particle Tracks");
-    LOG_INFO << "Initialising particle_tracks root ";
 }
 
 void VtkInterface::init_Ptrack_branch(std::string branchName)
@@ -32,7 +31,6 @@ void VtkInterface::init_Ptrack_branch(std::string branchName)
     multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
                    ->Set(vtkCompositeDataSet::NAME(), branchName);
     multiBlockCounters[branchName] = 0;
-    std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchName << std::endl;
   }
 }
 
@@ -43,14 +41,12 @@ void VtkInterface::init(){
   }
 
   new_vtkArray("Q", 1);
-  new_vtkArray("B.n_direction", 1);
-  new_vtkArray("Normal", 3);
-  new_vtkArray("B_field", 3);
+  // new_vtkArray("B.n_direction", 1);
+  // new_vtkArray("Normal", 3);
+  // new_vtkArray("B_field", 3);
   new_vtkArray("Psi_Start", 1);
-  new_vtkArray("B.n", 1);
+  // new_vtkArray("B.n", 1);
 
-  LOG_WARNING << "VTK-AEGIS Interface initialised";
-  std::cout << "Number of arrays for vtkUnstructuredGrid initalised - " << arrays.size() << std::endl;
   
   if (drawParticleTracks){
     std::cout << "vtkMultiBlockDataSet initialised" << std::endl; 
@@ -121,6 +117,7 @@ void VtkInterface::add_vtkArrays(std::string vtk_input_file) // read stl and add
   }
 }
 
+
 void VtkInterface::write_unstructuredGrid(std::string vtk_input_file, std::string fileName)
 {
   add_vtkArrays(vtk_input_file);
@@ -162,4 +159,10 @@ void VtkInterface::init_new_vtkPoints(){
 
 void VtkInterface::insert_next_point_in_track(std::vector<double> pointsToAdd){
   particleTrackPoints->InsertNextPoint(pointsToAdd[0], pointsToAdd[1], pointsToAdd[2]);
+}
+
+void VtkInterface::mpi_write_uStrGrid(std::string vtk_input_file, std::vector<double> heatfluxVector){
+
+
+
 }

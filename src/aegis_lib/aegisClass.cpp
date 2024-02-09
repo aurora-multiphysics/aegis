@@ -3,7 +3,7 @@
 
 void AegisClass::Execute(std::string settingsFile){
 
-  int rank, nprocs;
+  
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);  
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
@@ -21,16 +21,13 @@ void AegisClass::Execute(std::string settingsFile){
   std::vector<double> triA(3), triB(3), triC(3);
   moab::Range targetSurfaceList = select_target_surface();
   integrator = std::make_unique<surfaceIntegrator>(targetSurfaceList);
-  std::ofstream particleFinalPos ("particleFinalPos.txt");
 
   int totalNumberOfFacets = targetSurfaceList.size();
   int numberofFacets = totalNumberOfFacets / nprocs;
   int startFacet = rank * numberofFacets;
   int endFacet = startFacet + numberofFacets;
   nFacets = 0;
-
-  std::vector<double> qValues;
-
+  
   for (int i=startFacet; i<endFacet; ++i){ // loop over all facets
     const auto facet = targetSurfaceList[i];
     ++nFacets;
@@ -45,7 +42,7 @@ void AegisClass::Execute(std::string settingsFile){
       triC[j] = triCoords[j+6];
     }
     triSource Tri(triA, triB, triC, facet); 
-    vtkInterface->insert_next_uStrGrid("Normal", Tri.unitNormal);
+    // vtkInterface->insert_next_uStrGrid("Normal", Tri.unitNormal);
 
     if (particleLaunchPos == "fixed"){
       particle.set_pos(Tri.centroid());
@@ -58,39 +55,39 @@ void AegisClass::Execute(std::string settingsFile){
     particle.check_if_in_bfield(bFieldData); // if out of bounds skip to next triangle
     if (particle.outOfBounds){
       LOG_INFO << "Particle start is out of magnetic field bounds. Skipping to next triangle. Check correct eqdsk is being used for the given geometry";
-      vtkInterface->insert_next_uStrGrid("B_field", {0.0, 0.0, 0.0});
-      vtkInterface->insert_next_uStrGrid("Psi_Start", 0.0);
-      vtkInterface->insert_next_uStrGrid("B.n", 0.0);
-      vtkInterface->insert_next_uStrGrid("B.n_direction", 0.0);
-      vtkInterface->insert_next_uStrGrid("Q", 0.0);
+      // vtkInterface->insert_next_uStrGrid("B_field", {0.0, 0.0, 0.0});
+      // vtkInterface->insert_next_uStrGrid("Psi_Start", 0.0);
+      // vtkInterface->insert_next_uStrGrid("B.n", 0.0);
+      // vtkInterface->insert_next_uStrGrid("B.n_direction", 0.0);
+    //  vtkInterface->insert_next_uStrGrid("Q", 0.0);
+    qValues.push_back(0.0);
       continue;
     }
-    std::ofstream launchPos ("launch_pos.txt");
-    launchPos << particle.launchPos[0] << " " << particle.launchPos[1] << " " << particle.launchPos[2] << std::endl;
     vtkInterface->init_new_vtkPoints();
-    vtkInterface->insert_next_point_in_track(particle.launchPos);
+    // vtkInterface->insert_next_point_in_track(particle.launchPos);
 
     particle.set_dir(bFieldData);
     polarPos = coordTfm::cart_to_polar(particle.launchPos, "forwards");
 
-    vtkInterface->insert_next_uStrGrid("B_field", particle.BfieldXYZ);
+    // vtkInterface->insert_next_uStrGrid("B_field", particle.BfieldXYZ);
     BdotN = Tri.dot_product(particle.BfieldXYZ); 
     psi = particle.get_psi(bFieldData); 
+
+    psiValues.push_back(psi);
     psid = psi + bFieldData.psibdry; 
 
-    vtkInterface->insert_next_uStrGrid("Psi_Start", psi);
-    vtkInterface->insert_next_uStrGrid("B.n", BdotN);
+    // vtkInterface->insert_next_uStrGrid("Psi_Start", psi);
+    // vtkInterface->insert_next_uStrGrid("B.n", BdotN);
     particle.align_dir_to_surf(BdotN);
 
     if (BdotN < 0){
-      vtkInterface->insert_next_uStrGrid("B.n_direction", -1.0);
+      // vtkInterface->insert_next_uStrGrid("B.n_direction", -1.0);
     }
     else if (BdotN > 0){
-      vtkInterface->insert_next_uStrGrid("B.n_direction", 1.0);
+      // vtkInterface->insert_next_uStrGrid("B.n_direction", 1.0);
     }
     Q = bFieldData.omp_power_dep(psid, powerSOL, lambdaQ, BdotN, "exp");
     
-    qValues.push_back(Q);
     psiOnSurface = psi;
     
     // Start ray tracing
@@ -128,7 +125,6 @@ void AegisClass::Execute(std::string settingsFile){
       particle.check_if_midplane_reached(bFieldData.zcen, bFieldData.rbdry, userROutrBdry);
       
       if (particle.atMidplane != 0 && !noMidplaneTermination){ 
-        particleFinalPos << particle.pos[0] << " " << particle.pos[1] << " " << particle.pos[2] << std::endl; 
         terminate_particle(facet, history, terminationState::DEPOSITING);
         break;
       }
@@ -145,17 +141,19 @@ void AegisClass::Execute(std::string settingsFile){
   // write out data and print final
 
   std::vector<double> allQValues;
+  std::vector<double> allPsiValues;
   std::array<int, 4> particleStats = integrator->particle_stats(); 
   std::array<int, 4> totalParticleStats;
 
-  MPI_Barrier(MPI_COMM_WORLD);
 
   if (rank != 0){
+    MPI_Send(psiValues.data(), psiValues.size(), MPI_DOUBLE, 0, 9, MPI_COMM_WORLD);
     MPI_Send(qValues.data(), qValues.size(), MPI_DOUBLE, 0, 10, MPI_COMM_WORLD);
     MPI_Send(particleStats.data(), particleStats.size(), MPI_INT, 0, 11, MPI_COMM_WORLD);
 
   }
   else {
+    allPsiValues.insert(allPsiValues.end(), psiValues.begin(), psiValues.end());
     allQValues.insert(allQValues.end(), qValues.begin(), qValues.end());
     totalParticleStats = integrator->particle_stats();
   }
@@ -163,29 +161,38 @@ void AegisClass::Execute(std::string settingsFile){
 
   for (int i=1; i<nprocs; ++i){
     if (rank == 0){
+      MPI_Recv(psiValues.data(), psiValues.size(), MPI_DOUBLE, i, 9, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      allPsiValues.insert(allPsiValues.end(), psiValues.begin(), psiValues.end());
+
       MPI_Recv(qValues.data(), qValues.size(), MPI_DOUBLE, i, 10, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       allQValues.insert(allQValues.end(), qValues.begin(), qValues.end());
-      
-      MPI_Recv(particleStats.data(), particleStats.size(), MPI_INT, i, 11, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      std::cout << "------ process " << i << "------" << std::endl;
-      for (auto j:particleStats){
-        std::cout << j << std::endl;
-      }
-      std::cout << "-----------" << std::endl;
 
-      std::transform(totalParticleStats.begin(), totalParticleStats.end(),
-                     particleStats.begin(), totalParticleStats.end(), std::plus<int>());
+      MPI_Recv(particleStats.data(), particleStats.size(), MPI_INT, i, 11, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      for (int j=0; j<particleStats.size(); ++j){
+        totalParticleStats[j] += particleStats[j]; 
+      }
     }
   }
 
   if (rank == 0){
+
+    for (int i=0; i<num_facets(); ++i){
+      vtkInterface->insert_next_uStrGrid("Q", allQValues[i]);
+      vtkInterface->insert_next_uStrGrid("Psi_Start", allPsiValues[i]);
+
+    }
+
     vtkInterface->write_unstructuredGrid(vtkInputFile, "out.vtk");
     if (drawParticleTracks == "yes"){
       vtkInterface->write_multiBlockData("particle_tracks.vtm");
     }
-    integrator->print_particle_stats();
+    print_particle_stats(totalParticleStats);
   }
-}
+
+  mpi_particle_stats();
+
+  }
+
 
 void AegisClass::init_solve(){
   
@@ -296,7 +303,8 @@ void AegisClass::terminate_particle(const moab::EntityHandle &facet, DagMC::RayH
       LOG_INFO << "Fieldline trace reached maximum length before intersection";
   }
 
-  vtkInterface->insert_next_uStrGrid("Q", heatflux);
+//  vtkInterface->insert_next_uStrGrid("Q", heatflux);
+  qValues.push_back(heatflux);
   psiQ_values.push_back(std::make_pair(psiOnSurface, Q));
 }
 
@@ -327,14 +335,13 @@ moab::Range AegisClass::select_target_surface(){
     {
       targetSurf = DAG->entity_by_id(2,s); // surface of interest
       DAG->moab_instance()->get_entities_by_type(targetSurf, MBTRI, surfFacets[targetSurf]);
-      std::cout << "Surface ID [" << DAG->get_entity_id(s) << "] " << "No. of elements " << surfFacets[s].size() << std::endl;
+      std::cout << "Surface ID [" << s << "] " << "No. of elements " << surfFacets[targetSurf].size() << std::endl;
       surfFacetsKeys.insert(targetSurf);
       numTargetFacets += surfFacets[targetSurf].size();
       targetFacets.merge(surfFacets[targetSurf]);         
     }
+
     LOG_WARNING << "Surface IDs provided. Launching from surfaces given by global IDs:";
-    for (auto i:runSettings.vValues["surfs"])
-    {LOG_WARNING << "Surface ID - " << i << " ";}
   }
   else
   {
@@ -343,7 +350,7 @@ moab::Range AegisClass::select_target_surface(){
     {
       DAG->moab_instance()->get_entities_by_type(s, MBTRI, surfFacets[s]);
       surfFacetsKeys.insert(s);
-      std::cout << "Surface ID [" << DAG->get_entity_id(s) << "] " << "No. of elements " << surfFacets[s].size() << std::endl;
+      std::cout << "Surface ID [" << s << "] " << "No. of elements " << surfFacets[s].size() << std::endl;
       numTargetFacets += surfFacets[s].size();             
       targetFacets.merge(surfFacets[s]);  
     }
@@ -367,9 +374,31 @@ int AegisClass::num_facets(){
 }
 
 void AegisClass::print_particle_stats(std::array<int, 4> particleStats){
-  LOG_WARNING << "Number of particles launched = " << particleStats[0] << std::endl;
-  LOG_WARNING << "Number of particles depositing power from omp = " << particleStats[1] << std::endl;
-  LOG_WARNING << "Number of shadowed particle intersections = " << particleStats[2] << std::endl;
-  LOG_WARNING << "Number of particles lost from magnetic domain = " << particleStats[3] << std::endl;
-  LOG_WARNING << "Number of particles terminated upon reaching max tracking length = " << particleStats[4] << std::endl; 
+  int particlesCounted = 0;
+  for (const auto i:particleStats){
+    particlesCounted += i;
+  }
+
+  LOG_WARNING << "Number of particles launched = " << particlesCounted<< std::endl;
+  LOG_WARNING << "Number of particles depositing power from omp = " << particleStats[0] << std::endl;
+  LOG_WARNING << "Number of shadowed particle intersections = " << particleStats[1] << std::endl;
+  LOG_WARNING << "Number of particles lost from magnetic domain = " << particleStats[2] << std::endl;
+  LOG_WARNING << "Number of particles terminated upon reaching max tracking length = " << particleStats[3] << std::endl; 
+  LOG_WARNING << "Number of particles not accounted for = " << (num_facets() - particlesCounted) << std::endl;
 }
+
+void AegisClass::mpi_particle_stats(){
+ 
+  for (int i=0; i<nprocs; ++i){
+    if (rank == i){
+      std::cout << std::endl << "process " << i << " has the following particle stats:" << std::endl;
+      for (auto k: integrator->particle_stats())
+      {
+        std::cout << k << std::endl;
+      } 
+    }
+  }
+}
+
+
+

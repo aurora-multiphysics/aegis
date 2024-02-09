@@ -38,6 +38,7 @@ class VtkInterface
   void insert_next_uStrGrid(std::string arrayName, double valueToAdd);
   void init_new_vtkPoints();
   void insert_next_point_in_track(std::vector<double> pointsToAdd);  
+  void mpi_write_uStrGrid(std::string vtk_input_file, std::vector<double> heatfluxVector);
 
 
   private:

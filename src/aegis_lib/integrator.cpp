@@ -232,6 +232,7 @@ void surfaceIntegrator::set_launch_position(const moab::EntityHandle &facet, con
 }
 
 std::array<int, 4> surfaceIntegrator::particle_stats(){
+  int rank, size;
 
   std::array<int, 4> particleStats;
   particleStats[0] = nParticlesHeatDep;
