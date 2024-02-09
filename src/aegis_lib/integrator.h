@@ -70,6 +70,7 @@ class surfaceIntegrator
   void print_particle_stats(); // return number of particles depositing, shadowed, lost, etc...
 
   void set_launch_position(const moab::EntityHandle &facet, const std::vector<double> &position);
+  std::array<int, 4> particle_stats(); // return array of integers corresponding to particle stats
 
   private:
   int nParticlesTotal=0; // Total number of rays fired into geometry

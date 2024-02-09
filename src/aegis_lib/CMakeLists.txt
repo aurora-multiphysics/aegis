@@ -16,6 +16,7 @@ target_include_directories(${PROJECT_LIB_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR
 target_link_libraries(${PROJECT_LIB_NAME} PUBLIC ${Boost_LIBRARIES} ${TEST_LIBRARIES})
 target_link_libraries(${PROJECT_LIB_NAME} PUBLIC dagmc-shared uwuw-shared )
 target_link_libraries(${PROJECT_LIB_NAME} PUBLIC OpenMP::OpenMP_CXX)
+target_link_libraries(${PROJECT_LIB_NAME} PUBLIC MPI::MPI_CXX)
 target_link_libraries(${PROJECT_LIB_NAME} PUBLIC ${VTK_LIBRARIES})
 
 # vtk_module_autoinit is needed

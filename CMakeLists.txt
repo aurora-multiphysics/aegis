@@ -22,6 +22,8 @@ find_package(Boost REQUIRED COMPONENTS ${Boost_PACKAGES})
 
 find_package(OpenMP REQUIRED)
 
+find_package(MPI REQUIRED)
+
 #include(${CMAKE_SOURCE_DIR}/cmake/SetBuildType.cmake)
 
 # Default to cpmpile with debugging symbols

@@ -58,8 +58,6 @@
 
 using namespace moab;
 
-
-
 class AegisClass  
 {
   public:
@@ -72,6 +70,9 @@ class AegisClass
   moab::Range select_target_surface();
   void terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination);
   void ray_hit_on_launch(particleBase &particle, DagMC::RayHistory &history);
+  void print_particle_stats(std::array<int, 4> particleStats);
+
+  int nFacets;
 
   protected:
 
@@ -94,6 +95,7 @@ class AegisClass
   double psiref = 0.0;
   bool noMidplaneTermination = false;
 
+  std::stringstream stringToPrint;
 
   std::unique_ptr<moab::DagMC> DAG;
   std::unique_ptr<moab::DagMC> polarDAG;
