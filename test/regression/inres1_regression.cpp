@@ -79,7 +79,7 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
   AegisClass aegis(aegisConfig);
 
   if (std::filesystem::exists(aegisConfig)){
-    aegis.Execute(aegisConfig);
+    aegis.Execute();
   }
 
   else {

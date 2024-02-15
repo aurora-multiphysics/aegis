@@ -19,8 +19,7 @@ int main(int argc, char **argv) {
   }
   else 
   {
-    std::cout << "Error - No config file provided, defaulting to 'settings.json'
-    " << std::endl;
+    std::cout << "Error - No config file provided, defaulting to 'settings.json'" << std::endl;
     settingsFile = "settings.json";
   }
 
