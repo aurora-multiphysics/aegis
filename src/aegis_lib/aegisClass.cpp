@@ -1,18 +1,26 @@
 #include "aegisClass.h"
 #include <mpi.h>
+#include <memory>
 
-void AegisClass::Execute(std::string settingsFile){
+AegisClass::AegisClass(std::string filename)
+{
+  JSONsettings = std::make_shared<InputJSON>(filename);
 
-  
+  read_params(JSONsettings);
+
+  bFieldData.setup(JSONsettings);
+  DAG = std::make_unique<moab::DagMC>();
+  vtkInterface = std::make_unique<VtkInterface>(JSONsettings);
+
+  init_geometry();
+}
+
+void AegisClass::Execute(){
+
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);  
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
-  settingsFileName = settingsFile;
-  init_solve();
-  init_geometry();
-
   vtkInterface->init();  
-//  polarDAG = std::make_unique<moab::DagMC>(DAG->moab_instance());
 
   std::vector<double> Bfield; 
   std::vector<double> polarPos(3);
@@ -86,7 +94,7 @@ void AegisClass::Execute(std::string settingsFile){
     else if (BdotN > 0){
       // vtkInterface->insert_next_uStrGrid("B.n_direction", 1.0);
     }
-    Q = bFieldData.omp_power_dep(psid, powerSOL, lambdaQ, BdotN, "exp");
+    Q = bFieldData.omp_power_dep(psid, BdotN, "exp");
     
     psiOnSurface = psi;
     
@@ -194,24 +202,29 @@ void AegisClass::Execute(std::string settingsFile){
   }
 
 
-void AegisClass::init_solve(){
-  
-  clock_t start = clock(); // start clock time
+void AegisClass::read_params(const std::shared_ptr<InputJSON> &inputs){
 
-  // set runtime parameters
-  runSettings.load_params(settingsFileName); 
-  //runSettings.print_params();
-  dagmcInputFile = runSettings.sValues["DAGMC_input"];
-  vtkInputFile = "target_facets.stl";
-  eqdskInputFile = runSettings.sValues["eqdsk_file"];
-  powerSOL = runSettings.dValues["Psol"];
-  lambdaQ = runSettings.dValues["lambda_q"];
-  trackStepSize = runSettings.dValues["dsTrack"];
-  maxTrackSteps = runSettings.iValues["nTrack"];
-  particleLaunchPos = runSettings.sValues["launchPos"];
-  drawParticleTracks = runSettings.sValues["trace"];
-  std::string noDep = runSettings.sValues["no_deposition"];
-  if (noDep == "yes") {noMidplaneTermination = true;}
+  json aegisNamelist;
+  if (inputs->data.contains("aegis_params"))
+  {
+    aegisNamelist = inputs->data["aegis_params"];
+    dagmcInputFile = aegisNamelist["DAGMC"];
+    trackStepSize = aegisNamelist["step_size"];
+    maxTrackSteps = aegisNamelist["max_steps"];
+    particleLaunchPos = aegisNamelist["launch_pos"];
+    noMidplaneTermination = aegisNamelist["force_no_deposition"];
+
+    if (aegisNamelist.contains("target_surfs"))
+    {
+      for (auto i:aegisNamelist["target_surfs"])
+      {
+        vectorOfTargetSurfs.push_back(i);
+      }
+    }
+  }
+  
+
+
 
   if (particleLaunchPos == "fixed")
   {
@@ -222,18 +235,8 @@ void AegisClass::init_solve(){
     LOG_WARNING << "Launching from random positions in triangles";
   }
 
-  userROutrBdry = runSettings.dValues["rOutrBdry"];
-  LOG_WARNING << "User set R value at Outer midplane = " << userROutrBdry << std::endl;
-
-  rmove = runSettings.dValues["rmove"];
-  zmove = runSettings.dValues["zmove"];
-  fscale = runSettings.dValues["fscale"];
-  psiref = runSettings.dValues["psiref"];
 
 
-  //initialise memeory for smart pointers
-  DAG = std::make_unique<moab::DagMC>();
-  vtkInterface = std::make_unique<VtkInterface>(drawParticleTracks);
 }
 
 void AegisClass::init_geometry(){
@@ -246,9 +249,9 @@ void AegisClass::init_geometry(){
   volID = DAG->entity_by_index(3,1);
 
   // setup B Field data
-  bFieldData.read_eqdsk(eqdskInputFile);
-  bFieldData.move(rmove, zmove, fscale);
-  bFieldData.psibdry = psiref; // abstract out to function
+  
+  bFieldData.move();
+  bFieldData.psiref_override();
   bFieldData.init_interp_splines();
   bFieldData.centre(1);
 
@@ -329,16 +332,18 @@ moab::Range AegisClass::select_target_surface(){
   std::unordered_map<EntityHandle, moab::Range> surfFacets;
   moab::Range surfFacetsKeys;
   int numTargetFacets = 0;
-  if (runSettings.vValues["surfs"][0] != 0)
+
+
+  if (!vectorOfTargetSurfs.empty())
   {
-    for (auto &s:runSettings.vValues["surfs"])
+    for (auto &surfID:vectorOfTargetSurfs)
     {
-      targetSurf = DAG->entity_by_id(2,s); // surface of interest
+      targetSurf = DAG->entity_by_id(2,surfID); // surface of interest
       DAG->moab_instance()->get_entities_by_type(targetSurf, MBTRI, surfFacets[targetSurf]);
-      std::cout << "Surface ID [" << s << "] " << "No. of elements " << surfFacets[targetSurf].size() << std::endl;
+      std::cout << "Surface ID [" << surfID << "] " << "No. of elements " << surfFacets[targetSurf].size() << std::endl;
       surfFacetsKeys.insert(targetSurf);
       numTargetFacets += surfFacets[targetSurf].size();
-      targetFacets.merge(surfFacets[targetSurf]);         
+      targetFacets.merge(surfFacets[targetSurf]);  
     }
 
     LOG_WARNING << "Surface IDs provided. Launching from surfaces given by global IDs:";
@@ -346,18 +351,19 @@ moab::Range AegisClass::select_target_surface(){
   else
   {
     targetFacets = facetsList;
-    for (auto &s:surfsList)
+    for (auto &surfEH:surfsList)
     {
-      DAG->moab_instance()->get_entities_by_type(s, MBTRI, surfFacets[s]);
-      surfFacetsKeys.insert(s);
-      std::cout << "Surface ID [" << s << "] " << "No. of elements " << surfFacets[s].size() << std::endl;
-      numTargetFacets += surfFacets[s].size();             
-      targetFacets.merge(surfFacets[s]);  
+      DAG->moab_instance()->get_entities_by_type(surfEH, MBTRI, surfFacets[surfEH]);
+      surfFacetsKeys.insert(surfEH);
+      std::cout << "Surface ID [" << surfEH << "] " << "No. of elements " << surfFacets[surfEH].size() << std::endl;
+      numTargetFacets += surfFacets[surfEH].size();             
+      targetFacets.merge(surfFacets[surfEH]); 
     }
     LOG_WARNING << "No surface ID provided. Launching from all surfaces by default. WARNING - Will take a significant amount of time for larger geometry sets";
   }
   LOG_WARNING << "Total Number of Triangles rays launched from = "
               << numTargetFacets;
+
   moab::EntityHandle targetFacetsSet;
   moab::Range target_facets;
   DAG->moab_instance()->create_meshset(MESHSET_SET, targetFacetsSet);
@@ -392,13 +398,12 @@ void AegisClass::mpi_particle_stats(){
   for (int i=0; i<nprocs; ++i){
     if (rank == i){
       std::cout << std::endl << "process " << i << " has the following particle stats:" << std::endl;
-      for (auto k: integrator->particle_stats())
-      {
-        std::cout << k << std::endl;
-      } 
+      std::array localRankParticleStats = integrator->particle_stats();
+
+      std::cout << "Depositing - " << localRankParticleStats[0] << std::endl;
+      std::cout << "SHADOWED - " << localRankParticleStats[1] << std::endl;
+      std::cout << "LOST - " << localRankParticleStats[2] << std::endl;
+      std::cout << "MAX LENGTH - " << localRankParticleStats[3] << std::endl;
     }
   }
 }
-
-
-

@@ -88,3 +88,29 @@ void settings::print_params()
   std::cout << std::endl;
 
 }
+
+InputJSON::InputJSON()
+{
+
+}
+
+InputJSON::InputJSON(std::string filename){
+  filepath = filename;
+
+  data = read_json();
+}
+
+json InputJSON::read_json(){
+  std::ifstream file(filepath);
+  if (file.is_open())
+  {
+    std::cout << "Settings found in JSON file '" << filepath << "'" << std::endl;
+    json data = json::parse(file); 
+    return data;
+  }
+  else
+  {
+    std::cout << "Error! The requested JSON file '" << filepath << "' does not exist." << std::endl;  
+    return 0;
+  }
+} 

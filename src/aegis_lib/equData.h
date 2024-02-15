@@ -6,6 +6,8 @@
 #include <fstream>
 #include <cmath>
 #include "alglib/interpolation.h"
+#include "settings.hpp"
+#include "simpleLogger.h"
 
 
 struct eqdskData
@@ -77,6 +79,56 @@ class equData{
 
   public:
 
+  void setup(const std::shared_ptr<InputJSON> &inputs);
+
+  
+  // Return eqdsk struct
+  eqdskData get_eqdsk_struct();
+
+  // Read eqdsk file
+  void read_eqdsk(std::string filename);
+
+  // Write out eqdsk data back out in eqdsk format
+  void write_eqdsk_out();
+
+  // Initialise the 1D arrays and 2d spline functions
+  void init_interp_splines();
+
+  // Write out psi(R,Z) data for gnuplotting
+  void gnuplot_out();
+
+  // Find central psi extrema
+  void centre(int cenopt);
+
+  // calculate r_min and r_max as functions of theta_j
+  void r_extrema();
+
+  // Create 2d spline structures for R(psi,theta) and Z(psi,theta)
+  void rz_splines();
+
+  // Caculate B field vector (in toroidal polars) at given position
+  // set string to "polar" if position vector already in polars
+  std::vector<double> b_field(std::vector<double> position, std::string startingFrom);
+  
+  // Convert B Field vectors to cartesian given polar form and value of angle 
+  std::vector<double> b_field_cart(std::vector<double> polarBVector, double phi, int normalise); 
+
+  // Write out positions and associated BField vectors in cartesian and/or polar toroidal
+  void write_bfield(bool plotRZ, bool plotXYZ);
+
+  std::vector<double> b_ripple(std::vector<double> pos, std::vector<double> bField);
+
+  // Determine Rm and Bpm (R and Bpol at omp)
+  void boundary_rb();
+
+  double omp_power_dep(double psi, double bn, std::string formula);
+
+  void psi_limiter(std::vector<std::vector<double>> vertices);
+
+  void move();
+
+  void psiref_override();
+
   // override for ITER corrections to eqdsk
   bool OVERRIDE_ITER = true;
 
@@ -140,53 +192,15 @@ class equData{
   alglib::spline2dinterpolant psiSpline; // 2d spline interpolant for Psi(R,Z)
   alglib::spline1dinterpolant fSpline; // 1d spline interpolant for f(psi) or I(psi) toroidal component
 
-  // Methods
-  
-  // Return eqdsk struct
-  eqdskData get_eqdsk_struct();
-
-  // Read eqdsk file
-  void read_eqdsk(std::string filename);
-
-  // Write out eqdsk data back out in eqdsk format
-  void write_eqdsk_out();
-
-  // Initialise the 1D arrays and 2d spline functions
-  void init_interp_splines();
-
-  // Write out psi(R,Z) data for gnuplotting
-  void gnuplot_out();
-
-  // Find central psi extrema
-  void centre(int cenopt);
-
-  // calculate r_min and r_max as functions of theta_j
-  void r_extrema();
-
-  // Create 2d spline structures for R(psi,theta) and Z(psi,theta)
-  void rz_splines();
-
-  // Caculate B field vector (in toroidal polars) at given position
-  // set string to "polar" if position vector already in polars
-  std::vector<double> b_field(std::vector<double> position, std::string startingFrom);
-  
-  // Convert B Field vectors to cartesian given polar form and value of angle 
-  std::vector<double> b_field_cart(std::vector<double> polarBVector, double phi, int normalise); 
-
-  // Write out positions and associated BField vectors in cartesian and/or polar toroidal
-  void write_bfield(bool plotRZ, bool plotXYZ);
-
-  std::vector<double> b_ripple(std::vector<double> pos, std::vector<double> bField);
-
-  // Determine Rm and Bpm (R and Bpol at omp)
-  void boundary_rb();
-
-  double omp_power_dep(double psi, double Psol, double lambda_q, double bn, std::string formula);
-
-  void psi_limiter(std::vector<std::vector<double>> vertices);
-
-  void move(double rmove, double zmove, double fscale);
-
+  private:
+  std::string eqdskFilepath; // eqdsk file path
+  double powerSOL = 0.0; // power at scape off layer to be mapped onto surfaces
+  double lambdaQ = 0.0; // scrape off layer width
+  double rOutrBdry = 0.0; // R at outer midplane
+  double rmove = 0.0; // move equilibirium in R
+  double zmove = 0.0; // move equilibrium in Z
+  double fscale = 1.0; // scale equilibrium
+  double psiref = 0.0; // user specified psi if necessary   
 };
 
 #endif

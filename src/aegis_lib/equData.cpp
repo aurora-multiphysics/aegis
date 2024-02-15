@@ -8,12 +8,32 @@
 #include <sstream>
 #include <vector>
 
-
 #include "simpleLogger.h"
 #include "equData.h"
-#include "alglib/interpolation.h"
 #include "coordtfm.h"
 
+
+void equData::setup(const std::shared_ptr<InputJSON> &inputs){
+
+  json equilNamelist;
+  if (inputs->data.contains("equil_params"))
+  { 
+    equilNamelist = inputs->data["equil_params"];
+    eqdskFilepath = equilNamelist["eqdsk"];
+    cenopt = equilNamelist["cenopt"];
+    powerSOL = equilNamelist["P_sol"];
+    lambdaQ = equilNamelist["lambda_q"];
+    psiref = equilNamelist["psiref"];
+    rOutrBdry = equilNamelist["r_outrbdry"];
+    rmove = equilNamelist["rmove"];
+  }
+
+  read_eqdsk(eqdskFilepath);
+}
+void equData::psiref_override()
+{
+  psibdry = psiref;
+}
 
 // Return eqdsk data structure
 eqdskData equData::get_eqdsk_struct()
@@ -35,8 +55,12 @@ void equData::read_eqdsk(std::string filename)
     std::vector<int> header_ints;
 
     LOG_WARNING << "eqdsk file to be read - " << filename;
-
+    if (!eqdsk_file.is_open())
+    {
+      std::cout << "Error could not open file " << filename << std::endl;
+    }
     // Extract header information
+
     std::getline(eqdsk_file, eqdsk.header);
     header_ss << eqdsk.header;
     int number_found;
@@ -1177,7 +1201,7 @@ void equData::boundary_rb()
   LOG_WARNING << "Toroidal BField component (Bt) " << zbt;
 }
 
-double equData::omp_power_dep(double psi, double Psol, double lambda_q, double bn, std::string formula)
+double equData::omp_power_dep(double psi, double bn, std::string formula)
 {
   double heatFlux;
   double exponential, fpfac;
@@ -1196,7 +1220,7 @@ double equData::omp_power_dep(double psi, double Psol, double lambda_q, double b
   zrbfac = 1/(2*M_PI*zrm*zbpm);
 
 
-  zrblfac = zrbfac/lambda_q;
+  zrblfac = zrbfac/lambdaQ;
   power_split = 0.5;
 
   // std::cout << "RBDRY = " << rbdry << std::endl;
@@ -1214,7 +1238,7 @@ double equData::omp_power_dep(double psi, double Psol, double lambda_q, double b
 
   if (formula == "exp")
   {
-    fpfac = power_split*Psol*zrblfac;
+    fpfac = power_split*powerSOL*zrblfac;
     heatFlux = fpfac*bn*exp(rblfac*psi); // added bn into this formula because it was missing
   }
   //std::cout << "FPFAC = " << fpfac << std::endl;
@@ -1291,7 +1315,7 @@ void equData::psi_limiter(std::vector<std::vector<double>> vertices)
 
 }
 
-void equData::move(double rmove, double zmove, double fscale)
+void equData::move()
 {
   double zgfac; // geometrical factor
   std::cout << "BField Data has been moved and scaled by:" << std::endl;

@@ -75,8 +75,8 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
     FAIL() << "Cannot find '" << smarddaFile << "'";
   }
 //-------------- RUN AEGIS -------------
-  AegisClass aegis;
-  std::string aegisConfig = "testSettings.txt";
+  std::string aegisConfig = "settings.json";
+  AegisClass aegis(aegisConfig);
 
   if (std::filesystem::exists(aegisConfig)){
     aegis.Execute(aegisConfig);

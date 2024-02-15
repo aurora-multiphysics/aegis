@@ -61,9 +61,9 @@ using namespace moab;
 class AegisClass  
 {
   public:
-
-  void Execute(std::string settingsFile); 
-  void init_solve();
+  AegisClass(std::string filename);
+  void Execute(); 
+  void read_params(const std::shared_ptr<InputJSON> &inputs);
   void init_geometry();
   int num_facets();
   std::vector<std::pair<double,double>> psiQ_values; // for l2 norm test
@@ -79,7 +79,7 @@ class AegisClass
 
   private:
   std::string settingsFileName;
-  settings runSettings;
+  std::shared_ptr<InputJSON> JSONsettings; 
   std::string dagmcInputFile;
   std::string vtkInputFile;
   std::string eqdskInputFile;
@@ -95,6 +95,7 @@ class AegisClass
   double fscale = 1.0;
   double psiref = 0.0;
   bool noMidplaneTermination = false;
+  std::vector<int> vectorOfTargetSurfs;
 
   std::stringstream stringToPrint;
 

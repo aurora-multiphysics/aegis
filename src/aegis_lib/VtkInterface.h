@@ -20,11 +20,12 @@
 #include <vtkUnstructuredGridWriter.h>
 #include <vtkAppendFilter.h>
 
+#include <settings.hpp>
 
 class VtkInterface
 {
   public:
-  VtkInterface(std::string particleTrace);
+  VtkInterface(const std::shared_ptr<InputJSON> &JSONsettings);
   void init_Ptrack_root();
   void init_Ptrack_branch(std::string branchName);
   void init(); // initialise unstructured grid and particle tracks multiblock

@@ -2,12 +2,18 @@
 #include "simpleLogger.h"
 
 
-VtkInterface::VtkInterface(std::string particleTrace)
+
+VtkInterface::VtkInterface(const std::shared_ptr<InputJSON> &inputs)
 {
+  json vtkNamelist;
   unstructuredGrid = vtkSmartPointer<vtkUnstructuredGrid>::New();
-  if (particleTrace == "yes") {
-    drawParticleTracks = true;
+
+  if (inputs->data.contains("vtk_params"))
+  {
+    vtkNamelist = inputs->data["vtk_params"];
+    drawParticleTracks = vtkNamelist["draw_particle_tracks"];
   }
+
 }
 
 void VtkInterface::init_Ptrack_root()
