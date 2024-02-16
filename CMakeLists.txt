@@ -21,8 +21,8 @@ set(BOOST_REQUESTED_VERSION 1.71)
 find_package(Boost REQUIRED COMPONENTS ${Boost_PACKAGES})
 find_package(OpenMP REQUIRED)
 find_package(MPI REQUIRED)
-#find_package(nlohmann_json REQUIRED)
 add_subdirectory(externals/json)
+include_directories(externals/json/include)
 
 #include(${CMAKE_SOURCE_DIR}/cmake/SetBuildType.cmake)
 
