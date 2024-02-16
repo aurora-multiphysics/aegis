@@ -129,6 +129,8 @@ class equData{
 
   void psiref_override();
 
+  std::array<double, 3> get_midplane_params(); // return rInnerMidplane, rOuterMidplane, zMidplane
+
   // override for ITER corrections to eqdsk
   bool OVERRIDE_ITER = true;
 
@@ -193,6 +195,9 @@ class equData{
   alglib::spline1dinterpolant fSpline; // 1d spline interpolant for f(psi) or I(psi) toroidal component
 
   private:
+  bool debug = false;
+  bool drawEquRZ = false;
+  bool drawEquXYZ = false;
   std::string eqdskFilepath; // eqdsk file path
   double powerSOL = 0.0; // power at scape off layer to be mapped onto surfaces
   double lambdaQ = 0.0; // scrape off layer width

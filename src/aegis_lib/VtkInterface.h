@@ -31,8 +31,8 @@ class VtkInterface
   void init(); // initialise unstructured grid and particle tracks multiblock
   vtkNew<vtkPolyData> new_track(std::string branchName, vtkSmartPointer<vtkPoints> points, double heatflux);
   void new_vtkArray(std::string arrName, int nComponents);
-  void add_vtkArrays(std::string vtk_input_file);
-  void write_unstructuredGrid(std::string vtk_input_file, std::string fileName);
+  void add_vtkArrays();
+  void write_unstructuredGrid(std::string fileName);
   void write_particle_track(std::string branchName, double heatflux);
   void write_multiBlockData(std::string fileName);
   void insert_next_uStrGrid(std::string arrayName, std::vector<double> valuesToAdd);
@@ -51,7 +51,7 @@ class VtkInterface
   vtkSmartPointer<vtkUnstructuredGrid> unstructuredGrid;
   std::map<std::string, int> multiBlockCounters; // map of various counters for each branch
   vtkSmartPointer<vtkPoints> particleTrackPoints;
-
+  std::string vtk_input_file;
   bool drawParticleTracks = false;
 
 };

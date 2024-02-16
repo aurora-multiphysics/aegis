@@ -130,7 +130,7 @@ void AegisClass::Execute(){
         particle.set_dir(bFieldData);
         particle.align_dir_to_surf(BdotN);
       }
-      particle.check_if_midplane_reached(bFieldData.zcen, bFieldData.rbdry, userROutrBdry);
+      particle.check_if_midplane_reached(bFieldData.get_midplane_params());
       
       if (particle.atMidplane != 0 && !noMidplaneTermination){ 
         terminate_particle(facet, history, terminationState::DEPOSITING);
@@ -190,10 +190,8 @@ void AegisClass::Execute(){
 
     }
 
-    vtkInterface->write_unstructuredGrid(vtkInputFile, "out.vtk");
-    if (drawParticleTracks == "yes"){
-      vtkInterface->write_multiBlockData("particle_tracks.vtm");
-    }
+    vtkInterface->write_unstructuredGrid("out.vtk");
+    vtkInterface->write_multiBlockData("particle_tracks.vtm");
     print_particle_stats(totalParticleStats);
   }
 
