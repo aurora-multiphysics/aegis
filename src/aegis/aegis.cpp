@@ -12,17 +12,16 @@ int main(int argc, char **argv) {
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
   std::string settingsFile;
-
   if (argc > 1) 
   {
     settingsFile = argv[1];
   }
   else 
   {
-    std::cout << "Error - No config file provided, defaulting to 'settings.json'" << std::endl;
-    settingsFile = "settings.json";
+    std::cout << "Error - No config file provided, defaulting to 'aegis_settings.json'" << std::endl;
+    settingsFile = "aegis_settings.json";
   }
-
+ 
   AegisClass aegis(settingsFile);
   aegis.Execute();
 

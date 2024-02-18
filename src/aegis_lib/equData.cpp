@@ -31,6 +31,8 @@ void equData::setup(const std::shared_ptr<InputJSON> &inputs){
     debug = equilNamelist["print_debug_info"];
   }
 
+  std::cout << "eqdskFilePath = " << eqdskFilepath << std::endl;
+
   read_eqdsk(eqdskFilepath);
 }
 void equData::psiref_override()
@@ -60,7 +62,7 @@ void equData::read_eqdsk(std::string filename)
     LOG_WARNING << "eqdsk file to be read - " << filename;
     if (!eqdsk_file.is_open())
     {
-      std::cout << "Error could not open file " << filename << std::endl;
+      std::cout << "Error! Could not open eqdsk file " << filename << std::endl;
     }
     // Extract header information
 
