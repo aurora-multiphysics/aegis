@@ -2,12 +2,19 @@
 #include "simpleLogger.h"
 
 
-VtkInterface::VtkInterface(std::string particleTrace)
+
+VtkInterface::VtkInterface(const std::shared_ptr<InputJSON> &inputs)
 {
+  json vtkNamelist;
   unstructuredGrid = vtkSmartPointer<vtkUnstructuredGrid>::New();
-  if (particleTrace == "yes") {
-    drawParticleTracks = true;
+
+  if (inputs->data.contains("vtk_params"))
+  {
+    vtkNamelist = inputs->data["vtk_params"];
+    drawParticleTracks = vtkNamelist["draw_particle_tracks"];
+    vtk_input_file = vtkNamelist["VTK"];
   }
+
 }
 
 void VtkInterface::init_Ptrack_root()
@@ -19,7 +26,6 @@ void VtkInterface::init_Ptrack_root()
     multiBlockRoot->SetBlock(0, multiBlockBranch); // set block 
     multiBlockRoot->GetMetaData(static_cast<int>(0)) // name block
                   ->Set(vtkCompositeDataSet::NAME(), "Particle Tracks");
-    LOG_INFO << "Initialising particle_tracks root ";
 }
 
 void VtkInterface::init_Ptrack_branch(std::string branchName)
@@ -32,7 +38,6 @@ void VtkInterface::init_Ptrack_branch(std::string branchName)
     multiBlockBranch->GetMetaData(static_cast<int>(staticCast)) // name block
                    ->Set(vtkCompositeDataSet::NAME(), branchName);
     multiBlockCounters[branchName] = 0;
-    std::cout << "vtkMultiBlock Particle_track Branch Initialised - " << branchName << std::endl;
   }
 }
 
@@ -43,17 +48,15 @@ void VtkInterface::init(){
   }
 
   new_vtkArray("Q", 1);
-  new_vtkArray("B.n_direction", 1);
-  new_vtkArray("Normal", 3);
-  new_vtkArray("B_field", 3);
+  // new_vtkArray("B.n_direction", 1);
+  // new_vtkArray("Normal", 3);
+  // new_vtkArray("B_field", 3);
   new_vtkArray("Psi_Start", 1);
-  new_vtkArray("B.n", 1);
+  // new_vtkArray("B.n", 1);
 
-  LOG_WARNING << "VTK-AEGIS Interface initialised";
-  std::cout << "Number of arrays for vtkUnstructuredGrid initalised - " << arrays.size() << std::endl;
   
   if (drawParticleTracks){
-    std::cout << "vtkMultiBlockDataSet initialised" << std::endl; 
+    std::cout << "vtkMultiBlockDataSet initialised for particle tracks" << std::endl; 
   }
 }
 
@@ -97,7 +100,7 @@ void VtkInterface::new_vtkArray(std::string arrName, int nComponents)
   LOG_INFO << "Initialised new vtkDoubleArray '" << arrName  << "' with nComponents = " << nComponents;
 }
 
-void VtkInterface::add_vtkArrays(std::string vtk_input_file) // read stl and add arrays
+void VtkInterface::add_vtkArrays() // read stl and add arrays
 {
   // Read in STL file 
   vtkNew<vtkSTLReader> vtkstlReader; // STL reader 
@@ -121,9 +124,10 @@ void VtkInterface::add_vtkArrays(std::string vtk_input_file) // read stl and add
   }
 }
 
-void VtkInterface::write_unstructuredGrid(std::string vtk_input_file, std::string fileName)
+
+void VtkInterface::write_unstructuredGrid(std::string fileName)
 {
-  add_vtkArrays(vtk_input_file);
+  add_vtkArrays();
   vtkNew<vtkUnstructuredGridWriter> vtkUstrWriter;
   vtkUstrWriter->SetFileName(fileName.data());
   vtkUstrWriter->SetInputData(unstructuredGrid);
@@ -142,10 +146,14 @@ void VtkInterface::write_particle_track(std::string branchName, double heatflux)
 }
 
 void VtkInterface::write_multiBlockData(std::string fileName){
-  vtkNew<vtkXMLMultiBlockDataWriter> vtkMBWriter;
-  vtkMBWriter->SetFileName("particle_tracks.vtm");
-  vtkMBWriter->SetInputData(multiBlockRoot);
-  vtkMBWriter->Write();
+  if (!drawParticleTracks) {return;} // early return if drawing particle tracks disabled
+  else
+  {
+    vtkNew<vtkXMLMultiBlockDataWriter> vtkMBWriter;
+    vtkMBWriter->SetFileName("particle_tracks.vtm");
+    vtkMBWriter->SetInputData(multiBlockRoot);
+    vtkMBWriter->Write();
+  }
 }
 
 void VtkInterface::insert_next_uStrGrid(std::string arrayName, std::vector<double> valuesToAdd){
@@ -162,4 +170,10 @@ void VtkInterface::init_new_vtkPoints(){
 
 void VtkInterface::insert_next_point_in_track(std::vector<double> pointsToAdd){
   particleTrackPoints->InsertNextPoint(pointsToAdd[0], pointsToAdd[1], pointsToAdd[2]);
+}
+
+void VtkInterface::mpi_write_uStrGrid(std::string vtk_input_file, std::vector<double> heatfluxVector){
+
+
+
 }

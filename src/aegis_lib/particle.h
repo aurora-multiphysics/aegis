@@ -47,7 +47,7 @@ class particleBase
   void align_dir_to_surf(double Bn); // align particle dir to surface normal
   void update_vectors(double distanceTravelled); // update position  
   void update_vectors(double distanceTravelled, equData &EquData); // overload to update dir as well
-  void check_if_midplane_reached(double zcen, double rInrBdry, double rOutrBdry); // check if particle has reached inner or outer midplane and set value of atMidplane
+  void check_if_midplane_reached(const std::array<double, 3> &midplaneParameters); // check if particle has reached inner or outer midplane and set value of atMidplane
 
 };
 

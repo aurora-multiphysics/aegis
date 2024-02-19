@@ -44,7 +44,7 @@
 #include "moab/Core.hpp"
 #include "moab/Interface.hpp"
 #include <moab/OrientedBoxTreeTool.hpp>
-#include "settings.hpp"
+#include "inputs.h"
 #include "simpleLogger.h"
 #include "equData.h"
 #include "source.h"
@@ -58,26 +58,28 @@
 
 using namespace moab;
 
-
-
 class AegisClass  
 {
   public:
-
-  void Execute(std::string settingsFile); 
-  void init_solve();
+  AegisClass(std::string filename);
+  void Execute(); 
+  void read_params(const std::shared_ptr<InputJSON> &inputs);
   void init_geometry();
   int num_facets();
   std::vector<std::pair<double,double>> psiQ_values; // for l2 norm test
   moab::Range select_target_surface();
   void terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination);
   void ray_hit_on_launch(particleBase &particle, DagMC::RayHistory &history);
+  void print_particle_stats(std::array<int, 4> particleStats);
+  void mpi_particle_stats();
+  int rank, nprocs;
+  int nFacets;
 
   protected:
 
   private:
   std::string settingsFileName;
-  settings runSettings;
+  std::shared_ptr<InputJSON> JSONsettings; 
   std::string dagmcInputFile;
   std::string vtkInputFile;
   std::string eqdskInputFile;
@@ -93,7 +95,9 @@ class AegisClass
   double fscale = 1.0;
   double psiref = 0.0;
   bool noMidplaneTermination = false;
+  std::vector<int> vectorOfTargetSurfs;
 
+  std::stringstream stringToPrint;
 
   std::unique_ptr<moab::DagMC> DAG;
   std::unique_ptr<moab::DagMC> polarDAG;
@@ -110,6 +114,8 @@ class AegisClass
   int rayOrientation = 1; // rays are fired along surface normals
   double trackLength = 0.0;
   int facetCounter = 0;
+  std::vector<double> qValues;
+  std::vector<double> psiValues;
 
   equData bFieldData;
   bool plotBFieldRZ = false;

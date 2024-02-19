@@ -136,7 +136,7 @@ void particleBase::update_vectors(double distanceTravelled, equData &EquData)
   set_dir(EquData);
 }
 
-void particleBase::check_if_midplane_reached(double zcen, double rInrBdry, double rOutrBdry)
+void particleBase::check_if_midplane_reached(const std::array<double, 3> &midplaneParameters)
 {
   double x = pos[0];
   double y = pos[1];
@@ -146,20 +146,24 @@ void particleBase::check_if_midplane_reached(double zcen, double rInrBdry, doubl
   double prevZ = previousPos[2]; 
   atMidplane = 0;
 
+  double rInnerMidplane = midplaneParameters[0]; // R at inner midplane
+  double rOuterMidplane = midplaneParameters[1]; // R at outer midplane
+  double zMidplane = midplaneParameters[2]; // Z at midplane
+
   if (prevZ > currentZ)
   {
-    if (currentZ <= zcen)
+    if (currentZ <= zMidplane)
     {
-      if (r <= rInrBdry) {atMidplane = 1;}
-      else if (r >= rOutrBdry) {atMidplane = 2;}
+      if (r <= rInnerMidplane) {atMidplane = 1;}
+      else if (r >= rOuterMidplane) {atMidplane = 2;}
     }
   }
   else if (prevZ < currentZ)
   {
-    if (currentZ >= zcen)
+    if (currentZ >= zMidplane)
     {
-      if (r <= rInrBdry) {atMidplane = 1;}
-      else if (r >= rOutrBdry) {atMidplane = 2;}
+      if (r <= rInnerMidplane) {atMidplane = 1;}
+      else if (r >= rOuterMidplane) {atMidplane = 2;}
     }
   }
 }

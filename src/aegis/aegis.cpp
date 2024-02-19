@@ -1,17 +1,42 @@
 #include "aegisClass.h"
+#include <mpi.h>
+#include "inputs.h"
 
-int main() {
-  clock_t start = clock();
-  
-  AegisClass aegis;
-  aegis.Execute("runSettings.txt");
+int main(int argc, char **argv) {
 
-  clock_t end = clock();
-  double elapsed = double(end - start)/CLOCKS_PER_SEC;
+  int rank, nprocs;
+  MPI_Init(&argc, &argv);
 
-  std::cout << "------------------------------------------------------" << std::endl;
-  std::cout << "Elapsed Aegis run time = " << elapsed << std::endl;
-  std::cout << "------------------------------------------------------" << std::endl;
+  double startTime = MPI_Wtime();
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+  std::string settingsFile;
+  if (argc > 1) 
+  {
+    settingsFile = argv[1];
+  }
+  else 
+  {
+    std::cout << "Error - No config file provided, defaulting to 'aegis_settings.json'" << std::endl;
+    settingsFile = "aegis_settings.json";
+  }
+ 
+  AegisClass aegis(settingsFile);
+  aegis.Execute();
+
+  for (int i=0; i<nprocs; ++i){
+    if (rank == i)
+    {
+      double endTime = MPI_Wtime();
+      double totalTime = endTime - startTime;
+      std::cout << "Elapsed wall Time on process " << i << " = " << totalTime << std::endl; 
+      std::cout << "----------------------------" << std::endl << std::endl;  
+    }
+  }
+
+
+  MPI_Finalize();
 
   return 0;
 }

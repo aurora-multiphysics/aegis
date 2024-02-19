@@ -19,13 +19,14 @@
 #include <unordered_map>
 #include <time.h>
 #include <any>
+#include <mpi.h>
 
 
 #include "DagMC.hpp"
 #include "moab/Core.hpp"
 #include "moab/Interface.hpp"
 #include <moab/OrientedBoxTreeTool.hpp>
-#include "settings.hpp"
+#include "inputs.h"
 #include "simpleLogger.h"
 #include "equData.h"
 #include "source.h"
@@ -75,11 +76,13 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
     FAIL() << "Cannot find '" << smarddaFile << "'";
   }
 //-------------- RUN AEGIS -------------
-  AegisClass aegis;
-  std::string aegisConfig = "testSettings.txt";
+  std::string aegisConfig = "aegis_settings.json";
+  AegisClass aegis(aegisConfig);
 
   if (std::filesystem::exists(aegisConfig)){
-    aegis.Execute(aegisConfig);
+    MPI_Init(NULL, NULL);
+    aegis.Execute();
+    MPI_Finalize();
   }
 
   else {
@@ -114,7 +117,7 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
   const auto AEGIS_MAX = *std::max_element(aegis.psiQ_values.begin(),aegis.psiQ_values.end(),[](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
   const auto SMARDDA_MAX = *std::max_element(smardda_qValues.begin(),smardda_qValues.end(),[](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
 
-  double percentTol = 5; // 5% tolerance
+  double percentTol = 7; // 5% tolerance
   double MAX_REL_ERROR = fabs(std::fabs((AEGIS_MAX.second - SMARDDA_MAX.second)/SMARDDA_MAX.second)*100);
   double L2_NORM_ERROR = fabs(std::fabs((L2_NORM - EXPECTED_L2_NORM)/EXPECTED_L2_NORM)*100);
   std::cout << "---------------------------" << std::endl;

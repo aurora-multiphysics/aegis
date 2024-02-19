@@ -1,12 +1,26 @@
 #include "aegisClass.h"
+#include <mpi.h>
+#include <memory>
 
-void AegisClass::Execute(std::string settingsFile){
-  settingsFileName = settingsFile;
-  init_solve();
+AegisClass::AegisClass(std::string filename)
+{
+  JSONsettings = std::make_shared<InputJSON>(filename);
+
+  read_params(JSONsettings);
+
+  bFieldData.setup(JSONsettings);
+  DAG = std::make_unique<moab::DagMC>();
+  vtkInterface = std::make_unique<VtkInterface>(JSONsettings);
+
   init_geometry();
+}
+
+void AegisClass::Execute(){
+
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);  
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
   vtkInterface->init();  
-//  polarDAG = std::make_unique<moab::DagMC>(DAG->moab_instance());
 
   std::vector<double> Bfield; 
   std::vector<double> polarPos(3);
@@ -15,10 +29,16 @@ void AegisClass::Execute(std::string settingsFile){
   std::vector<double> triA(3), triB(3), triC(3);
   moab::Range targetSurfaceList = select_target_surface();
   integrator = std::make_unique<surfaceIntegrator>(targetSurfaceList);
-  std::ofstream particleFinalPos ("particleFinalPos.txt");
 
-  for (auto facet:targetSurfaceList){ // loop over all facets
-    facetCounter +=1;
+  int totalNumberOfFacets = targetSurfaceList.size();
+  int numberofFacets = totalNumberOfFacets / nprocs;
+  int startFacet = rank * numberofFacets;
+  int endFacet = startFacet + numberofFacets;
+  nFacets = 0;
+  
+  for (int i=startFacet; i<endFacet; ++i){ // loop over all facets
+    const auto facet = targetSurfaceList[i];
+    ++nFacets;
     particleBase particle;
     std::vector<moab::EntityHandle> triNodes;
     DAG->moab_instance()->get_adjacencies(&facet, 1, 0, false, triNodes);
@@ -30,7 +50,7 @@ void AegisClass::Execute(std::string settingsFile){
       triC[j] = triCoords[j+6];
     }
     triSource Tri(triA, triB, triC, facet); 
-    vtkInterface->insert_next_uStrGrid("Normal", Tri.unitNormal);
+    // vtkInterface->insert_next_uStrGrid("Normal", Tri.unitNormal);
 
     if (particleLaunchPos == "fixed"){
       particle.set_pos(Tri.centroid());
@@ -43,37 +63,39 @@ void AegisClass::Execute(std::string settingsFile){
     particle.check_if_in_bfield(bFieldData); // if out of bounds skip to next triangle
     if (particle.outOfBounds){
       LOG_INFO << "Particle start is out of magnetic field bounds. Skipping to next triangle. Check correct eqdsk is being used for the given geometry";
-      vtkInterface->insert_next_uStrGrid("B_field", {0.0, 0.0, 0.0});
-      vtkInterface->insert_next_uStrGrid("Psi_Start", 0.0);
-      vtkInterface->insert_next_uStrGrid("B.n", 0.0);
-      vtkInterface->insert_next_uStrGrid("B.n_direction", 0.0);
-      vtkInterface->insert_next_uStrGrid("Q", 0.0);
+      // vtkInterface->insert_next_uStrGrid("B_field", {0.0, 0.0, 0.0});
+      // vtkInterface->insert_next_uStrGrid("Psi_Start", 0.0);
+      // vtkInterface->insert_next_uStrGrid("B.n", 0.0);
+      // vtkInterface->insert_next_uStrGrid("B.n_direction", 0.0);
+    //  vtkInterface->insert_next_uStrGrid("Q", 0.0);
+    qValues.push_back(0.0);
       continue;
     }
-    std::ofstream launchPos ("launch_pos.txt");
-    launchPos << particle.launchPos[0] << " " << particle.launchPos[1] << " " << particle.launchPos[2] << std::endl;
     vtkInterface->init_new_vtkPoints();
-    vtkInterface->insert_next_point_in_track(particle.launchPos);
+    // vtkInterface->insert_next_point_in_track(particle.launchPos);
 
     particle.set_dir(bFieldData);
     polarPos = coordTfm::cart_to_polar(particle.launchPos, "forwards");
 
-    vtkInterface->insert_next_uStrGrid("B_field", particle.BfieldXYZ);
+    // vtkInterface->insert_next_uStrGrid("B_field", particle.BfieldXYZ);
     BdotN = Tri.dot_product(particle.BfieldXYZ); 
     psi = particle.get_psi(bFieldData); 
+
+    psiValues.push_back(psi);
     psid = psi + bFieldData.psibdry; 
 
-    vtkInterface->insert_next_uStrGrid("Psi_Start", psi);
-    vtkInterface->insert_next_uStrGrid("B.n", BdotN);
+    // vtkInterface->insert_next_uStrGrid("Psi_Start", psi);
+    // vtkInterface->insert_next_uStrGrid("B.n", BdotN);
     particle.align_dir_to_surf(BdotN);
 
     if (BdotN < 0){
-      vtkInterface->insert_next_uStrGrid("B.n_direction", -1.0);
+      // vtkInterface->insert_next_uStrGrid("B.n_direction", -1.0);
     }
     else if (BdotN > 0){
-      vtkInterface->insert_next_uStrGrid("B.n_direction", 1.0);
+      // vtkInterface->insert_next_uStrGrid("B.n_direction", 1.0);
     }
-    Q = bFieldData.omp_power_dep(psid, powerSOL, lambdaQ, BdotN, "exp");
+    Q = bFieldData.omp_power_dep(psid, BdotN, "exp");
+    
     psiOnSurface = psi;
     
     // Start ray tracing
@@ -108,10 +130,9 @@ void AegisClass::Execute(std::string settingsFile){
         particle.set_dir(bFieldData);
         particle.align_dir_to_surf(BdotN);
       }
-      particle.check_if_midplane_reached(bFieldData.zcen, bFieldData.rbdry, userROutrBdry);
+      particle.check_if_midplane_reached(bFieldData.get_midplane_params());
       
       if (particle.atMidplane != 0 && !noMidplaneTermination){ 
-        particleFinalPos << particle.pos[0] << " " << particle.pos[1] << " " << particle.pos[2] << std::endl; 
         terminate_particle(facet, history, terminationState::DEPOSITING);
         break;
       }
@@ -126,31 +147,82 @@ void AegisClass::Execute(std::string settingsFile){
 
   }
   // write out data and print final
-  vtkInterface->write_unstructuredGrid(vtkInputFile, "out.vtk");
-  if (drawParticleTracks == "yes"){
-    vtkInterface->write_multiBlockData("particle_tracks.vtm");
+
+  std::vector<double> allQValues;
+  std::vector<double> allPsiValues;
+  std::array<int, 4> particleStats = integrator->particle_stats(); 
+  std::array<int, 4> totalParticleStats;
+
+
+  if (rank != 0){
+    MPI_Send(psiValues.data(), psiValues.size(), MPI_DOUBLE, 0, 9, MPI_COMM_WORLD);
+    MPI_Send(qValues.data(), qValues.size(), MPI_DOUBLE, 0, 10, MPI_COMM_WORLD);
+    MPI_Send(particleStats.data(), particleStats.size(), MPI_INT, 0, 11, MPI_COMM_WORLD);
+
   }
-  integrator->print_particle_stats();
-}
+  else {
+    allPsiValues.insert(allPsiValues.end(), psiValues.begin(), psiValues.end());
+    allQValues.insert(allQValues.end(), qValues.begin(), qValues.end());
+    totalParticleStats = integrator->particle_stats();
+  }
 
-void AegisClass::init_solve(){
+
+  for (int i=1; i<nprocs; ++i){
+    if (rank == 0){
+      MPI_Recv(psiValues.data(), psiValues.size(), MPI_DOUBLE, i, 9, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      allPsiValues.insert(allPsiValues.end(), psiValues.begin(), psiValues.end());
+
+      MPI_Recv(qValues.data(), qValues.size(), MPI_DOUBLE, i, 10, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      allQValues.insert(allQValues.end(), qValues.begin(), qValues.end());
+
+      MPI_Recv(particleStats.data(), particleStats.size(), MPI_INT, i, 11, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      for (int j=0; j<particleStats.size(); ++j){
+        totalParticleStats[j] += particleStats[j]; 
+      }
+    }
+  }
+
+  if (rank == 0){
+
+    for (int i=0; i<num_facets(); ++i){
+      vtkInterface->insert_next_uStrGrid("Q", allQValues[i]);
+      vtkInterface->insert_next_uStrGrid("Psi_Start", allPsiValues[i]);
+
+    }
+
+    vtkInterface->write_unstructuredGrid("out.vtk");
+    vtkInterface->write_multiBlockData("particle_tracks.vtm");
+    print_particle_stats(totalParticleStats);
+  }
+
+  mpi_particle_stats();
+
+  }
+
+
+void AegisClass::read_params(const std::shared_ptr<InputJSON> &inputs){
+
+  json aegisNamelist;
+  if (inputs->data.contains("aegis_params"))
+  {
+    aegisNamelist = inputs->data["aegis_params"];
+    dagmcInputFile = aegisNamelist["DAGMC"];
+    trackStepSize = aegisNamelist["step_size"];
+    maxTrackSteps = aegisNamelist["max_steps"];
+    particleLaunchPos = aegisNamelist["launch_pos"];
+    noMidplaneTermination = aegisNamelist["force_no_deposition"];
+
+    if (aegisNamelist.contains("target_surfs"))
+    {
+      for (auto i:aegisNamelist["target_surfs"])
+      {
+        vectorOfTargetSurfs.push_back(i);
+      }
+    }
+  }
   
-  clock_t start = clock(); // start clock time
 
-  // set runtime parameters
-  runSettings.load_params(settingsFileName); 
-  //runSettings.print_params();
-  dagmcInputFile = runSettings.sValues["DAGMC_input"];
-  vtkInputFile = "target_facets.stl";
-  eqdskInputFile = runSettings.sValues["eqdsk_file"];
-  powerSOL = runSettings.dValues["Psol"];
-  lambdaQ = runSettings.dValues["lambda_q"];
-  trackStepSize = runSettings.dValues["dsTrack"];
-  maxTrackSteps = runSettings.iValues["nTrack"];
-  particleLaunchPos = runSettings.sValues["launchPos"];
-  drawParticleTracks = runSettings.sValues["trace"];
-  std::string noDep = runSettings.sValues["no_deposition"];
-  if (noDep == "yes") {noMidplaneTermination = true;}
+
 
   if (particleLaunchPos == "fixed")
   {
@@ -161,18 +233,8 @@ void AegisClass::init_solve(){
     LOG_WARNING << "Launching from random positions in triangles";
   }
 
-  userROutrBdry = runSettings.dValues["rOutrBdry"];
-  LOG_WARNING << "User set R value at Outer midplane = " << userROutrBdry << std::endl;
-
-  rmove = runSettings.dValues["rmove"];
-  zmove = runSettings.dValues["zmove"];
-  fscale = runSettings.dValues["fscale"];
-  psiref = runSettings.dValues["psiref"];
 
 
-  //initialise memeory for smart pointers
-  DAG = std::make_unique<moab::DagMC>();
-  vtkInterface = std::make_unique<VtkInterface>(drawParticleTracks);
 }
 
 void AegisClass::init_geometry(){
@@ -185,9 +247,9 @@ void AegisClass::init_geometry(){
   volID = DAG->entity_by_index(3,1);
 
   // setup B Field data
-  bFieldData.read_eqdsk(eqdskInputFile);
-  bFieldData.move(rmove, zmove, fscale);
-  bFieldData.psibdry = psiref; // abstract out to function
+  
+  bFieldData.move();
+  bFieldData.psiref_override();
   bFieldData.init_interp_splines();
   bFieldData.centre(1);
 
@@ -242,7 +304,8 @@ void AegisClass::terminate_particle(const moab::EntityHandle &facet, DagMC::RayH
       LOG_INFO << "Fieldline trace reached maximum length before intersection";
   }
 
-  vtkInterface->insert_next_uStrGrid("Q", heatflux);
+//  vtkInterface->insert_next_uStrGrid("Q", heatflux);
+  qValues.push_back(heatflux);
   psiQ_values.push_back(std::make_pair(psiOnSurface, Q));
 }
 
@@ -267,36 +330,38 @@ moab::Range AegisClass::select_target_surface(){
   std::unordered_map<EntityHandle, moab::Range> surfFacets;
   moab::Range surfFacetsKeys;
   int numTargetFacets = 0;
-  if (runSettings.vValues["surfs"][0] != 0)
+
+
+  if (!vectorOfTargetSurfs.empty())
   {
-    for (auto &s:runSettings.vValues["surfs"])
+    for (auto &surfID:vectorOfTargetSurfs)
     {
-      targetSurf = DAG->entity_by_id(2,s); // surface of interest
+      targetSurf = DAG->entity_by_id(2,surfID); // surface of interest
       DAG->moab_instance()->get_entities_by_type(targetSurf, MBTRI, surfFacets[targetSurf]);
-      std::cout << "Surface ID [" << DAG->get_entity_id(s) << "] " << "No. of elements " << surfFacets[s].size() << std::endl;
+      std::cout << "Surface ID [" << surfID << "] " << "No. of elements " << surfFacets[targetSurf].size() << std::endl;
       surfFacetsKeys.insert(targetSurf);
       numTargetFacets += surfFacets[targetSurf].size();
-      targetFacets.merge(surfFacets[targetSurf]);         
+      targetFacets.merge(surfFacets[targetSurf]);  
     }
+
     LOG_WARNING << "Surface IDs provided. Launching from surfaces given by global IDs:";
-    for (auto i:runSettings.vValues["surfs"])
-    {LOG_WARNING << "Surface ID - " << i << " ";}
   }
   else
   {
     targetFacets = facetsList;
-    for (auto &s:surfsList)
+    for (auto &surfEH:surfsList)
     {
-      DAG->moab_instance()->get_entities_by_type(s, MBTRI, surfFacets[s]);
-      surfFacetsKeys.insert(s);
-      std::cout << "Surface ID [" << DAG->get_entity_id(s) << "] " << "No. of elements " << surfFacets[s].size() << std::endl;
-      numTargetFacets += surfFacets[s].size();             
-      targetFacets.merge(surfFacets[s]);  
+      DAG->moab_instance()->get_entities_by_type(surfEH, MBTRI, surfFacets[surfEH]);
+      surfFacetsKeys.insert(surfEH);
+      std::cout << "Surface ID [" << surfEH << "] " << "No. of elements " << surfFacets[surfEH].size() << std::endl;
+      numTargetFacets += surfFacets[surfEH].size();             
+      targetFacets.merge(surfFacets[surfEH]); 
     }
     LOG_WARNING << "No surface ID provided. Launching from all surfaces by default. WARNING - Will take a significant amount of time for larger geometry sets";
   }
   LOG_WARNING << "Total Number of Triangles rays launched from = "
               << numTargetFacets;
+
   moab::EntityHandle targetFacetsSet;
   moab::Range target_facets;
   DAG->moab_instance()->create_meshset(MESHSET_SET, targetFacetsSet);
@@ -310,4 +375,33 @@ moab::Range AegisClass::select_target_surface(){
 
 int AegisClass::num_facets(){
   return numFacets;
+}
+
+void AegisClass::print_particle_stats(std::array<int, 4> particleStats){
+  int particlesCounted = 0;
+  for (const auto i:particleStats){
+    particlesCounted += i;
+  }
+
+  LOG_WARNING << "Number of particles launched = " << particlesCounted<< std::endl;
+  LOG_WARNING << "Number of particles depositing power from omp = " << particleStats[0] << std::endl;
+  LOG_WARNING << "Number of shadowed particle intersections = " << particleStats[1] << std::endl;
+  LOG_WARNING << "Number of particles lost from magnetic domain = " << particleStats[2] << std::endl;
+  LOG_WARNING << "Number of particles terminated upon reaching max tracking length = " << particleStats[3] << std::endl; 
+  LOG_WARNING << "Number of particles not accounted for = " << (num_facets() - particlesCounted) << std::endl;
+}
+
+void AegisClass::mpi_particle_stats(){
+ 
+  for (int i=0; i<nprocs; ++i){
+    if (rank == i){
+      std::cout << std::endl << "process " << i << " has the following particle stats:" << std::endl;
+      std::array localRankParticleStats = integrator->particle_stats();
+
+      std::cout << "Depositing - " << localRankParticleStats[0] << std::endl;
+      std::cout << "SHADOWED - " << localRankParticleStats[1] << std::endl;
+      std::cout << "LOST - " << localRankParticleStats[2] << std::endl;
+      std::cout << "MAX LENGTH - " << localRankParticleStats[3] << std::endl;
+    }
+  }
 }

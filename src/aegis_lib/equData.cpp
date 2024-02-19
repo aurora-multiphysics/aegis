@@ -8,12 +8,37 @@
 #include <sstream>
 #include <vector>
 
-
 #include "simpleLogger.h"
 #include "equData.h"
-#include "alglib/interpolation.h"
 #include "coordtfm.h"
 
+
+void equData::setup(const std::shared_ptr<InputJSON> &inputs){
+
+  json equilNamelist;
+  if (inputs->data.contains("equil_params"))
+  { 
+    equilNamelist = inputs->data["equil_params"];
+    eqdskFilepath = equilNamelist["eqdsk"];
+    cenopt = equilNamelist["cenopt"];
+    powerSOL = equilNamelist["P_sol"];
+    lambdaQ = equilNamelist["lambda_q"];
+    psiref = equilNamelist["psiref"];
+    rOutrBdry = equilNamelist["r_outrbdry"];
+    rmove = equilNamelist["rmove"];
+    drawEquRZ = equilNamelist["draw_equil_rz"];
+    drawEquXYZ = equilNamelist["draw_equil_xyz"];
+    debug = equilNamelist["print_debug_info"];
+  }
+
+  std::cout << "eqdskFilePath = " << eqdskFilepath << std::endl;
+
+  read_eqdsk(eqdskFilepath);
+}
+void equData::psiref_override()
+{
+  psibdry = psiref;
+}
 
 // Return eqdsk data structure
 eqdskData equData::get_eqdsk_struct()
@@ -35,8 +60,12 @@ void equData::read_eqdsk(std::string filename)
     std::vector<int> header_ints;
 
     LOG_WARNING << "eqdsk file to be read - " << filename;
-
+    if (!eqdsk_file.is_open())
+    {
+      std::cout << "Error! Could not open eqdsk file " << filename << std::endl;
+    }
     // Extract header information
+
     std::getline(eqdsk_file, eqdsk.header);
     header_ss << eqdsk.header;
     int number_found;
@@ -52,8 +81,7 @@ void equData::read_eqdsk(std::string filename)
     // Store nw and nh from header information (last two numbers in header)
     nw = header_ints[header_ints.size()-2];
     nh = header_ints[header_ints.size()-1];
-    LOG_WARNING << "Number of grid points in R (nw) = " << nw;
-    LOG_WARNING << "Number of grid points in Z (nh) = " << nh;
+
 
     // Read first four lines of data
     eqdsk_file >> eqdsk.rdim >> eqdsk.zdim >> eqdsk.rcentr >> eqdsk.rgrid >> eqdsk.zmid;
@@ -61,20 +89,24 @@ void equData::read_eqdsk(std::string filename)
     eqdsk_file >> eqdsk.cpasma >> eqdsk.psimag2 >> eqdsk.xdum >> eqdsk.rqcen >> eqdsk.xdum;
     eqdsk_file >> eqdsk.zqcen >> eqdsk.xdum >> eqdsk.psibdry2 >> eqdsk.xdum >> eqdsk.xdum;
 
-    LOG_WARNING << "Geometry parameters from EFIT:";
-    LOG_WARNING << "Domain size in R eqdsk.rdim " << eqdsk.rdim;
-    LOG_WARNING << "Domain size in Z eqdsk.zdim " << eqdsk.zdim;
-    LOG_WARNING << "R at centre " << eqdsk.rcentr;
-    LOG_WARNING << "Domain start in R eqdsk.rgrid " << eqdsk.rgrid;
-    LOG_WARNING << "Domain centre in Z eqdsk.zmid " << eqdsk.zmid;
-    LOG_WARNING << "Plasma parameters from EFIT:";
-    LOG_WARNING << "B at rcentre " << eqdsk.bcentr;
-    LOG_WARNING << "Flux at centre ssimag1 " << eqdsk.psimag1; // psiaxis in SMARDDA
-    LOG_WARNING << "Flux at boundary ssibry1 "<< eqdsk.psibdry1;
-    LOG_WARNING << "Plasma centre in R eqdsk.rmaxis " << eqdsk.rqcen;
-    LOG_WARNING << "Plasma centre in Z eqdsk.zmaxis " << eqdsk.zqcen;
-    LOG_WARNING << "Plasma current " << eqdsk.cpasma;
-
+    if (debug)
+    { 
+      LOG_WARNING << "Number of grid points in R (nw) = " << nw;
+      LOG_WARNING << "Number of grid points in Z (nh) = " << nh;
+      LOG_WARNING << "Geometry parameters from EFIT:";
+      LOG_WARNING << "Domain size in R eqdsk.rdim " << eqdsk.rdim;
+      LOG_WARNING << "Domain size in Z eqdsk.zdim " << eqdsk.zdim;
+      LOG_WARNING << "R at centre " << eqdsk.rcentr;
+      LOG_WARNING << "Domain start in R eqdsk.rgrid " << eqdsk.rgrid;
+      LOG_WARNING << "Domain centre in Z eqdsk.zmid " << eqdsk.zmid;
+      LOG_WARNING << "Plasma parameters from EFIT:";
+      LOG_WARNING << "B at rcentre " << eqdsk.bcentr;
+      LOG_WARNING << "Flux at centre ssimag1 " << eqdsk.psimag1; // psiaxis in SMARDDA
+      LOG_WARNING << "Flux at boundary ssibry1 "<< eqdsk.psibdry1;
+      LOG_WARNING << "Plasma centre in R eqdsk.rmaxis " << eqdsk.rqcen;
+      LOG_WARNING << "Plasma centre in Z eqdsk.zmaxis " << eqdsk.zqcen;
+      LOG_WARNING << "Plasma current " << eqdsk.cpasma;
+    }
     // Read 1D array data
 
     if (nw > 0)
@@ -109,7 +141,7 @@ void equData::read_eqdsk(std::string filename)
     {
       eqdsk.rbdry.resize(eqdsk.nbdry);
       eqdsk.zbdry.resize(eqdsk.nbdry);
-      LOG_WARNING << "Reading eqdsk.rbdry and eqdsk.zbdry...";
+      LOG_INFO << "Reading eqdsk.rbdry and eqdsk.zbdry...";
       for(int i=0; i<eqdsk.nbdry; i++) // Read in n elements into vector from file
       {
         eqdsk_file >> eqdsk.rbdry[i] >> eqdsk.zbdry[i];
@@ -123,7 +155,7 @@ void equData::read_eqdsk(std::string filename)
 
     if (eqdsk.nlim > 0)
     {
-      LOG_WARNING << "Reading eqdsk.rlim and eqdsk.zlim...";
+      LOG_INFO << "Reading eqdsk.rlim and eqdsk.zlim...";
       eqdsk.rlim.resize(eqdsk.nlim);
       eqdsk.zlim.resize(eqdsk.nlim);
       for (int i=0; i<eqdsk.nlim; i++)
@@ -184,20 +216,21 @@ void equData::read_eqdsk(std::string filename)
     dpsi = std::abs(rsig*(psiqbdry-psiaxis)/nw);
     psinorm = std::fabs(psiqbdry-psiaxis)/2;
 
-
-    LOG_WARNING << "DPSI =  " << dpsi;
-    LOG_WARNING << "PSIQBDRY = " << psiqbdry;
-    LOG_WARNING << "PSIAXIS = " << psiaxis;
-    LOG_WARNING << "RSIG = " << rsig;
-    LOG_WARNING << "RMIN = " << rmin;
-    LOG_WARNING << "RMAX = " << rmax;
-    LOG_WARNING << "ZMIN = " << zmin;
-    LOG_WARNING << "ZMAX = " << zmax;
-    LOG_WARNING << "dR = " << dr;
-    LOG_WARNING << "dZ = " << dz;
-    LOG_WARNING << "PSINORM = " << psinorm;
-    LOG_WARNING << "IVAC = " << ivac;
-
+    if (debug)
+    { 
+      LOG_WARNING << "DPSI =  " << dpsi;
+      LOG_WARNING << "PSIQBDRY = " << psiqbdry;
+      LOG_WARNING << "PSIAXIS = " << psiaxis;
+      LOG_WARNING << "RSIG = " << rsig;
+      LOG_WARNING << "RMIN = " << rmin;
+      LOG_WARNING << "RMAX = " << rmax;
+      LOG_WARNING << "ZMIN = " << zmin;
+      LOG_WARNING << "ZMAX = " << zmax;
+      LOG_WARNING << "dR = " << dr;
+      LOG_WARNING << "dZ = " << dz;
+      LOG_WARNING << "PSINORM = " << psinorm;
+      LOG_WARNING << "IVAC = " << ivac;
+    }
 
 
     // scale for psibig (TODO)
@@ -213,7 +246,7 @@ std::vector<double> equData::read_array(int n, std::string varName)
   LOG_TRACE << "-----equData.read_array()-----";
 
   std::vector<double> work1d(n); // working vector of doubles of size n
-  LOG_WARNING << "Reading " << varName << " values...";
+  LOG_INFO << "Reading " << varName << " values...";
   for(int i=0; i<nw; i++) // Read in n elements into vector from file
   {
     eqdsk_file >> work1d[i];
@@ -230,7 +263,7 @@ std::vector<std::vector<double>> equData::read_2darray(int nx, int ny, std::stri
   LOG_TRACE << "-----equData.read_2darray()-----";
 
   std::vector<std::vector<double>> work2d(nw, std::vector<double>(nh));
-  LOG_WARNING << "Reading " << varName << " values...";
+  LOG_INFO << "Reading " << varName << " values...";
   for (int i=0; i<nx; i++)
   {
     for(int j=0; j<ny; j++)
@@ -474,9 +507,10 @@ void equData::set_rsig()
   {
     rsig = +1.0;
   }
-
-  LOG_WARNING << "Value of rsig (psiqbdry-psiaxis) = " << rsig;
-
+  
+  if (debug) {
+    LOG_WARNING << "Value of rsig (psiqbdry-psiaxis) = " << rsig;
+  }
 }
 
 // Find central psi extrema
@@ -1177,7 +1211,7 @@ void equData::boundary_rb()
   LOG_WARNING << "Toroidal BField component (Bt) " << zbt;
 }
 
-double equData::omp_power_dep(double psi, double Psol, double lambda_q, double bn, std::string formula)
+double equData::omp_power_dep(double psi, double bn, std::string formula)
 {
   double heatFlux;
   double exponential, fpfac;
@@ -1196,7 +1230,7 @@ double equData::omp_power_dep(double psi, double Psol, double lambda_q, double b
   zrbfac = 1/(2*M_PI*zrm*zbpm);
 
 
-  zrblfac = zrbfac/lambda_q;
+  zrblfac = zrbfac/lambdaQ;
   power_split = 0.5;
 
   // std::cout << "RBDRY = " << rbdry << std::endl;
@@ -1214,7 +1248,7 @@ double equData::omp_power_dep(double psi, double Psol, double lambda_q, double b
 
   if (formula == "exp")
   {
-    fpfac = power_split*Psol*zrblfac;
+    fpfac = power_split*powerSOL*zrblfac;
     heatFlux = fpfac*bn*exp(rblfac*psi); // added bn into this formula because it was missing
   }
   //std::cout << "FPFAC = " << fpfac << std::endl;
@@ -1291,7 +1325,7 @@ void equData::psi_limiter(std::vector<std::vector<double>> vertices)
 
 }
 
-void equData::move(double rmove, double zmove, double fscale)
+void equData::move()
 {
   double zgfac; // geometrical factor
   std::cout << "BField Data has been moved and scaled by:" << std::endl;
@@ -1318,6 +1352,15 @@ void equData::move(double rmove, double zmove, double fscale)
 
 }
 
+std::array<double, 3> equData::get_midplane_params()
+{
+  std::array<double, 3> midplaneParams;
+  midplaneParams[0] = rbdry;
+  midplaneParams[1] = rOutrBdry;
+  midplaneParams[2] = zcen;
+
+  return midplaneParams;
+}
 
 
 // void equData::set_omp()

@@ -19,8 +19,10 @@ set(Boost_PACKAGES system log log_setup)
 set(BOOST_REQUESTED_VERSION 1.71)
 
 find_package(Boost REQUIRED COMPONENTS ${Boost_PACKAGES})
-
 find_package(OpenMP REQUIRED)
+find_package(MPI REQUIRED)
+add_subdirectory(externals/json)
+include_directories(externals/json/include)
 
 #include(${CMAKE_SOURCE_DIR}/cmake/SetBuildType.cmake)
 
@@ -67,11 +69,6 @@ else()
 find_package(DAGMC REQUIRED lib/cmake)
 endif()
 message(STATUS "Found DAGMC config in: ${DAGMC_DIR}")
-
-#target_link_libraries(${PROJECT_NAME} dagmc-shared uwuw-shared )
-#target_compile_definitions( PRIVATE DAGMC)
-#target_link_libraries(libopenmc dagmc-shared uwuw-shared)
-
 
 message(STATUS "DAGMC_INCLUDE_DIRS is set to: ${DAGMC_INCLUDE_DIRS}")
 message(STATUS "DAGMC_LIBRARIES is set to: ${DAGMC_LIBRARIES}")
