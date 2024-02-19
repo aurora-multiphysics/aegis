@@ -33,6 +33,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install 
     libeigen3-dev \
     libglfw3-dev  \
     libtbb-dev \
+    libopenmpi3 \
     pkg-config \
     rsync \
     bison \
