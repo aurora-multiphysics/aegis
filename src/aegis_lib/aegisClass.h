@@ -44,7 +44,7 @@
 #include "moab/Core.hpp"
 #include "moab/Interface.hpp"
 #include <moab/OrientedBoxTreeTool.hpp>
-#include "settings.hpp"
+#include "inputs.h"
 #include "simpleLogger.h"
 #include "equData.h"
 #include "source.h"

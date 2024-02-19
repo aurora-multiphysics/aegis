@@ -20,7 +20,7 @@
 #include <vtkUnstructuredGridWriter.h>
 #include <vtkAppendFilter.h>
 
-#include <settings.hpp>
+#include <inputs.h>
 
 class VtkInterface
 {

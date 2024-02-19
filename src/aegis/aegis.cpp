@@ -1,6 +1,6 @@
 #include "aegisClass.h"
 #include <mpi.h>
-#include "settings.hpp"
+#include "inputs.h"
 
 int main(int argc, char **argv) {
 

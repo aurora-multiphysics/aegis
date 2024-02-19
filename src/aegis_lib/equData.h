@@ -6,7 +6,7 @@
 #include <fstream>
 #include <cmath>
 #include "alglib/interpolation.h"
-#include "settings.hpp"
+#include "inputs.h"
 #include "simpleLogger.h"
 
 
