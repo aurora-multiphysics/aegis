@@ -24,11 +24,22 @@ DAGMC should be built with the following additional flags:
 
     cmake -DMOAB_DIR=\${MOAB_DIR} -DDOUBLE_DOWN=on -DDOUBLE_DOWN_DIR=\${DOUBLEDOWN_DIR} -DBUILD_TALLY=ON
 
-And finally this repo should be built with the following flag:
+This repo's submodules (`nlohmann_json`) should be installed with:
 
-    cmake -DDAGMC_DIR=\${DAGMC_DIR}
+    git submodule update --init --recursive
 
-In order to produce visualisations to be used with ParaView, Aegis also makes use of the `VTK library` which should be installed locally. The CMakeLists.txt file included will pull the the necessary modules from VTK to produce visualisations as shown:
+And finally AEGIS can be configured and built with:
+
+    cmake -DDAGMC_DIR=\${DAGMC_DIR} 
+    make 
+    make test
+
+This produces an `aegis` executable located in `bin`. The `inres1` case can be run as an example by navigating to the directory and calling 
+
+    `../bin/aegis aegis_settings.json`
+
+
+In order to produce visualisations intended to be used with ParaView, Aegis also makes use of the `VTK library` which should be installed locally. Currently the ability to produce a heatflux distribution across a CAD surface is dependent on the `VTK library`. In the future this may be abstracted out, however the ability to produce particle track plots will likely remain dependent on the `VTK libraries`. The CMakeLists.txt file included will pull the the necessary modules from VTK to produce visualisations as shown:
 
 Some example outputs from an Aegis run with the same magnetic equilibrium and geometry are shown below: 
 
