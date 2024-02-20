@@ -16,9 +16,7 @@ jobs:
     steps:
     # Check out repo to get Dockerfile
     - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        ref: ${GITHUB_REF}
+      uses: actions/checkout@v2
     # Build container and run tests from limited_build Dockerfile 
     - name: PrintGithubContext
       run: echo $PRCOMMITSHA
