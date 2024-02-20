@@ -11,7 +11,7 @@ RUN cd /$WORKDIR && \
     cd aegis && \
     mkdir bld && \
     cd bld && \
-    git submodule --init --recursive && \
+    git submodule update --init --recursive && \
     cmake ../ -DDAGMC_DIR=/$WORKDIR/dagmc_bld/DAGMC/lib/cmake/dagmc/ && \
     make && \
     make test 
