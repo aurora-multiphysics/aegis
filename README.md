@@ -6,9 +6,7 @@ The following dependancies are **required**:
 - **Double-Down v1.0.0** (A double precision interface to Embree) 
 - **MOAB Version 5.2.0** (Mesh Oriented datABase) 
 - **DAGMC** (Direct Accelerated Geometry Monte Carlo code)
-
-The following dependancies are **optional**:
-- **VTK** (Visualisation ToolKit) - For producing more advaced visualisations within ParaView
+- **VTK** (Visualisation ToolKit) - For producing more advaced visualisations within ParaView (may become optional in the future)
 
 # Building the repo
 Embree should be built with the following additional flags:
