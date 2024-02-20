@@ -1,5 +1,5 @@
 #include "VtkInterface.h"
-#include "simpleLogger.h"
+#include "SimpleLogger.h"
 
 
 
@@ -157,11 +157,25 @@ void VtkInterface::write_multiBlockData(std::string fileName){
 }
 
 void VtkInterface::insert_next_uStrGrid(std::string arrayName, std::vector<double> valuesToAdd){
+  if (valuesToAdd.size() > 3) 
+  { 
+    return;
+  }
   arrays[arrayName]->InsertNextTuple3(valuesToAdd[0], valuesToAdd[1], valuesToAdd[2]);
 }
 
 void VtkInterface::insert_next_uStrGrid(std::string arrayName, double valueToAdd){
   arrays[arrayName]->InsertNextTuple1(valueToAdd);
+}
+
+void VtkInterface::insert_zero_uStrGrid()
+{
+  for (const auto &i:arrays) // loop through all arrays and insert next value as 0.0
+  {
+    // check number of components in array before inserting 0
+    if (i.second->GetSize() == 3) {i.second->InsertNextTuple3(0.0, 0.0, 0.0);}
+    else if (i.second->GetSize() == 1) {i.second->InsertNextTuple1(0.0);}
+  }
 }
 
 void VtkInterface::init_new_vtkPoints(){

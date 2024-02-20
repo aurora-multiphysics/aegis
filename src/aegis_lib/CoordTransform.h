@@ -1,13 +1,13 @@
-#ifndef coordtfm__
-#define coordtfm__
+#ifndef CoordTransform__
+#define CoordTransform__
 
 #include <vector>
 #include <variant>
 #include <cmath>
 #include <string>
-#include "equData.h"
+#include "EquilData.h"
 
-namespace coordTfm
+namespace CoordTransform
 {
 
 
@@ -17,7 +17,7 @@ std::vector<double> cart_to_polar(std::vector<double> inputVector,
 
 // Polar toroidal to flux coordinates defined by psi spline
 std::vector<double> polar_to_flux(std::vector<double> inputVector, std::string direction,
-                                  equData& EquData);
+                                  EquilData& EquData);
 
 };
 
@@ -30,7 +30,7 @@ std::vector<double> polar_to_flux(std::vector<double> inputVector, std::string d
     std::vector<double> fluxCoord;
 
     public: 
-    vecTfm(std::vector<double> vector, int coordSystem, equData &EquData);
+    vecTfm(std::vector<double> vector, int coordSystem, EquilData &EquData);
     std::vector<double> cart();
     std::vector<double> polar();
     std::vector<double> flux();

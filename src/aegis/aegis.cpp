@@ -1,6 +1,5 @@
-#include "aegisClass.h"
+#include "ParticleSimulation.h"
 #include <mpi.h>
-#include "inputs.h"
 
 int main(int argc, char **argv) {
 
@@ -22,8 +21,8 @@ int main(int argc, char **argv) {
     settingsFile = "aegis_settings.json";
   }
  
-  AegisClass aegis(settingsFile);
-  aegis.Execute();
+  ParticleSimulation simulation(settingsFile);
+  simulation.Execute();
 
   for (int i=0; i<nprocs; ++i){
     if (rank == i)

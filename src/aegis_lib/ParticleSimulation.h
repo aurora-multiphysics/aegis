@@ -1,5 +1,5 @@
-#ifndef Aegis__
-#define Aegis__
+#ifndef ParticleSimulation__
+#define ParticleSimulation__
 
 #include <stdio.h>
 #include <assert.h>
@@ -44,40 +44,43 @@
 #include "moab/Core.hpp"
 #include "moab/Interface.hpp"
 #include <moab/OrientedBoxTreeTool.hpp>
-#include "inputs.h"
-#include "simpleLogger.h"
-#include "equData.h"
-#include "source.h"
-#include "integrator.h"
-#include "coordtfm.h"
+#include "Inputs.h"
+#include "SimpleLogger.h"
+#include "EquilData.h"
+#include "Source.h"
+#include "Integrator.h"
+#include "CoordTransform.h"
 #include "alglib/interpolation.h"
-#include "particle.h"
+#include "Particle.h"
 #include "VtkInterface.h"
 
 
 
 using namespace moab;
 
-class AegisClass  
+class ParticleSimulation  
 {
   public:
-  AegisClass(std::string filename);
+  ParticleSimulation(std::string filename);
   void Execute(); 
-  void read_params(const std::shared_ptr<InputJSON> &inputs);
   void init_geometry();
   int num_facets();
   std::vector<std::pair<double,double>> psiQ_values; // for l2 norm test
-  moab::Range select_target_surface();
-  void terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination);
-  void ray_hit_on_launch(particleBase &particle, DagMC::RayHistory &history);
-  void print_particle_stats(std::array<int, 4> particleStats);
-  void mpi_particle_stats();
-  int rank, nprocs;
-  int nFacets;
+
 
   protected:
 
   private:
+  moab::Range select_target_surface();
+  void loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history);
+  void terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination);
+  void ray_hit_on_launch(ParticleBase &particle, DagMC::RayHistory &history);
+  void print_particle_stats(std::array<int, 4> particleStats);
+  void mpi_particle_stats();
+  int rank, nprocs;
+  int nFacets;
+  void read_params(const std::shared_ptr<InputJSON> &inputs);
+  
   std::string settingsFileName;
   std::shared_ptr<InputJSON> JSONsettings; 
   std::string dagmcInputFile;
@@ -117,11 +120,11 @@ class AegisClass
   std::vector<double> qValues;
   std::vector<double> psiValues;
 
-  equData bFieldData;
+  EquilData equilibrium;
   bool plotBFieldRZ = false;
   bool plotBFieldXYZ = false;
   
-  std::unique_ptr<surfaceIntegrator> integrator;
+  std::unique_ptr<SurfaceIntegrator> integrator;
   double BdotN = 0.0; // dot product of magnetic field and triangle surface normal
   double Q = 0.0; // heatflux incident on surface triangle
   double psi = 0.0; // value of psi at current position
@@ -134,20 +137,6 @@ class AegisClass
   const std::string branchDepositingPart = "Depositing Particles";
   const std::string branchMaxLengthPart = "Max Length Particles";
   
-
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #endif

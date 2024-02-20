@@ -8,12 +8,12 @@
 #include <sstream>
 #include <vector>
 
-#include "simpleLogger.h"
-#include "equData.h"
-#include "coordtfm.h"
+#include "SimpleLogger.h"
+#include "EquilData.h"
+#include "CoordTransform.h"
 
 
-void equData::setup(const std::shared_ptr<InputJSON> &inputs){
+void EquilData::setup(const std::shared_ptr<InputJSON> &inputs){
 
   json equilNamelist;
   if (inputs->data.contains("equil_params"))
@@ -35,25 +35,25 @@ void equData::setup(const std::shared_ptr<InputJSON> &inputs){
 
   read_eqdsk(eqdskFilepath);
 }
-void equData::psiref_override()
+void EquilData::psiref_override()
 {
   psibdry = psiref;
 }
 
 // Return eqdsk data structure
-eqdskData equData::get_eqdsk_struct()
+eqdskData EquilData::get_eqdsk_struct()
 {
   return eqdsk;
 }
 
 // Read eqdsk file
-void equData::read_eqdsk(std::string filename)
+void EquilData::read_eqdsk(std::string filename)
 {
     std::cout << "------------------------------------------------------" << std::endl;
     std::cout << "--------------------READING EQDSK---------------------" << std::endl;
     std::cout << "------------------------------------------------------" << std::endl;
 
-    LOG_TRACE << "-----equData.read_eqdsk()-----";
+    LOG_TRACE << "-----EquilData.read_eqdsk()-----";
     eqdsk_file.open(filename);
     std::stringstream header_ss;
     std::string temp;
@@ -169,8 +169,8 @@ void equData::read_eqdsk(std::string filename)
       LOG_FATAL << "Error reading limiter data from eqdsk";
     }
 
-    //initialise rest of equData attributes
-    // set equData attributes
+    //initialise rest of EquilData attributes
+    // set EquilData attributes
     rmin = eqdsk.rgrid;
     zmin = eqdsk.zmid - eqdsk.zdim/2;
     rmax = eqdsk.rgrid+eqdsk.rdim;
@@ -241,9 +241,9 @@ void equData::read_eqdsk(std::string filename)
 }
 
 // Read 1D array from eqdsk (PRIVATE)
-std::vector<double> equData::read_array(int n, std::string varName)
+std::vector<double> EquilData::read_array(int n, std::string varName)
 {
-  LOG_TRACE << "-----equData.read_array()-----";
+  LOG_TRACE << "-----EquilData.read_array()-----";
 
   std::vector<double> work1d(n); // working vector of doubles of size n
   LOG_INFO << "Reading " << varName << " values...";
@@ -258,9 +258,9 @@ std::vector<double> equData::read_array(int n, std::string varName)
 }
 
 // Read 2D array from eqdsk (PRIVATE)
-std::vector<std::vector<double>> equData::read_2darray(int nx, int ny, std::string varName)
+std::vector<std::vector<double>> EquilData::read_2darray(int nx, int ny, std::string varName)
 {
-  LOG_TRACE << "-----equData.read_2darray()-----";
+  LOG_TRACE << "-----EquilData.read_2darray()-----";
 
   std::vector<std::vector<double>> work2d(nw, std::vector<double>(nh));
   LOG_INFO << "Reading " << varName << " values...";
@@ -279,9 +279,9 @@ std::vector<std::vector<double>> equData::read_2darray(int nx, int ny, std::stri
 }
 
 // Write out eqdsk data back out in eqdsk format
-void equData::write_eqdsk_out()
+void EquilData::write_eqdsk_out()
 {
-  LOG_TRACE << "-----equData.write_eqdsk_out()-----";
+  LOG_TRACE << "-----EquilData.write_eqdsk_out()-----";
   std::ofstream eqdsk_out("eqdsk.out");
   eqdsk_out << std::setprecision(9) << std::scientific;
   eqdsk_out << std::setiosflags(std::ios::uppercase);
@@ -359,9 +359,9 @@ void equData::write_eqdsk_out()
 }
 
 // Write singular line out in EQDSK format (PRIVATE)
-int equData::eqdsk_line_out(std::ofstream &file, double element, int counter)
+int EquilData::eqdsk_line_out(std::ofstream &file, double element, int counter)
     {
-      LOG_TRACE << "-----equData.eqdsk_line_out()-----";
+      LOG_TRACE << "-----EquilData.eqdsk_line_out()-----";
       if (counter == 5)
       {
         file << std::endl;
@@ -383,9 +383,9 @@ int equData::eqdsk_line_out(std::ofstream &file, double element, int counter)
     }
 
 // Write out eqdsk arrays (PRIVATE)
-void equData::eqdsk_write_array(std::ofstream &file, std::vector<double> array, int counter)
+void EquilData::eqdsk_write_array(std::ofstream &file, std::vector<double> array, int counter)
 {
-  LOG_TRACE << "-----equData.eqdsk_write_array()-----";
+  LOG_TRACE << "-----EquilData.eqdsk_write_array()-----";
   double element;
   for(int i=0; i<nw; i++)
   {
@@ -396,9 +396,9 @@ void equData::eqdsk_write_array(std::ofstream &file, std::vector<double> array, 
 }
 
 // Initialise the 1D arrays and 2d spline functions
-void equData::init_interp_splines()
+void EquilData::init_interp_splines()
 {
-  LOG_TRACE << "-----equData.init_interp_splines()-----";
+  LOG_TRACE << "-----EquilData.init_interp_splines()-----";
   std::vector<double> r_pts(nw);
   std::vector<double> z_pts(nh);
   r_pts[0] = rmin;
@@ -476,9 +476,9 @@ void equData::init_interp_splines()
 }
 
 // Write out psi(R,Z) data for gnuplotting
-void equData::gnuplot_out()
+void EquilData::gnuplot_out()
 {
-  LOG_TRACE << "-----equData.gnuplot_out()-----";
+  LOG_TRACE << "-----EquilData.gnuplot_out()-----";
   std::ofstream psiRZ_out;
   psiRZ_out.open("psi_RZ.gnu");
 
@@ -496,9 +496,9 @@ void equData::gnuplot_out()
 
 // Set sign to determine if psi decreasing or increasing away from centre
 // (+1 -> Increase outwards, -1 -> Decrease outwards)
-void equData::set_rsig()
+void EquilData::set_rsig()
 {
-  LOG_TRACE << "-----equData.set_rsig()-----";
+  LOG_TRACE << "-----EquilData.set_rsig()-----";
   if (psiqbdry-psiaxis < 0)
   {
     rsig = -1.0;
@@ -514,9 +514,9 @@ void equData::set_rsig()
 }
 
 // Find central psi extrema
-void equData::centre(int cenopt)
+void EquilData::centre(int cenopt)
 {
-  LOG_TRACE << "-----equData.centre-----";
+  LOG_TRACE << "-----EquilData.centre-----";
   int igr; // R position index of global extremum
   int igz; // Z position index of global extremum
   int soutr = 10; // maximum number of outer searches
@@ -634,17 +634,17 @@ void equData::centre(int cenopt)
     break; // end case 2
   }
   psicen = alglib::spline2dcalc(psiSpline, rcen, zcen);
-  LOG_WARNING << "Rcen value calculated from equData.centre() = " << rcen;
-  LOG_WARNING << "Zcen value calculated from equData.centre() = " << zcen;
-  LOG_WARNING << "Psicen value calculated from equData.centre() = " << psicen;
+  LOG_WARNING << "Rcen value calculated from EquilData.centre() = " << rcen;
+  LOG_WARNING << "Zcen value calculated from EquilData.centre() = " << zcen;
+  LOG_WARNING << "Psicen value calculated from EquilData.centre() = " << psicen;
   
 
 }
 
 // ***TODO***
-void equData::r_extrema()
+void EquilData::r_extrema()
 {
-  LOG_TRACE << "-----equData.r_extrema()-----";
+  LOG_TRACE << "-----EquilData.r_extrema()-----";
   int nrsrsamp; // number of samples in r
   double zpsi; // psi
   double zdpdr; // dpsi/dr
@@ -723,9 +723,9 @@ void equData::r_extrema()
 
 
 // Create 2d spline structures for R(psi,theta) and Z(psi,theta) ***TODO***
-void equData::rz_splines()
+void EquilData::rz_splines()
 {
-  LOG_TRACE << "-----equData.rz_splines()-----";
+  LOG_TRACE << "-----EquilData.rz_splines()-----";
   int iext; // maximum allowed number of knots for spline in r
   int iknot; // actual number of knots for splinie in r
   int intheta; // actual number of angles defining R,Z(psi,theta)
@@ -771,7 +771,7 @@ void equData::rz_splines()
 }
 
 // Caculate B field vector (in toroidal polars) at given position
-std::vector<double> equData::b_field(std::vector<double> position,
+std::vector<double> EquilData::b_field(std::vector<double> position,
                                      std::string startingFrom)
 {
   std::vector<double> bVector(3); // B in toroidal polars
@@ -793,7 +793,7 @@ std::vector<double> equData::b_field(std::vector<double> position,
   else
   {
     std::vector<double> polarPosition;
-    polarPosition = coordTfm::cart_to_polar(position, "forwards");
+    polarPosition = CoordTransform::cart_to_polar(position, "forwards");
     zr = polarPosition[0];
     zz = polarPosition[1];
   }
@@ -821,7 +821,7 @@ std::vector<double> equData::b_field(std::vector<double> position,
 
 }
 
-std::vector<double> equData::b_field_cart(std::vector<double> polarBVector, double phi, int normalise)
+std::vector<double> EquilData::b_field_cart(std::vector<double> polarBVector, double phi, int normalise)
 {
   std::vector<double> cartBVector(3);
   double zbx; // cartesian Bx component
@@ -855,9 +855,9 @@ std::vector<double> equData::b_field_cart(std::vector<double> polarBVector, doub
 
 
 
-void equData::write_bfield(bool plotRZ, bool plotXYZ)
+void EquilData::write_bfield(bool plotRZ, bool plotXYZ)
 {
-  LOG_TRACE << "-----equData.b_field_write()-----";
+  LOG_TRACE << "-----EquilData.b_field_write()-----";
   std::vector<double> polarPos(3); // cartesian position P(x,y,z)
   std::vector<double> polarB(3); // polar toroidal magnetic field B(Br, Bz, Bphi)
 
@@ -917,7 +917,7 @@ void equData::write_bfield(bool plotRZ, bool plotXYZ)
           }
           polarB = b_field(polarPos, "polar"); // calculate B(R,Z,phi)
           cartB = b_field_cart(polarB, polarPos[2], 0); // transform to B(x,y,z)
-          cartPos = coordTfm::cart_to_polar(polarPos, "backwards"); // transform position to cartesian
+          cartPos = CoordTransform::cart_to_polar(polarPos, "backwards"); // transform position to cartesian
 
           // write out magnetic field data for plotting
           if (cartPos[0] > 0 )
@@ -941,9 +941,9 @@ void equData::write_bfield(bool plotRZ, bool plotXYZ)
 }
 
 // get toroidal ripple term in magnetic field from external file or otherwise. By default use MAST term
-// std::vector<double> equData::b_ripple(std::vector<double> pos, std::vector<double> bField)
+// std::vector<double> EquilData::b_ripple(std::vector<double> pos, std::vector<double> bField)
 // {
-//   LOG_TRACE << "-----equData.b_ripple()-----";
+//   LOG_TRACE << "-----EquilData.b_ripple()-----";
 //   std::vector<double> bRipple(3); // toroidal ripple term
 //   double zr; // local R
 //   double zz; // local Z
@@ -963,11 +963,11 @@ void equData::write_bfield(bool plotRZ, bool plotXYZ)
 
 
 
-void equData::boundary_rb()
+void EquilData::boundary_rb()
 {
   // mostly copied from r_extrema()
 
-  LOG_TRACE << "-----equData.boundary_rb()-----";
+  LOG_TRACE << "-----EquilData.boundary_rb()-----";
   std::string functionName = ".boundary_rb(): ";
   int nrsrsamp; // number of samples in r
 
@@ -1211,7 +1211,7 @@ void equData::boundary_rb()
   LOG_WARNING << "Toroidal BField component (Bt) " << zbt;
 }
 
-double equData::omp_power_dep(double psi, double bn, std::string formula)
+double EquilData::omp_power_dep(double psi, double bn, std::string formula)
 {
   double heatFlux;
   double exponential, fpfac;
@@ -1258,7 +1258,7 @@ double equData::omp_power_dep(double psi, double bn, std::string formula)
 }
 
 
-void equData::psi_limiter(std::vector<std::vector<double>> vertices)
+void EquilData::psi_limiter(std::vector<std::vector<double>> vertices)
 {
   std::ofstream fluxVert("flux_vertex.txt");
   std::ofstream cartVert("cart_vertex.txt");
@@ -1274,8 +1274,8 @@ void equData::psi_limiter(std::vector<std::vector<double>> vertices)
   for (auto &i:vertices)
   {
     std::vector<double> cartPos = i;
-    std::vector<double> polarPos = coordTfm::cart_to_polar(i, "forwards");
-    std::vector<double> fluxPos = coordTfm::polar_to_flux(polarPos, "forwards", *this);
+    std::vector<double> polarPos = CoordTransform::cart_to_polar(i, "forwards");
+    std::vector<double> fluxPos = CoordTransform::polar_to_flux(polarPos, "forwards", *this);
     zpsi = fluxPos[0];
     double ztheta = fluxPos[1];
     zr = polarPos[0];
@@ -1325,7 +1325,7 @@ void equData::psi_limiter(std::vector<std::vector<double>> vertices)
 
 }
 
-void equData::move()
+void EquilData::move()
 {
   double zgfac; // geometrical factor
   std::cout << "BField Data has been moved and scaled by:" << std::endl;
@@ -1352,7 +1352,7 @@ void equData::move()
 
 }
 
-std::array<double, 3> equData::get_midplane_params()
+std::array<double, 3> EquilData::get_midplane_params()
 {
   std::array<double, 3> midplaneParams;
   midplaneParams[0] = rbdry;
@@ -1363,9 +1363,9 @@ std::array<double, 3> equData::get_midplane_params()
 }
 
 
-// void equData::set_omp()
+// void EquilData::set_omp()
 // {
-//   // Ensure equData::centre() has been called first so R,Z values of centre known
+//   // Ensure EquilData::centre() has been called first so R,Z values of centre known
 //   if (rcen == 0 && zcen == 0)
 //   {
 //     LOG_ERROR << "Values RCEN and ZCEN are not set. Ensure these are set before attempting to

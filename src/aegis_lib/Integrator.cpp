@@ -1,19 +1,19 @@
 
 
 
-#include "integrator.h"
+#include "Integrator.h"
 #include <moab/Core.hpp>
 #include "moab/Interface.hpp"
 #include <moab/OrientedBoxTreeTool.hpp>
-#include "simpleLogger.h"
+#include "SimpleLogger.h"
 
 
 
 // surface integrator class constructor 
 // initialise list of EntityHandles and maps associated with 
-surfaceIntegrator::surfaceIntegrator(moab::Range const &Facets)
+SurfaceIntegrator::SurfaceIntegrator(moab::Range const &Facets)
 {
-  LOG_TRACE << "-----surfaceIntegrator CONSTRUCTOR()-----";
+  LOG_TRACE << "-----SurfaceIntegrator CONSTRUCTOR()-----";
 
   nFacets = Facets.size();
 
@@ -27,9 +27,9 @@ surfaceIntegrator::surfaceIntegrator(moab::Range const &Facets)
 }
 
 // Overload for constructor use with STL vector
-surfaceIntegrator::surfaceIntegrator(std::vector<EntityHandle> const &Facets)
+SurfaceIntegrator::SurfaceIntegrator(std::vector<EntityHandle> const &Facets)
 {
-  LOG_TRACE << "-----surfaceIntegrator CONSTRUCTOR()-----";
+  LOG_TRACE << "-----SurfaceIntegrator CONSTRUCTOR()-----";
 
   nFacets = Facets.size();
 
@@ -42,24 +42,24 @@ surfaceIntegrator::surfaceIntegrator(std::vector<EntityHandle> const &Facets)
 
 }
 
-void surfaceIntegrator::count_hit(EntityHandle facet_hit)
+void SurfaceIntegrator::count_hit(EntityHandle facet_hit)
 {
   particlesShadowedBy[facet_hit] +=1;
   nParticlesShadowed +=1;
 }
 
-void surfaceIntegrator::count_lost_ray()
+void SurfaceIntegrator::count_lost_ray()
 {
   nParticlesLost += 1;
 }
 
-void surfaceIntegrator::store_heat_flux(EntityHandle facet, double heatflux)
+void SurfaceIntegrator::store_heat_flux(EntityHandle facet, double heatflux)
 {
   powFac[facet] += heatflux; // tally accumulated heatflux on facet
   if (heatflux > 0 ) {nParticlesHeatDep += 1;} 
 }
 
-void surfaceIntegrator::count_particle(EntityHandle facet, terminationState termination, double heatflux = 0.0)
+void SurfaceIntegrator::count_particle(EntityHandle facet, terminationState termination, double heatflux = 0.0)
 {
 
   if (heatflux < 0.0){
@@ -101,7 +101,7 @@ void surfaceIntegrator::count_particle(EntityHandle facet, terminationState term
 }
 
 
-void surfaceIntegrator::ray_reflect_dir(double const prev_dir[3], double const surface_normal[3], 
+void SurfaceIntegrator::ray_reflect_dir(double const prev_dir[3], double const surface_normal[3], 
                                         double reflected_dir[3])
 {
   double reflect_dot = 0 ;
@@ -115,7 +115,7 @@ void surfaceIntegrator::ray_reflect_dir(double const prev_dir[3], double const s
 }
 
 // return sorted map of EntityHandles against ints 
-void surfaceIntegrator::facet_values(std::unordered_map<moab::EntityHandle, int> const &map)
+void SurfaceIntegrator::facet_values(std::unordered_map<moab::EntityHandle, int> const &map)
 {
     int_sorted_map sortedMap(map.begin(), map.end());
     for (auto const &pair: sortedMap)
@@ -128,7 +128,7 @@ void surfaceIntegrator::facet_values(std::unordered_map<moab::EntityHandle, int>
 }
 
 // return sorted map of EntityHandles against doubles 
-void surfaceIntegrator::facet_values(std::unordered_map<moab::EntityHandle, double> const &map)
+void SurfaceIntegrator::facet_values(std::unordered_map<moab::EntityHandle, double> const &map)
 {
     std::cout << std::endl;
     std::cout << "Heat flux deposited per facet" << std::endl;
@@ -145,7 +145,7 @@ void surfaceIntegrator::facet_values(std::unordered_map<moab::EntityHandle, doub
 }
 
 // output values of unordered_map to csv format
-void surfaceIntegrator::csv_out(std::unordered_map<moab::EntityHandle, double> const &map)
+void SurfaceIntegrator::csv_out(std::unordered_map<moab::EntityHandle, double> const &map)
 {
   moab::EntityHandle tri;
   double value;
@@ -166,7 +166,7 @@ void surfaceIntegrator::csv_out(std::unordered_map<moab::EntityHandle, double> c
 
 }
 
-void surfaceIntegrator::piecewise_multilinear_out(std::unordered_map<moab::EntityHandle, double> const &map)
+void SurfaceIntegrator::piecewise_multilinear_out(std::unordered_map<moab::EntityHandle, double> const &map)
 {
   moab::EntityHandle tri;
   std::vector<double> value; // value associated with EntityHandle
@@ -217,7 +217,7 @@ void surfaceIntegrator::piecewise_multilinear_out(std::unordered_map<moab::Entit
 
 }
 
-void surfaceIntegrator::print_particle_stats(){ // return number of particles depositing, shadowed, lost etc.
+void SurfaceIntegrator::print_particle_stats(){ // return number of particles depositing, shadowed, lost etc.
 
   LOG_WARNING << "Number of particles launched = " << nFacets;
   LOG_WARNING << "Number of particles depositing power from omp = " << nParticlesHeatDep;
@@ -227,11 +227,11 @@ void surfaceIntegrator::print_particle_stats(){ // return number of particles de
 
 };
 
-void surfaceIntegrator::set_launch_position(const moab::EntityHandle &facet, const std::vector<double> &position){
+void SurfaceIntegrator::set_launch_position(const moab::EntityHandle &facet, const std::vector<double> &position){
   launchPositions[facet] = position;
 }
 
-std::array<int, 4> surfaceIntegrator::particle_stats(){
+std::array<int, 4> SurfaceIntegrator::particle_stats(){
   int rank, size;
 
   std::array<int, 4> particleStats;

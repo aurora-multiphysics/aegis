@@ -7,10 +7,10 @@
 #include <fstream>
 #include <vector>
 #include <cmath>
-#include "equData.h"
-#include "integrator.h"
-#include "source.h"
-#include "coordtfm.h"
+#include "EquilData.h"
+#include "Integrator.h"
+#include "Source.h"
+#include "CoordTransform.h"
  
 using namespace moab;
 
@@ -289,7 +289,7 @@ TEST_F(aegisUnitTest, SMARDDA_comparison_test) {
 
 TEST_F(aegisUnitTest, eqdsk_read) {
 
-  equData EquData;
+  EquilData EquData;
   EquData.read_eqdsk("test.eqdsk");
   eqdskData eqdsk = EquData.get_eqdsk_struct();
 
@@ -340,7 +340,7 @@ TEST_F(aegisUnitTest, cart_polar_coord_transform){
   std::string direction;
   output.reserve(3);
 
-  output = coordTfm::cart_to_polar(input, direction);
+  output = CoordTransform::cart_to_polar(input, direction);
 
   EXPECT_FLOAT_EQ(output[0], 5.8180752);
   EXPECT_FLOAT_EQ(output[1], -2);
@@ -350,7 +350,7 @@ TEST_F(aegisUnitTest, cart_polar_coord_transform){
 
 TEST_F(aegisUnitTest, polar_flux_coord_transform){
 
-  equData EquData;
+  EquilData EquData;
   EquData.read_eqdsk("test.eqdsk");
   EquData.init_interp_splines();
   EquData.centre(1);
@@ -360,7 +360,7 @@ TEST_F(aegisUnitTest, polar_flux_coord_transform){
   std::string direction;
   output.reserve(3);
 
-  output = coordTfm::polar_to_flux(input, direction, EquData);
+  output = CoordTransform::polar_to_flux(input, direction, EquData);
 
   EXPECT_FLOAT_EQ(output[0], -2.5001357);
   EXPECT_FLOAT_EQ(output[1], 2.1932724);

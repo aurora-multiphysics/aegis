@@ -1,5 +1,5 @@
-#ifndef simpleLogger_h__
-#define simpleLogger_h__
+#ifndef SimpleLogger_h__
+#define SimpleLogger_h__
 
 //#define BOOST_LOG_DYN_LINK // necessary when linking the boost_log library dynamically
 

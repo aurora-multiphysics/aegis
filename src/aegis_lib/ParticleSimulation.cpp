@@ -1,34 +1,34 @@
-#include "aegisClass.h"
+#include "ParticleSimulation.h"
 #include <mpi.h>
 #include <memory>
 
-AegisClass::AegisClass(std::string filename)
+ParticleSimulation::ParticleSimulation(std::string filename)
 {
   JSONsettings = std::make_shared<InputJSON>(filename);
 
   read_params(JSONsettings);
 
-  bFieldData.setup(JSONsettings);
+  equilibrium.setup(JSONsettings);
   DAG = std::make_unique<moab::DagMC>();
   vtkInterface = std::make_unique<VtkInterface>(JSONsettings);
 
   init_geometry();
 }
 
-void AegisClass::Execute(){
+void ParticleSimulation::Execute(){
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);  
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
   vtkInterface->init();  
+  moab::Range targetSurfaceList = select_target_surface();
+  integrator = std::make_unique<SurfaceIntegrator>(targetSurfaceList);
 
   std::vector<double> Bfield; 
   std::vector<double> polarPos(3);
   std::vector<double> newPt(3);  
   std::vector<double> triCoords(9);
   std::vector<double> triA(3), triB(3), triC(3);
-  moab::Range targetSurfaceList = select_target_surface();
-  integrator = std::make_unique<surfaceIntegrator>(targetSurfaceList);
 
   int totalNumberOfFacets = targetSurfaceList.size();
   int numberofFacets = totalNumberOfFacets / nprocs;
@@ -39,7 +39,7 @@ void AegisClass::Execute(){
   for (int i=startFacet; i<endFacet; ++i){ // loop over all facets
     const auto facet = targetSurfaceList[i];
     ++nFacets;
-    particleBase particle;
+    ParticleBase particle;
     std::vector<moab::EntityHandle> triNodes;
     DAG->moab_instance()->get_adjacencies(&facet, 1, 0, false, triNodes);
     DAG->moab_instance()->get_coords(&triNodes[0], triNodes.size(), triCoords.data());
@@ -49,8 +49,7 @@ void AegisClass::Execute(){
       triB[j] = triCoords[j+3];
       triC[j] = triCoords[j+6];
     }
-    triSource Tri(triA, triB, triC, facet); 
-    // vtkInterface->insert_next_uStrGrid("Normal", Tri.unitNormal);
+    TriSource Tri(triA, triB, triC, facet); 
 
     if (particleLaunchPos == "fixed"){
       particle.set_pos(Tri.centroid());
@@ -60,90 +59,48 @@ void AegisClass::Execute(){
     }
     integrator->set_launch_position(facet, particle.get_pos("cart"));
     
-    particle.check_if_in_bfield(bFieldData); // if out of bounds skip to next triangle
+    particle.check_if_in_bfield(equilibrium); // if out of bounds skip to next triangle
     if (particle.outOfBounds){
       LOG_INFO << "Particle start is out of magnetic field bounds. Skipping to next triangle. Check correct eqdsk is being used for the given geometry";
-      // vtkInterface->insert_next_uStrGrid("B_field", {0.0, 0.0, 0.0});
-      // vtkInterface->insert_next_uStrGrid("Psi_Start", 0.0);
-      // vtkInterface->insert_next_uStrGrid("B.n", 0.0);
-      // vtkInterface->insert_next_uStrGrid("B.n_direction", 0.0);
-    //  vtkInterface->insert_next_uStrGrid("Q", 0.0);
+      //vtkInterface->insert_zero_uStrGrid();
     qValues.push_back(0.0);
       continue;
     }
     vtkInterface->init_new_vtkPoints();
     // vtkInterface->insert_next_point_in_track(particle.launchPos);
 
-    particle.set_dir(bFieldData);
-    polarPos = coordTfm::cart_to_polar(particle.launchPos, "forwards");
+    particle.set_dir(equilibrium);
+    polarPos = CoordTransform::cart_to_polar(particle.launchPos, "forwards");
+    BdotN = Tri.dot_product(particle.BfieldXYZ);
 
-    // vtkInterface->insert_next_uStrGrid("B_field", particle.BfieldXYZ);
-    BdotN = Tri.dot_product(particle.BfieldXYZ); 
-    psi = particle.get_psi(bFieldData); 
-
-    psiValues.push_back(psi);
-    psid = psi + bFieldData.psibdry; 
-
-    // vtkInterface->insert_next_uStrGrid("Psi_Start", psi);
-    // vtkInterface->insert_next_uStrGrid("B.n", BdotN);
-    particle.align_dir_to_surf(BdotN);
-
-    if (BdotN < 0){
-      // vtkInterface->insert_next_uStrGrid("B.n_direction", -1.0);
-    }
-    else if (BdotN > 0){
-      // vtkInterface->insert_next_uStrGrid("B.n_direction", 1.0);
-    }
-    Q = bFieldData.omp_power_dep(psid, BdotN, "exp");
-    
+    psi = particle.get_psi(equilibrium); 
     psiOnSurface = psi;
+    psiValues.push_back(psi);
+    psid = psi + equilibrium.psibdry; 
+    
+    particle.align_dir_to_surf(BdotN);
+    Q = equilibrium.omp_power_dep(psid, BdotN, "exp");
     
     // Start ray tracing
     DagMC::RayHistory history;
     ray_hit_on_launch(particle, history);
     trackLength = trackStepSize;
 
-    particle.update_vectors(trackStepSize, bFieldData);
+    particle.update_vectors(trackStepSize, equilibrium);
     vtkInterface->insert_next_point_in_track(particle.pos);
 
-    // loop along particle track
-    for (int j=0; j<maxTrackSteps; ++j){
-      trackLength += trackStepSize;
-      DAG->ray_fire(volID, particle.pos.data(), particle.dir.data(), nextSurf, nextSurfDist, &history, trackStepSize, rayOrientation);
+    // vtkInterface->insert_next_uStrGrid("Normal", Tri.unitNormal);
+    // vtkInterface->insert_next_uStrGrid("B_field", particle.BfieldXYZ);
+    // vtkInterface->insert_next_uStrGrid("Psi_Start", psi);
+    // vtkInterface->insert_next_uStrGrid("B.n", BdotN);
+    if (BdotN < 0){
+      // vtkInterface->insert_next_uStrGrid("B.n_direction", -1.0);
+    }
+    else if (BdotN > 0){
+      // vtkInterface->insert_next_uStrGrid("B.n_direction", 1.0);
+    }
 
-      if (nextSurf != 0){
-        particle.update_vectors(nextSurfDist); // update position to surface intersection point
-        terminate_particle(facet, history, terminationState::SHADOWED);
-        break;
-      }
-      else{
-        particle.update_vectors(trackStepSize); // update position by stepsize
-      }
-      
-      vtkInterface->insert_next_point_in_track(particle.pos);
-      particle.check_if_in_bfield(bFieldData);
-      if (particle.outOfBounds){
-        terminate_particle(facet, history, terminationState::LOST);
-        break;
-      }
-      else{
-        particle.set_dir(bFieldData);
-        particle.align_dir_to_surf(BdotN);
-      }
-      particle.check_if_midplane_reached(bFieldData.get_midplane_params());
-      
-      if (particle.atMidplane != 0 && !noMidplaneTermination){ 
-        terminate_particle(facet, history, terminationState::DEPOSITING);
-        break;
-      }
-
-      if (j == (maxTrackSteps-1))
-      {
-        terminate_particle(facet, history, terminationState::MAXLENGTH);
-        break;
-      }
-
-    } 
+    loop_over_particle_track(facet, particle, history);
 
   }
   // write out data and print final
@@ -200,7 +157,7 @@ void AegisClass::Execute(){
   }
 
 
-void AegisClass::read_params(const std::shared_ptr<InputJSON> &inputs){
+void ParticleSimulation::read_params(const std::shared_ptr<InputJSON> &inputs){
 
   json aegisNamelist;
   if (inputs->data.contains("aegis_params"))
@@ -221,9 +178,6 @@ void AegisClass::read_params(const std::shared_ptr<InputJSON> &inputs){
     }
   }
   
-
-
-
   if (particleLaunchPos == "fixed")
   {
     LOG_WARNING << "Launching from triangle centroid/barycentre";
@@ -233,11 +187,9 @@ void AegisClass::read_params(const std::shared_ptr<InputJSON> &inputs){
     LOG_WARNING << "Launching from random positions in triangles";
   }
 
-
-
 }
 
-void AegisClass::init_geometry(){
+void ParticleSimulation::init_geometry(){
   // setup dagmc instance
   DAG->load_file(dagmcInputFile.c_str());
   DAG->init_OBBTree();
@@ -248,10 +200,10 @@ void AegisClass::init_geometry(){
 
   // setup B Field data
   
-  bFieldData.move();
-  bFieldData.psiref_override();
-  bFieldData.init_interp_splines();
-  bFieldData.centre(1);
+  equilibrium.move();
+  equilibrium.psiref_override();
+  equilibrium.init_interp_splines();
+  equilibrium.centre(1);
 
   std::vector<double> vertexCoordinates;
   DAG->moab_instance()->get_vertex_coordinates(vertexCoordinates);
@@ -266,12 +218,59 @@ void AegisClass::init_geometry(){
     vertexList[i][2] = vertexCoordinates[i + numNodes*2];
   }
 
-  bFieldData.psi_limiter(vertexList);
-  bFieldData.write_bfield(plotBFieldRZ, plotBFieldXYZ);
+  equilibrium.psi_limiter(vertexList);
+  equilibrium.write_bfield(plotBFieldRZ, plotBFieldXYZ);
 }
 
+void ParticleSimulation::loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history)
+{
 
-void AegisClass::terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination){
+  for (int step=0; step<maxTrackSteps; ++step)
+  {
+    trackLength += trackStepSize;
+    DAG->ray_fire(volID, particle.pos.data(), particle.dir.data(), nextSurf, nextSurfDist, &history, trackStepSize, rayOrientation);
+
+    if (nextSurf != 0)
+    {
+      particle.update_vectors(nextSurfDist); // update position to surface intersection point
+      terminate_particle(facet, history, terminationState::SHADOWED);
+      break;
+    }
+    else
+    {
+      particle.update_vectors(trackStepSize); // update position by stepsize
+    }
+    
+    vtkInterface->insert_next_point_in_track(particle.pos);
+    particle.check_if_in_bfield(equilibrium);
+    if (particle.outOfBounds){
+      terminate_particle(facet, history, terminationState::LOST);
+      break;
+    }
+
+    else
+    {
+      particle.set_dir(equilibrium);
+      particle.align_dir_to_surf(BdotN);
+    }
+    particle.check_if_midplane_reached(equilibrium.get_midplane_params());
+    
+    if (particle.atMidplane != 0 && !noMidplaneTermination){ 
+      terminate_particle(facet, history, terminationState::DEPOSITING);
+      break;
+    }
+
+    if (step == (maxTrackSteps-1))
+    {
+      terminate_particle(facet, history, terminationState::MAXLENGTH);
+      break;
+    }
+
+  } 
+
+}
+
+void ParticleSimulation::terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination){
   double heatflux;
 
   switch(termination){
@@ -309,7 +308,7 @@ void AegisClass::terminate_particle(const moab::EntityHandle &facet, DagMC::RayH
   psiQ_values.push_back(std::make_pair(psiOnSurface, Q));
 }
 
-void AegisClass::ray_hit_on_launch(particleBase &particle, DagMC::RayHistory &history){
+void ParticleSimulation::ray_hit_on_launch(ParticleBase &particle, DagMC::RayHistory &history){
   DAG->ray_fire(volID, particle.launchPos.data(), particle.dir.data(), nextSurf, nextSurfDist, &history,trackStepSize,rayOrientation);
   if (nextSurf != 0) 
   {
@@ -320,7 +319,7 @@ void AegisClass::ray_hit_on_launch(particleBase &particle, DagMC::RayHistory &hi
 }
 
 // Get triangles from the surface(s) of interest
-moab::Range AegisClass::select_target_surface(){ 
+moab::Range ParticleSimulation::select_target_surface(){ 
 
   moab::Range targetFacets; // range containing all of the triangles in the surface of interest
   // can specify particular surfaces of interest
@@ -338,7 +337,10 @@ moab::Range AegisClass::select_target_surface(){
     {
       targetSurf = DAG->entity_by_id(2,surfID); // surface of interest
       DAG->moab_instance()->get_entities_by_type(targetSurf, MBTRI, surfFacets[targetSurf]);
-      std::cout << "Surface ID [" << surfID << "] " << "No. of elements " << surfFacets[targetSurf].size() << std::endl;
+      if (rank == 0)
+      {
+        std::cout << "Surface ID [" << surfID << "] " << "No. of elements " << surfFacets[targetSurf].size() << std::endl;
+      }
       surfFacetsKeys.insert(targetSurf);
       numTargetFacets += surfFacets[targetSurf].size();
       targetFacets.merge(surfFacets[targetSurf]);  
@@ -353,7 +355,10 @@ moab::Range AegisClass::select_target_surface(){
     {
       DAG->moab_instance()->get_entities_by_type(surfEH, MBTRI, surfFacets[surfEH]);
       surfFacetsKeys.insert(surfEH);
-      std::cout << "Surface ID [" << surfEH << "] " << "No. of elements " << surfFacets[surfEH].size() << std::endl;
+      if (rank == 0)
+      {
+        std::cout << "Surface ID [" << surfEH << "] " << "No. of elements " << surfFacets[surfEH].size() << std::endl;
+      }
       numTargetFacets += surfFacets[surfEH].size();             
       targetFacets.merge(surfFacets[surfEH]); 
     }
@@ -373,11 +378,11 @@ moab::Range AegisClass::select_target_surface(){
   return targetFacets;
 }
 
-int AegisClass::num_facets(){
+int ParticleSimulation::num_facets(){
   return numFacets;
 }
 
-void AegisClass::print_particle_stats(std::array<int, 4> particleStats){
+void ParticleSimulation::print_particle_stats(std::array<int, 4> particleStats){
   int particlesCounted = 0;
   for (const auto i:particleStats){
     particlesCounted += i;
@@ -391,7 +396,7 @@ void AegisClass::print_particle_stats(std::array<int, 4> particleStats){
   LOG_WARNING << "Number of particles not accounted for = " << (num_facets() - particlesCounted) << std::endl;
 }
 
-void AegisClass::mpi_particle_stats(){
+void ParticleSimulation::mpi_particle_stats(){
  
   for (int i=0; i<nprocs; ++i){
     if (rank == i){

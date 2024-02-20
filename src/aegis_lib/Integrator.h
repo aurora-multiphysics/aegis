@@ -1,5 +1,5 @@
-#ifndef integrator__
-#define integrator__
+#ifndef Integrator__
+#define Integrator__
 
 #include <iostream>
 #include <stdio.h>
@@ -12,7 +12,7 @@
 #include <moab/Core.hpp>
 #include "moab/Interface.hpp"
 #include <moab/OrientedBoxTreeTool.hpp>
-#include "equData.h"
+#include "EquilData.h"
 
 
 
@@ -47,11 +47,11 @@ MAXLENGTH // max length reached
 
 // integrator .h file
 
-class surfaceIntegrator 
+class SurfaceIntegrator 
 {
   public:
-  surfaceIntegrator(moab::Range const &Facets); // constructor (with moab::Range)
-  surfaceIntegrator(std::vector<EntityHandle> const &Facets); // constructor (with std::vector<EntityHandle>)
+  SurfaceIntegrator(moab::Range const &Facets); // constructor (with moab::Range)
+  SurfaceIntegrator(std::vector<EntityHandle> const &Facets); // constructor (with std::vector<EntityHandle>)
   void count_hit(EntityHandle facet_hit); // count hits belonging to each facet
   void count_lost_ray();
   void store_heat_flux(EntityHandle facet, double heatflux); // store the power associated with a particular facet

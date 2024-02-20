@@ -20,7 +20,7 @@
 #include <vtkUnstructuredGridWriter.h>
 #include <vtkAppendFilter.h>
 
-#include <inputs.h>
+#include <Inputs.h>
 
 class VtkInterface
 {
@@ -37,6 +37,7 @@ class VtkInterface
   void write_multiBlockData(std::string fileName);
   void insert_next_uStrGrid(std::string arrayName, std::vector<double> valuesToAdd);
   void insert_next_uStrGrid(std::string arrayName, double valueToAdd);
+  void insert_zero_uStrGrid();
   void init_new_vtkPoints();
   void insert_next_point_in_track(std::vector<double> pointsToAdd);  
   void mpi_write_uStrGrid(std::string vtk_input_file, std::vector<double> heatfluxVector);
