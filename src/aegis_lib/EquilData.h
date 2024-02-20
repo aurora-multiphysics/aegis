@@ -1,13 +1,13 @@
-#ifndef equData__
-#define equData__
+#ifndef EquilData__
+#define EquilData__
 
 #include <stdio.h>
 #include <vector>
 #include <fstream>
 #include <cmath>
 #include "alglib/interpolation.h"
-#include "inputs.h"
-#include "simpleLogger.h"
+#include "Inputs.h"
+#include "SimpleLogger.h"
 
 
 struct eqdskData
@@ -47,10 +47,10 @@ struct eqdskData
 };
 
 
-class equData{
+class EquilData{
 
   eqdskData eqdsk;  
-  std::string className = "equData";
+  std::string className = "EquilData";
   
   // File streams
   std::ifstream eqdsk_file;

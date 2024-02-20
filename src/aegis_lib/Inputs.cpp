@@ -5,7 +5,7 @@
 #include <time.h>
 #include <fstream>
 #include <sstream>
-#include "inputs.h"
+#include "Inputs.h"
 
 
 

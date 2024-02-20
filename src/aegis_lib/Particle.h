@@ -1,5 +1,5 @@
-#ifndef particle__
-#define particle__
+#ifndef Particle__
+#define Particle__
 
 #include <iostream>
 #include <stdio.h>
@@ -14,12 +14,12 @@
 #include "moab/Interface.hpp"
 #include <moab/OrientedBoxTreeTool.hpp>
 
-#include "coordtfm.h"
-#include "equData.h"
+#include "CoordTransform.h"
+#include "EquilData.h"
 
 
 
-class particleBase 
+class ParticleBase 
 {
   private:
   double power = 0.0; // power associated with particle
@@ -40,13 +40,13 @@ class particleBase
   void set_pos(std::vector<double> newPosition); // set new particle position
   void set_pos(double newPosition[]); // overload for C-style array
   std::vector<double> get_pos(std::string coordType); // return STL vector of the current position
-  double get_psi(equData &EquData); // get psi value at current pos
-  void set_dir(equData &EquData); // set unit drection vector and Bfield at current position
+  double get_psi(EquilData &EquData); // get psi value at current pos
+  void set_dir(EquilData &EquData); // set unit drection vector and Bfield at current position
   std::vector<double> get_dir(std::string coordType); // return STL vector of unit direction
-  void check_if_in_bfield(equData &Equdata); // check if in magnetic field
+  void check_if_in_bfield(EquilData &Equdata); // check if in magnetic field
   void align_dir_to_surf(double Bn); // align particle dir to surface normal
   void update_vectors(double distanceTravelled); // update position  
-  void update_vectors(double distanceTravelled, equData &EquData); // overload to update dir as well
+  void update_vectors(double distanceTravelled, EquilData &EquData); // overload to update dir as well
   void check_if_midplane_reached(const std::array<double, 3> &midplaneParameters); // check if particle has reached inner or outer midplane and set value of atMidplane
 
 };

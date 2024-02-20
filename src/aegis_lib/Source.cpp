@@ -3,7 +3,7 @@
 #include <cctype>
 #include <random>
 #include <math.h>
-#include "source.h"
+#include "Source.h"
 
 
 pointSource::pointSource(std::vector<double> xyz)
@@ -89,7 +89,7 @@ void boxSource::get_dir()
 /////////
 
 // define plane via cartesian plane equation ax + by + cz + d = 0
-triSource::triSource(std::vector<double> xyz1, std::vector<double> xyz2, std::vector<double> xyz3, moab::EntityHandle handle)
+TriSource::TriSource(std::vector<double> xyz1, std::vector<double> xyz2, std::vector<double> xyz3, moab::EntityHandle handle)
 {
   xyzA = xyz1;
   xyzB = xyz2;
@@ -125,7 +125,7 @@ triSource::triSource(std::vector<double> xyz1, std::vector<double> xyz2, std::ve
 
 
 
-std::vector<double> triSource::random_pt()
+std::vector<double> TriSource::random_pt()
 {
   std::random_device dev;
   std::mt19937 rng(dev());
@@ -148,7 +148,7 @@ std::vector<double> triSource::random_pt()
   return randomPt;
 }
 
-std::vector<double> triSource::centroid()
+std::vector<double> TriSource::centroid()
 {
   std::vector<double> centroid(3);
   double x, y, z; // xyz coords of centroid
@@ -164,7 +164,7 @@ std::vector<double> triSource::centroid()
 }
 
 
-double triSource::dot_product(std::vector<double> externalVector) 
+double TriSource::dot_product(std::vector<double> externalVector) 
 {
   double product = 0;
   for (int i=0; i<3; i++)

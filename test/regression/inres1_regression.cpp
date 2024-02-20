@@ -26,15 +26,15 @@
 #include "moab/Core.hpp"
 #include "moab/Interface.hpp"
 #include <moab/OrientedBoxTreeTool.hpp>
-#include "inputs.h"
-#include "simpleLogger.h"
-#include "equData.h"
-#include "source.h"
-#include "integrator.h"
-#include "coordtfm.h"
+#include "Inputs.h"
+#include "SimpleLogger.h"
+#include "EquilData.h"
+#include "Source.h"
+#include "Integrator.h"
+#include "CoordTransform.h"
 #include "alglib/interpolation.h"
-#include "particle.h"
-#include "aegisClass.h"
+#include "Particle.h"
+#include "ParticleSimulation.h"
  
  using namespace moab;
 
@@ -77,7 +77,7 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
   }
 //-------------- RUN AEGIS -------------
   std::string aegisConfig = "aegis_settings.json";
-  AegisClass aegis(aegisConfig);
+  ParticleSimulation aegis(aegisConfig);
 
   if (std::filesystem::exists(aegisConfig)){
     MPI_Init(NULL, NULL);

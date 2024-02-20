@@ -3,13 +3,13 @@
 #include <cmath>
 #include <string>
 
-#include "coordtfm.h"
-#include "equData.h"
+#include "CoordTransform.h"
+#include "EquilData.h"
 #include "alglib/interpolation.h"
-#include "simpleLogger.h"
+#include "SimpleLogger.h"
 
 
-std::vector<double> coordTfm::cart_to_polar(std::vector<double> inputVector,
+std::vector<double> CoordTransform::cart_to_polar(std::vector<double> inputVector,
                                                    std::string direction)
 {
   std::vector<double> outputVector(3);
@@ -49,8 +49,8 @@ std::vector<double> coordTfm::cart_to_polar(std::vector<double> inputVector,
   return outputVector;
 }
 
-std::vector<double> coordTfm::polar_to_flux(std::vector<double> inputVector,
-                                            std::string direction, equData& EquData)
+std::vector<double> CoordTransform::polar_to_flux(std::vector<double> inputVector,
+                                            std::string direction, EquilData& EquData)
 {
   std::vector<double> outputVector(3);
   double r; // local polar r
@@ -94,18 +94,18 @@ std::vector<double> coordTfm::polar_to_flux(std::vector<double> inputVector,
 // 1 - Cartesian
 // 2 - Polar-Toroidal
 // 3 - Flux Coordinates
-vecTfm::vecTfm(std::vector<double> vector, int coordSystem, equData &EquData)
+vecTfm::vecTfm(std::vector<double> vector, int coordSystem, EquilData &EquData)
 {
   switch (coordSystem)
   {
     case 1:
       cartCoord = vector;
-      polarCoord = coordTfm::cart_to_polar(cartCoord, "forwards");
-      fluxCoord = coordTfm::polar_to_flux(polarCoord, "forwards", EquData);
+      polarCoord = CoordTransform::cart_to_polar(cartCoord, "forwards");
+      fluxCoord = CoordTransform::polar_to_flux(polarCoord, "forwards", EquData);
     case 2:
       polarCoord = vector;
-      fluxCoord = coordTfm::polar_to_flux(polarCoord, "forwards", EquData);
-      cartCoord = coordTfm::cart_to_polar(cartCoord, "backwards");
+      fluxCoord = CoordTransform::polar_to_flux(polarCoord, "forwards", EquData);
+      cartCoord = CoordTransform::cart_to_polar(cartCoord, "backwards");
     // case 3:
     //   flux = vector;
     //   // TODO backwards tfm from flux
