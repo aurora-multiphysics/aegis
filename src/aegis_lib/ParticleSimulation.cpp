@@ -34,123 +34,58 @@ void ParticleSimulation::Execute(){
   int numberofFacets = totalNumberOfFacets / nprocs;
   int startFacet = rank * numberofFacets;
   int endFacet = startFacet + numberofFacets;
-  nFacets = 0;
   
-  for (int i=startFacet; i<endFacet; ++i){ // loop over all facets
-    const auto facet = targetSurfaceList[i];
-    ++nFacets;
-    ParticleBase particle;
-    std::vector<moab::EntityHandle> triNodes;
-    DAG->moab_instance()->get_adjacencies(&facet, 1, 0, false, triNodes);
-    DAG->moab_instance()->get_coords(&triNodes[0], triNodes.size(), triCoords.data());
 
-    for (int j=0; j<3; j++){
-      triA[j] = triCoords[j];
-      triB[j] = triCoords[j+3];
-      triC[j] = triCoords[j+6];
-    }
-    TriSource Tri(triA, triB, triC, facet); 
-
-    if (particleLaunchPos == "fixed"){
-      particle.set_pos(Tri.centroid());
-    }
-    else{
-      particle.set_pos(Tri.random_pt());
-    }
-    integrator->set_launch_position(facet, particle.get_pos("cart"));
-    
-    particle.check_if_in_bfield(equilibrium); // if out of bounds skip to next triangle
-    if (particle.outOfBounds){
-      LOG_INFO << "Particle start is out of magnetic field bounds. Skipping to next triangle. Check correct eqdsk is being used for the given geometry";
-      //vtkInterface->insert_zero_uStrGrid();
-    qValues.push_back(0.0);
-      continue;
-    }
-    vtkInterface->init_new_vtkPoints();
-    // vtkInterface->insert_next_point_in_track(particle.launchPos);
-
-    particle.set_dir(equilibrium);
-    polarPos = CoordTransform::cart_to_polar(particle.launchPos, "forwards");
-    BdotN = Tri.dot_product(particle.BfieldXYZ);
-
-    psi = particle.get_psi(equilibrium); 
-    psiOnSurface = psi;
-    psiValues.push_back(psi);
-    psid = psi + equilibrium.psibdry; 
-    
-    particle.align_dir_to_surf(BdotN);
-    Q = equilibrium.omp_power_dep(psid, BdotN, "exp");
-    
-    // Start ray tracing
-    DagMC::RayHistory history;
-    ray_hit_on_launch(particle, history);
-    trackLength = trackStepSize;
-
-    particle.update_vectors(trackStepSize, equilibrium);
-    vtkInterface->insert_next_point_in_track(particle.pos);
-
-    // vtkInterface->insert_next_uStrGrid("Normal", Tri.unitNormal);
-    // vtkInterface->insert_next_uStrGrid("B_field", particle.BfieldXYZ);
-    // vtkInterface->insert_next_uStrGrid("Psi_Start", psi);
-    // vtkInterface->insert_next_uStrGrid("B.n", BdotN);
-    if (BdotN < 0){
-      // vtkInterface->insert_next_uStrGrid("B.n_direction", -1.0);
-    }
-    else if (BdotN > 0){
-      // vtkInterface->insert_next_uStrGrid("B.n_direction", 1.0);
-    }
-
-    loop_over_particle_track(facet, particle, history);
-
-  }
+  loop_over_facets(startFacet, endFacet, targetSurfaceList);
+  
   // write out data and print final
 
-  std::vector<double> allQValues;
-  std::vector<double> allPsiValues;
-  std::array<int, 4> particleStats = integrator->particle_stats(); 
-  std::array<int, 4> totalParticleStats;
+  // std::vector<double> allQValues;
+  // std::vector<double> allPsiValues;
+  // std::array<int, 4> particleStats = integrator->particle_stats(); 
+  // std::array<int, 4> totalParticleStats;
 
 
-  if (rank != 0){
-    MPI_Send(psiValues.data(), psiValues.size(), MPI_DOUBLE, 0, 9, MPI_COMM_WORLD);
-    MPI_Send(qValues.data(), qValues.size(), MPI_DOUBLE, 0, 10, MPI_COMM_WORLD);
-    MPI_Send(particleStats.data(), particleStats.size(), MPI_INT, 0, 11, MPI_COMM_WORLD);
+  // if (rank != 0){
+  //   MPI_Send(psiValues.data(), psiValues.size(), MPI_DOUBLE, 0, 9, MPI_COMM_WORLD);
+  //   MPI_Send(qValues.data(), qValues.size(), MPI_DOUBLE, 0, 10, MPI_COMM_WORLD);
+  //   MPI_Send(particleStats.data(), particleStats.size(), MPI_INT, 0, 11, MPI_COMM_WORLD);
 
-  }
-  else {
-    allPsiValues.insert(allPsiValues.end(), psiValues.begin(), psiValues.end());
-    allQValues.insert(allQValues.end(), qValues.begin(), qValues.end());
-    totalParticleStats = integrator->particle_stats();
-  }
+  // }
+  // else {
+  //   allPsiValues.insert(allPsiValues.end(), psiValues.begin(), psiValues.end());
+  //   allQValues.insert(allQValues.end(), qValues.begin(), qValues.end());
+  //   totalParticleStats = integrator->particle_stats();
+  // }
 
 
-  for (int i=1; i<nprocs; ++i){
-    if (rank == 0){
-      MPI_Recv(psiValues.data(), psiValues.size(), MPI_DOUBLE, i, 9, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      allPsiValues.insert(allPsiValues.end(), psiValues.begin(), psiValues.end());
+  // for (int i=1; i<nprocs; ++i){
+  //   if (rank == 0){
+  //     MPI_Recv(psiValues.data(), psiValues.size(), MPI_DOUBLE, i, 9, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  //     allPsiValues.insert(allPsiValues.end(), psiValues.begin(), psiValues.end());
 
-      MPI_Recv(qValues.data(), qValues.size(), MPI_DOUBLE, i, 10, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      allQValues.insert(allQValues.end(), qValues.begin(), qValues.end());
+  //     MPI_Recv(qValues.data(), qValues.size(), MPI_DOUBLE, i, 10, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  //     allQValues.insert(allQValues.end(), qValues.begin(), qValues.end());
 
-      MPI_Recv(particleStats.data(), particleStats.size(), MPI_INT, i, 11, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      for (int j=0; j<particleStats.size(); ++j){
-        totalParticleStats[j] += particleStats[j]; 
-      }
-    }
-  }
+  //     MPI_Recv(particleStats.data(), particleStats.size(), MPI_INT, i, 11, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  //     for (int j=0; j<particleStats.size(); ++j){
+  //       totalParticleStats[j] += particleStats[j]; 
+  //     }
+  //   }
+  // }
 
-  if (rank == 0){
+  // if (rank == 0){
 
-    for (int i=0; i<num_facets(); ++i){
-      vtkInterface->insert_next_uStrGrid("Q", allQValues[i]);
-      vtkInterface->insert_next_uStrGrid("Psi_Start", allPsiValues[i]);
+  //   for (int i=0; i<num_facets(); ++i){
+  //     vtkInterface->insert_next_uStrGrid("Q", allQValues[i]);
+  //     vtkInterface->insert_next_uStrGrid("Psi_Start", allPsiValues[i]);
 
-    }
+  //   }
 
-    vtkInterface->write_unstructuredGrid("out.vtk");
-    vtkInterface->write_multiBlockData("particle_tracks.vtm");
-    print_particle_stats(totalParticleStats);
-  }
+  //   vtkInterface->write_unstructuredGrid("out.vtk");
+  //   vtkInterface->write_multiBlockData("particle_tracks.vtm");
+    // print_particle_stats(totalParticleStats);
+  // }
 
   mpi_particle_stats();
 
@@ -222,7 +157,95 @@ void ParticleSimulation::init_geometry(){
   equilibrium.write_bfield(plotBFieldRZ, plotBFieldXYZ);
 }
 
-void ParticleSimulation::loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history)
+void ParticleSimulation::loop_over_facets(int startFacet, int endFacet,const moab::Range targetSurfaceList)
+{ 
+  int size = endFacet - startFacet;  
+  std::vector<double> QVALS(size);
+
+  std::vector<double> Bfield; 
+  std::vector<double> polarPos(3);
+  std::vector<double> newPt(3);  
+  std::vector<double> triCoords(9);
+  std::vector<double> triA(3), triB(3), triC(3);
+
+  for (int i=startFacet; i<endFacet; ++i)
+  { // loop over all facets
+
+    const auto facet = targetSurfaceList[i];
+    ParticleBase particle;
+    std::vector<moab::EntityHandle> triNodes;
+    DAG->moab_instance()->get_adjacencies(&facet, 1, 0, false, triNodes);
+    DAG->moab_instance()->get_coords(&triNodes[0], triNodes.size(), triCoords.data());
+
+    for (int j=0; j<3; j++)
+    {
+      triA[j] = triCoords[j];
+      triB[j] = triCoords[j+3];
+      triC[j] = triCoords[j+6];
+    }
+    TriSource Tri(triA, triB, triC, facet); 
+
+    if (particleLaunchPos == "fixed")
+    {
+      particle.set_pos(Tri.centroid());
+    }
+    else
+    {
+      particle.set_pos(Tri.random_pt());
+    }
+    integrator->set_launch_position(facet, particle.get_pos("cart"));
+    
+    particle.check_if_in_bfield(equilibrium); // if out of bounds skip to next triangle
+    if (particle.outOfBounds)
+    {
+      LOG_INFO << "Particle start is out of magnetic field bounds. Skipping to next triangle. Check correct eqdsk is being used for the given geometry";
+      //vtkInterface->insert_zero_uStrGrid();
+      continue;
+    }
+    vtkInterface->init_new_vtkPoints();
+    // vtkInterface->insert_next_point_in_track(particle.launchPos);
+
+    particle.set_dir(equilibrium);
+    polarPos = CoordTransform::cart_to_polar(particle.launchPos, "forwards");
+    BdotN = Tri.dot_product(particle.BfieldXYZ);
+
+    psi = particle.get_psi(equilibrium); 
+    psiOnSurface = psi;
+    psiValues.push_back(psi);
+    psid = psi + equilibrium.psibdry; 
+    
+    particle.align_dir_to_surf(BdotN);
+    Q = equilibrium.omp_power_dep(psid, BdotN, "exp");
+    
+    // Start ray tracing
+    DagMC::RayHistory history;
+    ray_hit_on_launch(particle, history);
+    trackLength = trackStepSize;
+
+    particle.update_vectors(trackStepSize, equilibrium);
+    vtkInterface->insert_next_point_in_track(particle.pos);
+
+    // vtkInterface->insert_next_uStrGrid("Normal", Tri.unitNormal);
+    // vtkInterface->insert_next_uStrGrid("B_field", particle.BfieldXYZ);
+    // vtkInterface->insert_next_uStrGrid("Psi_Start", psi);
+    // vtkInterface->insert_next_uStrGrid("B.n", BdotN);
+    if (BdotN < 0){
+      // vtkInterface->insert_next_uStrGrid("B.n_direction", -1.0);
+    }
+    else if (BdotN > 0){
+      // vtkInterface->insert_next_uStrGrid("B.n_direction", 1.0);
+    }
+
+  bool midplaneReached = loop_over_particle_track(facet, particle, history);
+
+  if (midplaneReached) {QVALS[i] = Q;}
+  else {QVALS[i] = 0.0;}
+
+  }
+
+}
+
+bool ParticleSimulation::loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history)
 {
 
   for (int step=0; step<maxTrackSteps; ++step)
@@ -234,7 +257,7 @@ void ParticleSimulation::loop_over_particle_track(const moab::EntityHandle &face
     {
       particle.update_vectors(nextSurfDist); // update position to surface intersection point
       terminate_particle(facet, history, terminationState::SHADOWED);
-      break;
+      return false;
     }
     else
     {
@@ -245,7 +268,7 @@ void ParticleSimulation::loop_over_particle_track(const moab::EntityHandle &face
     particle.check_if_in_bfield(equilibrium);
     if (particle.outOfBounds){
       terminate_particle(facet, history, terminationState::LOST);
-      break;
+      return false;
     }
 
     else
@@ -257,16 +280,18 @@ void ParticleSimulation::loop_over_particle_track(const moab::EntityHandle &face
     
     if (particle.atMidplane != 0 && !noMidplaneTermination){ 
       terminate_particle(facet, history, terminationState::DEPOSITING);
-      break;
+      return true;
     }
 
     if (step == (maxTrackSteps-1))
     {
       terminate_particle(facet, history, terminationState::MAXLENGTH);
-      break;
+      return false;
     }
 
   } 
+
+  return false; // default return false
 
 }
 

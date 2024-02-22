@@ -10,6 +10,12 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
+  // if (nprocs < 2)
+  // {
+  //     std::cout << "Error! This program requires at least two processes to run. Exiting... \n";
+  //     std::exit(1);
+  // }
+
   std::string settingsFile;
   if (argc > 1) 
   {
