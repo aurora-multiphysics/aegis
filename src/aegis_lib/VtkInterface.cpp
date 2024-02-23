@@ -51,7 +51,7 @@ void VtkInterface::init(){
   // new_vtkArray("B.n_direction", 1);
   // new_vtkArray("Normal", 3);
   // new_vtkArray("B_field", 3);
-  new_vtkArray("Psi_Start", 1);
+  // new_vtkArray("Psi_Start", 1);
   // new_vtkArray("B.n", 1);
 
   
@@ -166,6 +166,7 @@ void VtkInterface::insert_next_uStrGrid(std::string arrayName, std::vector<doubl
 
 void VtkInterface::insert_next_uStrGrid(std::string arrayName, double valueToAdd){
   arrays[arrayName]->InsertNextTuple1(valueToAdd);
+  std::cout << valueToAdd << std::endl;
 }
 
 void VtkInterface::insert_zero_uStrGrid()

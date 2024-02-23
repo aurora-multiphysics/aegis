@@ -73,7 +73,7 @@ class ParticleSimulation
   private:
   void dynamic_task_init();
   moab::Range select_target_surface();
-  void loop_over_facets(int startFacet, int endFacet,const  moab::Range targetSurfaceList);
+  std::vector<double> loop_over_facets(int startFacet, int endFacet,const  moab::Range targetSurfaceList);
   bool loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history);
   void terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination);
   void ray_hit_on_launch(ParticleBase &particle, DagMC::RayHistory &history);

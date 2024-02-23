@@ -19,73 +19,188 @@ void ParticleSimulation::Execute(){
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);  
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+  MPI_Status mpiStatus;
 
   vtkInterface->init();  
   moab::Range targetSurfaceList = select_target_surface();
   integrator = std::make_unique<SurfaceIntegrator>(targetSurfaceList);
 
-  std::vector<double> Bfield; 
-  std::vector<double> polarPos(3);
-  std::vector<double> newPt(3);  
-  std::vector<double> triCoords(9);
-  std::vector<double> triA(3), triB(3), triC(3);
-
   int totalNumberOfFacets = targetSurfaceList.size();
   int numberofFacets = totalNumberOfFacets / nprocs;
-  int startFacet = rank * numberofFacets;
-  int endFacet = startFacet + numberofFacets;
+
+  int chunkSize = 100;
+  const int noMoreWork = -1;
+
+  std::vector<double> handlerQVals(num_facets());
+
+  int workerStartIndex;
+
+
+  if(rank == 0)
+  
+  { // handler process... 
+    int facetsHandled = 0;
+    for(int procID = 1; procID < nprocs; procID++)
+    { // Send the initial indexes for each process statically
+      MPI_Send(&facetsHandled, 1, MPI_INT, procID, procID, MPI_COMM_WORLD); 
+      facetsHandled += chunkSize;
+    }  
+
+
+    std::vector<double> bufferQVals(chunkSize);
+
+    int activeWorkers = nprocs - 1;
+
+    do{
+      int avaialbleProcess = 0;
+      // call recieve from any source to get an avaialble process
+      MPI_Recv(&avaialbleProcess, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &mpiStatus);
+      if(facetsHandled < totalNumberOfFacets)
+      { // send that process the next index to start on in the total list
+        MPI_Send(&facetsHandled, 1, MPI_INT, avaialbleProcess, 1, MPI_COMM_WORLD);  
+        facetsHandled += chunkSize;
+
+        MPI_Recv(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, avaialbleProcess, avaialbleProcess*100, MPI_COMM_WORLD, &mpiStatus);
+        MPI_Recv(&workerStartIndex, 1, MPI_INT, avaialbleProcess, avaialbleProcess*101, MPI_COMM_WORLD, &mpiStatus);
+
+        int workerEndIndex = workerStartIndex + chunkSize;
+        std::vector<double>::iterator itr = handlerQVals.begin() + workerStartIndex;
+        handlerQVals.insert(itr, bufferQVals.begin(), bufferQVals.end());
+        
+      }
+      else
+      { // send message to workers to tell them no more work available
+        MPI_Send(&noMoreWork, 1, MPI_INT, avaialbleProcess, 1, MPI_COMM_WORLD);
+        activeWorkers--;
+      }
+
+   
+
+    } while(activeWorkers > 0); // while some workers are still active
+
+
+
+
+
+
+    // for (int ctr=0; ctr<bufferQVals.size(); ++ctr)
+    // {
+    //   printf("Qvals on rank [%d] = %f[%d] \n", rank, bufferQVals[ctr], ctr+1);     
+    // }
   
 
-  loop_over_facets(startFacet, endFacet, targetSurfaceList);
-  
+  }
+
+  else
+  { // worker processes...
+    std::vector<double> bufferQVals;
+    int startFacetIndex = 0;
+    // recieve the initial set of indexes
+    MPI_Recv(&startFacetIndex, 1, MPI_INT, 0, rank, MPI_COMM_WORLD, &mpiStatus);    
+    // Work with the iterations startFacetIndex
+
+    int start = startFacetIndex;
+    int end = start + chunkSize;
+
+    // processing the initial set of facets. Call loop over facets here
+    bufferQVals = loop_over_facets(start, end, targetSurfaceList);
+    // send local (to worker) array back to handler process
+    // MPI_Send(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, 0, rank*100, MPI_COMM_WORLD);
+    // MPI_Send(&start, 1, MPI_INT, 0, rank*101, MPI_COMM_WORLD);
+    
+    // for (int ctr=0; ctr<bufferQVals.size(); ++ctr)
+    // {
+    //   printf("Qvals on rank [%d] = %f[%d] \n", rank, bufferQVals[ctr], ctr+1);     
+    // }
+
+    // for (int i=0; i<chunkSize; ++i)
+    // {
+    //   initialQValsRankn << "Qvals on rank[" << rank << "] = " << bufferQVals[i] << "[" << i << "]" << std::endl; 
+    // }
+
+    do
+    {
+      MPI_Send(&rank, 1, MPI_INT, 0, 1, MPI_COMM_WORLD);
+      MPI_Recv(&startFacetIndex, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &mpiStatus);
+      
+      start = startFacetIndex;
+      end = start + chunkSize;
+
+      if(startFacetIndex != noMoreWork)
+      { // processing the next set of available work that has been dynamically allocated 
+        bufferQVals = loop_over_facets(start, end, targetSurfaceList);
+        // send local (to worker) array back to handler process
+        MPI_Send(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, 0, rank*100, MPI_COMM_WORLD);
+        MPI_Send(&start, 1, MPI_INT, 0, rank*101, MPI_COMM_WORLD);
+ 
+        // for (int ctr=0; ctr<bufferQVals.size(); ++ctr)
+        // {
+        //   printf("Qvals on rank [%d] = %f[%d] \n", rank, bufferQVals[ctr], ctr+1); 
+        // }
+ 
+      }
+    } while(startFacetIndex != noMoreWork); // while there is work available
+  }
+
+  // if (rank == 0)
+  // {
+  //   MPI_Recv(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, MPI_ANY_SOURCE, 100, MPI_COMM_WORLD, &mpiStatus);
+  //   MPI_Recv(&workerStartIndex, 1, MPI_INT, MPI_ANY_SOURCE, 101, MPI_COMM_WORLD, &mpiStatus);
+
+  //   int workerEndIndex = workerStartIndex + chunkSize;
+  //   for (int i=workerStartIndex; i<workerEndIndex; ++i)
+  //   {
+  //   }
+  // }
+
   // write out data and print final
 
-  // std::vector<double> allQValues;
-  // std::vector<double> allPsiValues;
-  // std::array<int, 4> particleStats = integrator->particle_stats(); 
-  // std::array<int, 4> totalParticleStats;
+  std::array<int, 4> particleStats = integrator->particle_stats(); 
+  std::array<int, 4> totalParticleStats;
 
 
-  // if (rank != 0){
+   if (rank != 0){
   //   MPI_Send(psiValues.data(), psiValues.size(), MPI_DOUBLE, 0, 9, MPI_COMM_WORLD);
   //   MPI_Send(qValues.data(), qValues.size(), MPI_DOUBLE, 0, 10, MPI_COMM_WORLD);
-  //   MPI_Send(particleStats.data(), particleStats.size(), MPI_INT, 0, 11, MPI_COMM_WORLD);
+    MPI_Send(particleStats.data(), particleStats.size(), MPI_INT, 0, 11, MPI_COMM_WORLD);
 
-  // }
-  // else {
+   }
+   else 
+   {
   //   allPsiValues.insert(allPsiValues.end(), psiValues.begin(), psiValues.end());
   //   allQValues.insert(allQValues.end(), qValues.begin(), qValues.end());
-  //   totalParticleStats = integrator->particle_stats();
-  // }
+    totalParticleStats = integrator->particle_stats();
+  }
 
 
-  // for (int i=1; i<nprocs; ++i){
-  //   if (rank == 0){
-  //     MPI_Recv(psiValues.data(), psiValues.size(), MPI_DOUBLE, i, 9, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  for (int i=1; i<nprocs; ++i){
+    if (rank == 0){
+  //     MPI_Recv(psiValues.data(), psiValues.size(), MPI_DOUBLE, i, 9, MPI_COMM_WORLD, &mpiStatus);
   //     allPsiValues.insert(allPsiValues.end(), psiValues.begin(), psiValues.end());
 
-  //     MPI_Recv(qValues.data(), qValues.size(), MPI_DOUBLE, i, 10, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  //     MPI_Recv(qValues.data(), qValues.size(), MPI_DOUBLE, i, 10, MPI_COMM_WORLD, &mpiStatus);
   //     allQValues.insert(allQValues.end(), qValues.begin(), qValues.end());
 
-  //     MPI_Recv(particleStats.data(), particleStats.size(), MPI_INT, i, 11, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-  //     for (int j=0; j<particleStats.size(); ++j){
-  //       totalParticleStats[j] += particleStats[j]; 
-  //     }
-  //   }
-  // }
+      MPI_Recv(particleStats.data(), particleStats.size(), MPI_INT, i, 11, MPI_COMM_WORLD, &mpiStatus);
+      for (int j=0; j<particleStats.size(); ++j){
+        totalParticleStats[j] += particleStats[j]; 
+      }
+    }
+  }
 
-  // if (rank == 0){
+   if (rank == 0){
+    std::ofstream outQ("out.txt");
+    for (int i=0; i<num_facets(); ++i){
+      vtkInterface->insert_next_uStrGrid("Q", handlerQVals[i]);
+    //  vtkInterface->insert_next_uStrGrid("Psi_Start", allPsiValues[i]);
+      outQ << handlerQVals[i] << std::endl;
+    }
+    std::cout << "handlerQVALS size = " << handlerQVals.size() << std::endl;
 
-  //   for (int i=0; i<num_facets(); ++i){
-  //     vtkInterface->insert_next_uStrGrid("Q", allQValues[i]);
-  //     vtkInterface->insert_next_uStrGrid("Psi_Start", allPsiValues[i]);
-
-  //   }
-
-  //   vtkInterface->write_unstructuredGrid("out.vtk");
+    vtkInterface->write_unstructuredGrid("out.vtk");
   //   vtkInterface->write_multiBlockData("particle_tracks.vtm");
-    // print_particle_stats(totalParticleStats);
-  // }
+    print_particle_stats(totalParticleStats);
+  }
 
   mpi_particle_stats();
 
@@ -157,10 +272,10 @@ void ParticleSimulation::init_geometry(){
   equilibrium.write_bfield(plotBFieldRZ, plotBFieldXYZ);
 }
 
-void ParticleSimulation::loop_over_facets(int startFacet, int endFacet,const moab::Range targetSurfaceList)
+std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int endFacet,const moab::Range targetSurfaceList)
 { 
   int size = endFacet - startFacet;  
-  std::vector<double> QVALS(size);
+  std::vector<double> heatfluxVals;
 
   std::vector<double> Bfield; 
   std::vector<double> polarPos(3);
@@ -225,24 +340,15 @@ void ParticleSimulation::loop_over_facets(int startFacet, int endFacet,const moa
     particle.update_vectors(trackStepSize, equilibrium);
     vtkInterface->insert_next_point_in_track(particle.pos);
 
-    // vtkInterface->insert_next_uStrGrid("Normal", Tri.unitNormal);
-    // vtkInterface->insert_next_uStrGrid("B_field", particle.BfieldXYZ);
-    // vtkInterface->insert_next_uStrGrid("Psi_Start", psi);
-    // vtkInterface->insert_next_uStrGrid("B.n", BdotN);
-    if (BdotN < 0){
-      // vtkInterface->insert_next_uStrGrid("B.n_direction", -1.0);
-    }
-    else if (BdotN > 0){
-      // vtkInterface->insert_next_uStrGrid("B.n_direction", 1.0);
-    }
 
-  bool midplaneReached = loop_over_particle_track(facet, particle, history);
+    bool midplaneReached = loop_over_particle_track(facet, particle, history);
 
-  if (midplaneReached) {QVALS[i] = Q;}
-  else {QVALS[i] = 0.0;}
+  if (midplaneReached) {heatfluxVals.push_back(Q);}
+  else {heatfluxVals.push_back(0.0);}
 
   }
 
+  return heatfluxVals;
 }
 
 bool ParticleSimulation::loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history)
@@ -423,15 +529,21 @@ void ParticleSimulation::print_particle_stats(std::array<int, 4> particleStats){
 
 void ParticleSimulation::mpi_particle_stats(){
  
-  for (int i=0; i<nprocs; ++i){
+  for (int i=1; i<nprocs; ++i){
     if (rank == i){
       std::cout << std::endl << "process " << i << " has the following particle stats:" << std::endl;
       std::array localRankParticleStats = integrator->particle_stats();
 
-      std::cout << "Depositing - " << localRankParticleStats[0] << std::endl;
+      std::cout << "DEPOSITING - " << localRankParticleStats[0] << std::endl;
       std::cout << "SHADOWED - " << localRankParticleStats[1] << std::endl;
       std::cout << "LOST - " << localRankParticleStats[2] << std::endl;
       std::cout << "MAX LENGTH - " << localRankParticleStats[3] << std::endl;
+
+      int totalParticlesHandled = localRankParticleStats[0] + localRankParticleStats[1]
+                                + localRankParticleStats[2] + localRankParticleStats[3];
+
+      std::cout << "TOTAL - " << totalParticlesHandled << std::endl;
+    
     }
   }
 }

@@ -1,11 +1,11 @@
 {
   "description": "inres1 test case to compare against SMARDDA",
   "aegis_params":{
-      "DAGMC": "inres1_shad.h5m",
+      "DAGMC": "inres1_fine.h5m",
       "step_size": 0.005,
       "max_steps": 100000,
       "launch_pos": "fixed",
-      "target_surfs": [1,2,3,4,5,6],
+      "target_surfs": [51],
       "force_no_deposition": false
   },
   "equil_params":{
