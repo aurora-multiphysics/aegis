@@ -55,7 +55,7 @@ void VtkInterface::init(){
   // new_vtkArray("B.n", 1);
 
   
-  if (drawParticleTracks){
+  if (drawParticleTracks && rank == 0){
     std::cout << "vtkMultiBlockDataSet initialised for particle tracks" << std::endl; 
   }
 }
@@ -97,7 +97,9 @@ void VtkInterface::new_vtkArray(std::string arrName, int nComponents)
   tempArray->SetNumberOfComponents(nComponents);
   tempArray->SetName(arrName.data());
   arrays.insert(std::make_pair(arrName.data(), tempArray));
-  LOG_INFO << "Initialised new vtkDoubleArray '" << arrName  << "' with nComponents = " << nComponents;
+  std::stringstream newVtkArrayOut;
+  newVtkArrayOut << "Initialised new vtkDoubleArray '" << arrName  << "' with nComponents = " << nComponents;
+  log_string(LogLevel::INFO, newVtkArrayOut.str());
 }
 
 void VtkInterface::add_vtkArrays() // read stl and add arrays
@@ -107,7 +109,7 @@ void VtkInterface::add_vtkArrays() // read stl and add arrays
   vtkstlReader->SetFileName(vtk_input_file.data());
   vtkstlReader->Update();
   
-  LOG_INFO << "Initialising vtkUnstructuredGrid... ";
+  log_string(LogLevel::INFO,"Initialising vtkUnstructuredGrid...");
 
 
   // Transform PolyData to vtkUnstructuredGrid datatype using append filter
@@ -120,7 +122,6 @@ void VtkInterface::add_vtkArrays() // read stl and add arrays
   for (const auto &arr: arrays)
   {
     unstructuredGrid->GetCellData()->AddArray(arr.second);
-    //LOG_INFO << "Added array '" << arr.second << "' to vtkUnstructuredGrid";
   }
 }
 
@@ -166,7 +167,6 @@ void VtkInterface::insert_next_uStrGrid(std::string arrayName, std::vector<doubl
 
 void VtkInterface::insert_next_uStrGrid(std::string arrayName, double valueToAdd){
   arrays[arrayName]->InsertNextTuple1(valueToAdd);
-  std::cout << valueToAdd << std::endl;
 }
 
 void VtkInterface::insert_zero_uStrGrid()

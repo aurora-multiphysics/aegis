@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include "Inputs.h"
+#include <mpi.h>
 
 
 
@@ -21,16 +22,18 @@ InputJSON::InputJSON(std::string filename){
 }
 
 json InputJSON::read_json(){
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   std::ifstream file(filepath);
   if (file.is_open())
   {
-    std::cout << "Settings found in JSON file '" << filepath << "'" << std::endl;
+    if (rank == 0) {std::cout << "Settings found in JSON file '" << filepath << "'" << std::endl;}
     json data = json::parse(file); 
     return data;
   }
   else
   {
-    std::cout << "Error! The requested JSON file '" << filepath << "' does not exist." << std::endl;  
-    exit(EXIT_FAILURE);
+    if (rank == 0) {std::cout << "Error! The requested JSON file '" << filepath << "' does not exist." << std::endl;}  
+    std::exit(EXIT_FAILURE);
   }
 } 

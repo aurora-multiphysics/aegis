@@ -5,8 +5,9 @@
       "step_size": 0.005,
       "max_steps": 100000,
       "launch_pos": "fixed",
-      "target_surfs": [51],
-      "force_no_deposition": false
+      "target_surfs": [50,51,52,53,54,55],
+      "force_no_deposition": false,
+      "dynamic_task_size": 100
   },
   "equil_params":{
       "eqdsk": "EQ3.eqdsk",

@@ -19,7 +19,7 @@
 
 
 
-class ParticleBase 
+class ParticleBase : public AegisBase
 {
   private:
   double power = 0.0; // power associated with particle

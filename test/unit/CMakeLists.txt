@@ -8,6 +8,7 @@ target_include_directories(unit_tests PUBLIC ${PROJECT_SOURCE_DIR}/src/${PROJECT
 target_include_directories(unit_tests PUBLIC ${DAGMC_INCLUDE_DIRS})
 target_include_directories(unit_tests PUBLIC ${VTK_LIBRARIES})
 
+target_link_libraries(unit_tests ${Boost_LIBRARIES})
 target_link_libraries(unit_tests ${GTEST_LIBRARY} ${GTEST_MAIN_LIBRARY} pthread)
 target_link_libraries(unit_tests ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${PROJECT_NAME}.so)
 target_link_libraries(unit_tests ${DAGMC_LIBRARY} dagmc-shared uwuw-shared )

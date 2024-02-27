@@ -19,10 +19,10 @@
 #include <vtkUnstructuredGridReader.h>
 #include <vtkUnstructuredGridWriter.h>
 #include <vtkAppendFilter.h>
+#include "Inputs.h"
+#include "AegisBase.h"
 
-#include <Inputs.h>
-
-class VtkInterface
+class VtkInterface : public AegisBase
 {
   public:
   VtkInterface(const std::shared_ptr<InputJSON> &JSONsettings);

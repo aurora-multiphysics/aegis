@@ -53,16 +53,17 @@
 #include "alglib/interpolation.h"
 #include "Particle.h"
 #include "VtkInterface.h"
-
+#include "AegisBase.h"
 
 
 using namespace moab;
 
-class ParticleSimulation  
+class ParticleSimulation : public AegisBase
 {
   public:
   ParticleSimulation(std::string filename);
-  void Execute(); 
+  void Execute();
+  void Execute_mpi(); 
   void init_geometry();
   int num_facets();
   std::vector<std::pair<double,double>> psiQ_values; // for l2 norm test
@@ -72,16 +73,15 @@ class ParticleSimulation
 
   private:
   void dynamic_task_init();
-  moab::Range select_target_surface();
-  std::vector<double> loop_over_facets(int startFacet, int endFacet,const  moab::Range targetSurfaceList);
-  bool loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history);
-  void terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination);
-  void ray_hit_on_launch(ParticleBase &particle, DagMC::RayHistory &history);
-  void print_particle_stats(std::array<int, 4> particleStats);
-  void mpi_particle_stats();
-  int rank, nprocs;
+  moab::Range select_target_surface(); // get target surfaces of interest from aegis_settings.json
+  std::vector<double> loop_over_facets(int startFacet, int endFacet,const  moab::Range targetSurfaceList); // loop over facets in target surfaces
+  terminationState loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history); // loop over individual particle tracks
+  void terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination); // end particle track
+  void ray_hit_on_launch(ParticleBase &particle, DagMC::RayHistory &history); // particle hit on initial launch from surface
+  void print_particle_stats(std::array<int, 4> particleStats); // print number of particles that reached each termination state
+  void mpi_particle_stats(); // get inidividual particle stats for each process
+  void read_params(const std::shared_ptr<InputJSON> &inputs); // read parameters from aegis_settings.json
   int nFacets;
-  void read_params(const std::shared_ptr<InputJSON> &inputs);
   
   std::string settingsFileName;
   std::shared_ptr<InputJSON> JSONsettings; 
@@ -95,6 +95,7 @@ class ParticleSimulation
   std::string particleLaunchPos;
   double userROutrBdry;
   std::string drawParticleTracks;
+  int dynamicTaskSize;
   double rmove = 0.0;
   double zmove = 0.0;
   double fscale = 1.0;

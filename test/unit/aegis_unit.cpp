@@ -11,6 +11,7 @@
 #include "Integrator.h"
 #include "Source.h"
 #include "CoordTransform.h"
+#include "SimpleLogger.h"
  
 using namespace moab;
 

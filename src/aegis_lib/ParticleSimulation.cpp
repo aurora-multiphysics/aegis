@@ -1,9 +1,11 @@
 #include "ParticleSimulation.h"
 #include <mpi.h>
-#include <memory>
 
+// setup AEGIS simulation 
 ParticleSimulation::ParticleSimulation(std::string filename)
 {
+  set_mpi_params();
+
   JSONsettings = std::make_shared<InputJSON>(filename);
 
   read_params(JSONsettings);
@@ -15,10 +17,9 @@ ParticleSimulation::ParticleSimulation(std::string filename)
   init_geometry();
 }
 
-void ParticleSimulation::Execute(){
+// perform AEGIS simulation solve with dynamic mpi load balancing
+void ParticleSimulation::Execute_mpi(){
 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);  
-  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
   MPI_Status mpiStatus;
 
   vtkInterface->init();  
@@ -28,7 +29,6 @@ void ParticleSimulation::Execute(){
   int totalNumberOfFacets = targetSurfaceList.size();
   int numberofFacets = totalNumberOfFacets / nprocs;
 
-  int chunkSize = 100;
   const int noMoreWork = -1;
 
   std::vector<double> handlerQVals(num_facets());
@@ -36,18 +36,18 @@ void ParticleSimulation::Execute(){
   int workerStartIndex;
 
 
-  if(rank == 0)
-  
-  { // handler process... 
+  if(rank == 0)  
+  { // handler process...
+    std::cout << "Dynamic task scheduling with " << (nprocs-1) << "processes, each handling "<< dynamicTaskSize << " facets" << std::endl;
     int facetsHandled = 0;
     for(int procID = 1; procID < nprocs; procID++)
     { // Send the initial indexes for each process statically
       MPI_Send(&facetsHandled, 1, MPI_INT, procID, procID, MPI_COMM_WORLD); 
-      facetsHandled += chunkSize;
+      facetsHandled += dynamicTaskSize;
     }  
 
 
-    std::vector<double> bufferQVals(chunkSize);
+    std::vector<double> bufferQVals(dynamicTaskSize);
 
     int activeWorkers = nprocs - 1;
 
@@ -58,12 +58,13 @@ void ParticleSimulation::Execute(){
       if(facetsHandled < totalNumberOfFacets)
       { // send that process the next index to start on in the total list
         MPI_Send(&facetsHandled, 1, MPI_INT, avaialbleProcess, 1, MPI_COMM_WORLD);  
-        facetsHandled += chunkSize;
+
+        facetsHandled += dynamicTaskSize;
 
         MPI_Recv(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, avaialbleProcess, avaialbleProcess*100, MPI_COMM_WORLD, &mpiStatus);
         MPI_Recv(&workerStartIndex, 1, MPI_INT, avaialbleProcess, avaialbleProcess*101, MPI_COMM_WORLD, &mpiStatus);
 
-        int workerEndIndex = workerStartIndex + chunkSize;
+        int workerEndIndex = workerStartIndex + dynamicTaskSize;
         std::vector<double>::iterator itr = handlerQVals.begin() + workerStartIndex;
         handlerQVals.insert(itr, bufferQVals.begin(), bufferQVals.end());
         
@@ -73,8 +74,6 @@ void ParticleSimulation::Execute(){
         MPI_Send(&noMoreWork, 1, MPI_INT, avaialbleProcess, 1, MPI_COMM_WORLD);
         activeWorkers--;
       }
-
-   
 
     } while(activeWorkers > 0); // while some workers are still active
 
@@ -100,7 +99,7 @@ void ParticleSimulation::Execute(){
     // Work with the iterations startFacetIndex
 
     int start = startFacetIndex;
-    int end = start + chunkSize;
+    int end = start + dynamicTaskSize;
 
     // processing the initial set of facets. Call loop over facets here
     bufferQVals = loop_over_facets(start, end, targetSurfaceList);
@@ -113,7 +112,7 @@ void ParticleSimulation::Execute(){
     //   printf("Qvals on rank [%d] = %f[%d] \n", rank, bufferQVals[ctr], ctr+1);     
     // }
 
-    // for (int i=0; i<chunkSize; ++i)
+    // for (int i=0; i<dynamicTaskSize; ++i)
     // {
     //   initialQValsRankn << "Qvals on rank[" << rank << "] = " << bufferQVals[i] << "[" << i << "]" << std::endl; 
     // }
@@ -123,8 +122,13 @@ void ParticleSimulation::Execute(){
       MPI_Send(&rank, 1, MPI_INT, 0, 1, MPI_COMM_WORLD);
       MPI_Recv(&startFacetIndex, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &mpiStatus);
       
+      if (startFacetIndex + dynamicTaskSize > num_facets())
+      {
+        dynamicTaskSize = num_facets() - startFacetIndex;
+      }
+
       start = startFacetIndex;
-      end = start + chunkSize;
+      end = start + dynamicTaskSize;
 
       if(startFacetIndex != noMoreWork)
       { // processing the next set of available work that has been dynamically allocated 
@@ -147,7 +151,7 @@ void ParticleSimulation::Execute(){
   //   MPI_Recv(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, MPI_ANY_SOURCE, 100, MPI_COMM_WORLD, &mpiStatus);
   //   MPI_Recv(&workerStartIndex, 1, MPI_INT, MPI_ANY_SOURCE, 101, MPI_COMM_WORLD, &mpiStatus);
 
-  //   int workerEndIndex = workerStartIndex + chunkSize;
+  //   int workerEndIndex = workerStartIndex + dynamicTaskSize;
   //   for (int i=workerStartIndex; i<workerEndIndex; ++i)
   //   {
   //   }
@@ -189,13 +193,10 @@ void ParticleSimulation::Execute(){
   }
 
    if (rank == 0){
-    std::ofstream outQ("out.txt");
     for (int i=0; i<num_facets(); ++i){
       vtkInterface->insert_next_uStrGrid("Q", handlerQVals[i]);
     //  vtkInterface->insert_next_uStrGrid("Psi_Start", allPsiValues[i]);
-      outQ << handlerQVals[i] << std::endl;
     }
-    std::cout << "handlerQVALS size = " << handlerQVals.size() << std::endl;
 
     vtkInterface->write_unstructuredGrid("out.vtk");
   //   vtkInterface->write_multiBlockData("particle_tracks.vtm");
@@ -206,7 +207,7 @@ void ParticleSimulation::Execute(){
 
   }
 
-
+// Read parameters from aegis_settings.json config file
 void ParticleSimulation::read_params(const std::shared_ptr<InputJSON> &inputs){
 
   json aegisNamelist;
@@ -218,6 +219,8 @@ void ParticleSimulation::read_params(const std::shared_ptr<InputJSON> &inputs){
     maxTrackSteps = aegisNamelist["max_steps"];
     particleLaunchPos = aegisNamelist["launch_pos"];
     noMidplaneTermination = aegisNamelist["force_no_deposition"];
+    dynamicTaskSize = aegisNamelist["dynamic_task_size"];
+
 
     if (aegisNamelist.contains("target_surfs"))
     {
@@ -230,22 +233,24 @@ void ParticleSimulation::read_params(const std::shared_ptr<InputJSON> &inputs){
   
   if (particleLaunchPos == "fixed")
   {
-    LOG_WARNING << "Launching from triangle centroid/barycentre";
+    log_string(LogLevel::WARNING, "Launching from triangle centroid/barycentre");
   }
   else
   {
-    LOG_WARNING << "Launching from random positions in triangles";
+    log_string(LogLevel::WARNING, "Launching from random positions in triangles");
   }
 
 }
 
+// initialise CAD geometry for AEGIS and magnetic field equilibrium for CAD Geometry
 void ParticleSimulation::init_geometry(){
   // setup dagmc instance
   DAG->load_file(dagmcInputFile.c_str());
   DAG->init_OBBTree();
   DAG->setup_geometry(surfsList, volsList);
   DAG->moab_instance()->get_entities_by_type(0, MBTRI, facetsList);
-  std::cout << "Number of Triangles in Geometry " << facetsList.size() << std::endl;
+
+  if (rank == 0) {std::cout << "Number of Triangles in Geometry " << facetsList.size() << std::endl;}
   volID = DAG->entity_by_index(3,1);
 
   // setup B Field data
@@ -257,7 +262,7 @@ void ParticleSimulation::init_geometry(){
 
   std::vector<double> vertexCoordinates;
   DAG->moab_instance()->get_vertex_coordinates(vertexCoordinates);
-  LOG_WARNING << "NUMBER OF NODES = " <<  vertexCoordinates.size() << std::endl;
+  if (rank == 0) {std::cout << "NUMBER OF NODES = " <<  vertexCoordinates.size() << std::endl;}
   int numNodes = vertexCoordinates.size()/3;
   std::vector<std::vector<double>> vertexList(numNodes, std::vector<double> (3));
 
@@ -272,6 +277,7 @@ void ParticleSimulation::init_geometry(){
   equilibrium.write_bfield(plotBFieldRZ, plotBFieldXYZ);
 }
 
+// loop over facets in target surfaces
 std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int endFacet,const moab::Range targetSurfaceList)
 { 
   int size = endFacet - startFacet;  
@@ -313,7 +319,7 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
     particle.check_if_in_bfield(equilibrium); // if out of bounds skip to next triangle
     if (particle.outOfBounds)
     {
-      LOG_INFO << "Particle start is out of magnetic field bounds. Skipping to next triangle. Check correct eqdsk is being used for the given geometry";
+      if (rank == 0) {LOG_INFO << "Particle start is out of magnetic field bounds. Skipping to next triangle. Check correct eqdsk is being used for the given geometry";}
       //vtkInterface->insert_zero_uStrGrid();
       continue;
     }
@@ -341,9 +347,9 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
     vtkInterface->insert_next_point_in_track(particle.pos);
 
 
-    bool midplaneReached = loop_over_particle_track(facet, particle, history);
+    terminationState state = loop_over_particle_track(facet, particle, history);
 
-  if (midplaneReached) {heatfluxVals.push_back(Q);}
+  if (state == terminationState::DEPOSITING) {heatfluxVals.push_back(Q);}
   else {heatfluxVals.push_back(0.0);}
 
   }
@@ -351,7 +357,8 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
   return heatfluxVals;
 }
 
-bool ParticleSimulation::loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history)
+// loop over single particle track from launch to termination
+terminationState ParticleSimulation::loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history)
 {
 
   for (int step=0; step<maxTrackSteps; ++step)
@@ -363,7 +370,7 @@ bool ParticleSimulation::loop_over_particle_track(const moab::EntityHandle &face
     {
       particle.update_vectors(nextSurfDist); // update position to surface intersection point
       terminate_particle(facet, history, terminationState::SHADOWED);
-      return false;
+      return terminationState::SHADOWED;
     }
     else
     {
@@ -374,7 +381,7 @@ bool ParticleSimulation::loop_over_particle_track(const moab::EntityHandle &face
     particle.check_if_in_bfield(equilibrium);
     if (particle.outOfBounds){
       terminate_particle(facet, history, terminationState::LOST);
-      return false;
+      return terminationState::LOST;
     }
 
     else
@@ -386,21 +393,27 @@ bool ParticleSimulation::loop_over_particle_track(const moab::EntityHandle &face
     
     if (particle.atMidplane != 0 && !noMidplaneTermination){ 
       terminate_particle(facet, history, terminationState::DEPOSITING);
-      return true;
+      return terminationState::DEPOSITING;
     }
 
     if (step == (maxTrackSteps-1))
     {
       terminate_particle(facet, history, terminationState::MAXLENGTH);
-      return false;
+      return terminationState::MAXLENGTH;
     }
 
   } 
 
-  return false; // default return false
+  return terminationState::LOST; // default return lost particle
 
 }
 
+// terminate particle depending on 1 of 4 termination states:
+//
+// DEPOSITING - Particle reaches outer midplane and deposits power on facet. Heatflux = Q
+// SHADOWED - Particle hits another piece of geometry. Heatflux = 0 
+// LOST - Particle leaves magnetic field so trace stops. Heatflux = 0
+// MAX LENGTH - Particle reaches maximum user set length before anything else. Heatflux = 0
 void ParticleSimulation::terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination){
   double heatflux;
 
@@ -409,7 +422,7 @@ void ParticleSimulation::terminate_particle(const moab::EntityHandle &facet, Dag
       heatflux = Q;
       vtkInterface->write_particle_track(branchDepositingPart, heatflux);
       integrator->count_particle(facet, termination, heatflux);
-      LOG_INFO << "Midplane reached. Depositing power";
+      if (rank == 0) {LOG_INFO << "Midplane reached. Depositing power";}
       break;
 
     case terminationState::SHADOWED:
@@ -417,21 +430,21 @@ void ParticleSimulation::terminate_particle(const moab::EntityHandle &facet, Dag
       history.get_last_intersection(intersectedFacet);
       vtkInterface->write_particle_track(branchShadowedPart, heatflux);
       integrator->count_particle(facet, termination, heatflux);
-      LOG_INFO << "Surface " << nextSurf << " hit after travelling " << trackLength << " units";
+      if (rank == 0) {LOG_INFO << "Surface " << nextSurf << " hit after travelling " << trackLength << " units";}
       break;
 
     case terminationState::LOST:
       heatflux = 0.0;   
       vtkInterface->write_particle_track(branchLostPart, heatflux);
       integrator->count_particle(facet, termination, heatflux);    
-      LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";
+      if (rank == 0) {LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";}
       break;
 
     case terminationState::MAXLENGTH:
       heatflux = 0.0;
       vtkInterface->write_particle_track(branchMaxLengthPart, heatflux);
       integrator->count_particle(facet, termination, heatflux);        
-      LOG_INFO << "Fieldline trace reached maximum length before intersection";
+      if (rank == 0) {LOG_INFO << "Fieldline trace reached maximum length before intersection";}
   }
 
 //  vtkInterface->insert_next_uStrGrid("Q", heatflux);
@@ -445,7 +458,7 @@ void ParticleSimulation::ray_hit_on_launch(ParticleBase &particle, DagMC::RayHis
   {
     history.get_last_intersection(intersectedFacet);
     DAG->next_vol(nextSurf, volID, volID);
-    LOG_INFO << "---- RAY HIT ON LAUNCH [" << facetCounter << "] ----";
+    if (rank == 0) {LOG_INFO << "---- RAY HIT ON LAUNCH [" << facetCounter << "] ----";}
   }
 }
 
@@ -464,39 +477,45 @@ moab::Range ParticleSimulation::select_target_surface(){
 
   if (!vectorOfTargetSurfs.empty())
   {
+    std::stringstream surfaceIDsOut;
+    surfaceIDsOut << "Surface IDs provided. Number of facets in each surface with global IDs: ";
     for (auto &surfID:vectorOfTargetSurfs)
     {
       targetSurf = DAG->entity_by_id(2,surfID); // surface of interest
       DAG->moab_instance()->get_entities_by_type(targetSurf, MBTRI, surfFacets[targetSurf]);
       if (rank == 0)
       {
-        std::cout << "Surface ID [" << surfID << "] " << "No. of elements " << surfFacets[targetSurf].size() << std::endl;
+        surfaceIDsOut << "[" << surfID << "] - " << surfFacets[targetSurf].size() << ", ";
       }
       surfFacetsKeys.insert(targetSurf);
       numTargetFacets += surfFacets[targetSurf].size();
       targetFacets.merge(surfFacets[targetSurf]);  
     }
+    surfaceIDsOut << std::endl;
+    log_string(LogLevel::WARNING, surfaceIDsOut.str());
 
-    LOG_WARNING << "Surface IDs provided. Launching from surfaces given by global IDs:";
   }
   else
   {
     targetFacets = facetsList;
+    std::stringstream surfaceIDsOut;
+    surfaceIDsOut << "No surface IDs provided. Launching from all surfaces by default. Facets per surface ID: ";
+
     for (auto &surfEH:surfsList)
     {
       DAG->moab_instance()->get_entities_by_type(surfEH, MBTRI, surfFacets[surfEH]);
       surfFacetsKeys.insert(surfEH);
       if (rank == 0)
       {
-        std::cout << "Surface ID [" << surfEH << "] " << "No. of elements " << surfFacets[surfEH].size() << std::endl;
+        surfaceIDsOut << "[" << surfEH << "] " << " - " << surfFacets[surfEH].size() << ",";
       }
       numTargetFacets += surfFacets[surfEH].size();             
       targetFacets.merge(surfFacets[surfEH]); 
     }
-    LOG_WARNING << "No surface ID provided. Launching from all surfaces by default. WARNING - Will take a significant amount of time for larger geometry sets";
+  log_string(LogLevel::WARNING, surfaceIDsOut.str());
+  log_string(LogLevel::WARNING, "WARNING - Will take a significant amount of time for larger geometry sets");
   }
-  LOG_WARNING << "Total Number of Triangles rays launched from = "
-              << numTargetFacets;
+  if (rank == 0) {LOG_WARNING << "Total Number of Triangles rays launched from = " << numTargetFacets;}
 
   moab::EntityHandle targetFacetsSet;
   moab::Range target_facets;
@@ -509,24 +528,29 @@ moab::Range ParticleSimulation::select_target_surface(){
   return targetFacets;
 }
 
+// return total number of facets in target surface(s) of interest 
 int ParticleSimulation::num_facets(){
   return numFacets;
 }
 
+// print particle stats for the entire run
 void ParticleSimulation::print_particle_stats(std::array<int, 4> particleStats){
   int particlesCounted = 0;
   for (const auto i:particleStats){
     particlesCounted += i;
   }
-
-  LOG_WARNING << "Number of particles launched = " << particlesCounted<< std::endl;
-  LOG_WARNING << "Number of particles depositing power from omp = " << particleStats[0] << std::endl;
-  LOG_WARNING << "Number of shadowed particle intersections = " << particleStats[1] << std::endl;
-  LOG_WARNING << "Number of particles lost from magnetic domain = " << particleStats[2] << std::endl;
-  LOG_WARNING << "Number of particles terminated upon reaching max tracking length = " << particleStats[3] << std::endl; 
-  LOG_WARNING << "Number of particles not accounted for = " << (num_facets() - particlesCounted) << std::endl;
+  if (rank == 0)
+  {
+    LOG_WARNING << "Number of particles launched = " << particlesCounted<< std::endl;
+    LOG_WARNING << "Number of particles depositing power from omp = " << particleStats[0] << std::endl;
+    LOG_WARNING << "Number of shadowed particle intersections = " << particleStats[1] << std::endl;
+    LOG_WARNING << "Number of particles lost from magnetic domain = " << particleStats[2] << std::endl;
+    LOG_WARNING << "Number of particles terminated upon reaching max tracking length = " << particleStats[3] << std::endl; 
+    LOG_WARNING << "Number of particles not accounted for = " << (num_facets() - particlesCounted) << std::endl;
+  }
 }
 
+// print individual particle stats for each MPI rank
 void ParticleSimulation::mpi_particle_stats(){
  
   for (int i=1; i<nprocs; ++i){
@@ -547,3 +571,35 @@ void ParticleSimulation::mpi_particle_stats(){
     }
   }
 }
+
+// run AEGIS simulation on single core
+void ParticleSimulation::Execute(){
+
+  MPI_Status mpiStatus;
+
+  vtkInterface->init();  
+  moab::Range targetSurfaceList = select_target_surface();
+  integrator = std::make_unique<SurfaceIntegrator>(targetSurfaceList);
+
+  int start = 0;
+  int end = targetSurfaceList.size();
+
+  std::vector<double> qvalues;
+
+  qvalues = loop_over_facets(start, end, targetSurfaceList);
+
+  // write out data and print final
+
+  std::array<int, 4> particleStats = integrator->particle_stats(); 
+
+  for (int i=0; i<num_facets(); ++i){
+    vtkInterface->insert_next_uStrGrid("Q", qvalues[i]);
+  //  vtkInterface->insert_next_uStrGrid("Psi_Start", allPsiValues[i]);
+  }
+
+    vtkInterface->write_unstructuredGrid("out.vtk");
+  //   vtkInterface->write_multiBlockData("particle_tracks.vtm");
+    print_particle_stats(particleStats);
+
+
+  }

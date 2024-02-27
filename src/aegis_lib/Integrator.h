@@ -13,6 +13,7 @@
 #include "moab/Interface.hpp"
 #include <moab/OrientedBoxTreeTool.hpp>
 #include "EquilData.h"
+#include "AegisBase.h"
 
 
 
@@ -47,7 +48,7 @@ MAXLENGTH // max length reached
 
 // integrator .h file
 
-class SurfaceIntegrator 
+class SurfaceIntegrator : public AegisBase
 {
   public:
   SurfaceIntegrator(moab::Range const &Facets); // constructor (with moab::Range)

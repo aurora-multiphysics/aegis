@@ -9,8 +9,8 @@
 #include <moab/OrientedBoxTreeTool.hpp>
 #include "SimpleLogger.h"
 
-
-void ParticleBase::set_pos(std::vector<double> newPosition) // set current particle position
+// set current particle position
+void ParticleBase::set_pos(std::vector<double> newPosition) 
 {
   if (pos.empty()) 
   { 
@@ -22,7 +22,8 @@ void ParticleBase::set_pos(std::vector<double> newPosition) // set current parti
   pos = newPosition; // set the new position
 }
 
-void ParticleBase::set_pos(double newPosition[]) // overload set_pos() for C-style array
+// overload set_pos() for C-style array
+void ParticleBase::set_pos(double newPosition[]) 
 {
   std::vector<double> tempVector(3);
   for (int i=0; i<3; i++)
@@ -37,6 +38,7 @@ void ParticleBase::set_pos(double newPosition[]) // overload set_pos() for C-sty
   pos = tempVector; // set the new position  
 }
 
+// Check if particle is currently in magnetic field
 void ParticleBase::check_if_in_bfield(EquilData &equilibrium)
 {
   std::vector<double> currentBfield = equilibrium.b_field(pos, "cart");
@@ -44,7 +46,8 @@ void ParticleBase::check_if_in_bfield(EquilData &equilibrium)
   else {outOfBounds = false;}
 }
 
-std::vector<double> ParticleBase::get_pos(std::string coordType) // return STL vector of current particle position
+// return STL vector of current particle position
+std::vector<double> ParticleBase::get_pos(std::string coordType) 
 {
   // make coordType lowercase
   std::transform(coordType.begin(), coordType.end(), coordType.begin(), 
@@ -62,7 +65,8 @@ std::vector<double> ParticleBase::get_pos(std::string coordType) // return STL v
   }
 }
 
-double ParticleBase::get_psi(EquilData &equilibrium) // return double of psi at current pos
+// return double of psi at current pos
+double ParticleBase::get_psi(EquilData &equilibrium) 
 {
   std::vector<double> currentPosition;
   double psi;
@@ -73,7 +77,8 @@ double ParticleBase::get_psi(EquilData &equilibrium) // return double of psi at 
   return psi;
 }
 
-void ParticleBase::set_dir(EquilData &equilibrium) // Set unit direction vector along cartesian magnetic field vector
+// set unit drection vector and Bfield at current position
+void ParticleBase::set_dir(EquilData &equilibrium) 
 {
   check_if_in_bfield(equilibrium);
   if (outOfBounds) {return;} // exit function early if out of bounds
@@ -94,12 +99,14 @@ void ParticleBase::set_dir(EquilData &equilibrium) // Set unit direction vector 
   dir = normB;
 }
 
+// get current particle direction (along magnetic field)
 std::vector<double> ParticleBase::get_dir(std::string coordType)
 {
   std::vector<double> currentDirection = dir;
   return currentDirection;
 }
 
+// align particle direction along surface normal of facet particle launched from
 void ParticleBase::align_dir_to_surf(double Bn)
 {
 
@@ -111,6 +118,7 @@ void ParticleBase::align_dir_to_surf(double Bn)
   }
 }
 
+// update position vector of particle with set distance travelled
 void ParticleBase::update_vectors(double distanceTravelled)
 {
   // This will update the position 
@@ -123,6 +131,7 @@ void ParticleBase::update_vectors(double distanceTravelled)
   set_pos(newPt);
 }
 
+// update position vector of particle with set distance travelled and update the particle direction at new position
 void ParticleBase::update_vectors(double distanceTravelled, EquilData &equilibrium)
 {
   // This will update the position and direction vector of the particle 
@@ -136,6 +145,7 @@ void ParticleBase::update_vectors(double distanceTravelled, EquilData &equilibri
   set_dir(equilibrium);
 }
 
+// check if the particle has reached the outer-midplane of plasma (TerminationState = DEPOSITING)
 void ParticleBase::check_if_midplane_reached(const std::array<double, 3> &midplaneParameters)
 {
   double x = pos[0];

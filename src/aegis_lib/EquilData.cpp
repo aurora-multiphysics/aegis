@@ -11,9 +11,13 @@
 #include "SimpleLogger.h"
 #include "EquilData.h"
 #include "CoordTransform.h"
+#include <mpi.h>
 
 
 void EquilData::setup(const std::shared_ptr<InputJSON> &inputs){
+
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
   json equilNamelist;
   if (inputs->data.contains("equil_params"))
@@ -31,10 +35,14 @@ void EquilData::setup(const std::shared_ptr<InputJSON> &inputs){
     debug = equilNamelist["print_debug_info"];
   }
 
-  std::cout << "eqdskFilePath = " << eqdskFilepath << std::endl;
+  if (rank == 0)
+  {
+    std::cout << "eqdskFilePath = " << eqdskFilepath << std::endl;
+  }
 
   read_eqdsk(eqdskFilepath);
 }
+
 void EquilData::psiref_override()
 {
   psibdry = psiref;
@@ -49,21 +57,26 @@ eqdskData EquilData::get_eqdsk_struct()
 // Read eqdsk file
 void EquilData::read_eqdsk(std::string filename)
 {
-    std::cout << "------------------------------------------------------" << std::endl;
-    std::cout << "--------------------READING EQDSK---------------------" << std::endl;
-    std::cout << "------------------------------------------------------" << std::endl;
-
-    LOG_TRACE << "-----EquilData.read_eqdsk()-----";
     eqdsk_file.open(filename);
     std::stringstream header_ss;
     std::string temp;
     std::vector<int> header_ints;
 
-    LOG_WARNING << "eqdsk file to be read - " << filename;
-    if (!eqdsk_file.is_open())
+    if (rank == 0)
+    {
+      std::cout << "------------------------------------------------------" << std::endl;
+      std::cout << "--------------------READING EQDSK---------------------" << std::endl;
+      std::cout << "------------------------------------------------------" << std::endl;
+      log_string(LogLevel::TRACE, "-----EquilData.read_eqdsk()-----");
+      log_string(LogLevel::WARNING, "eqdsk file to be read - " + filename);
+    }
+
+    if (!eqdsk_file.is_open() && rank == 0)
     {
       std::cout << "Error! Could not open eqdsk file " << filename << std::endl;
+      
     }
+    
     // Extract header information
 
     std::getline(eqdsk_file, eqdsk.header);
@@ -89,23 +102,23 @@ void EquilData::read_eqdsk(std::string filename)
     eqdsk_file >> eqdsk.cpasma >> eqdsk.psimag2 >> eqdsk.xdum >> eqdsk.rqcen >> eqdsk.xdum;
     eqdsk_file >> eqdsk.zqcen >> eqdsk.xdum >> eqdsk.psibdry2 >> eqdsk.xdum >> eqdsk.xdum;
 
-    if (debug)
+    if (debug && rank == 0)
     { 
-      LOG_WARNING << "Number of grid points in R (nw) = " << nw;
-      LOG_WARNING << "Number of grid points in Z (nh) = " << nh;
-      LOG_WARNING << "Geometry parameters from EFIT:";
-      LOG_WARNING << "Domain size in R eqdsk.rdim " << eqdsk.rdim;
-      LOG_WARNING << "Domain size in Z eqdsk.zdim " << eqdsk.zdim;
-      LOG_WARNING << "R at centre " << eqdsk.rcentr;
-      LOG_WARNING << "Domain start in R eqdsk.rgrid " << eqdsk.rgrid;
-      LOG_WARNING << "Domain centre in Z eqdsk.zmid " << eqdsk.zmid;
-      LOG_WARNING << "Plasma parameters from EFIT:";
-      LOG_WARNING << "B at rcentre " << eqdsk.bcentr;
-      LOG_WARNING << "Flux at centre ssimag1 " << eqdsk.psimag1; // psiaxis in SMARDDA
-      LOG_WARNING << "Flux at boundary ssibry1 "<< eqdsk.psibdry1;
-      LOG_WARNING << "Plasma centre in R eqdsk.rmaxis " << eqdsk.rqcen;
-      LOG_WARNING << "Plasma centre in Z eqdsk.zmaxis " << eqdsk.zqcen;
-      LOG_WARNING << "Plasma current " << eqdsk.cpasma;
+      std::cout << "Number of grid points in R (nw) = " << nw << std::endl;
+      std::cout << "Number of grid points in Z (nh) = " << nh << std::endl;
+      std::cout << "Geometry parameters from EFIT:" << std::endl;
+      std::cout << "Domain size in R eqdsk.rdim " << eqdsk.rdim << std::endl;
+      std::cout << "Domain size in Z eqdsk.zdim " << eqdsk.zdim << std::endl;
+      std::cout << "R at centre " << eqdsk.rcentr << std::endl;
+      std::cout << "Domain start in R eqdsk.rgrid " << eqdsk.rgrid << std::endl;
+      std::cout << "Domain centre in Z eqdsk.zmid " << eqdsk.zmid << std::endl;
+      std::cout << "Plasma parameters from EFIT:" << std::endl;
+      std::cout << "B at rcentre " << eqdsk.bcentr << std::endl;
+      std::cout << "Flux at centre ssimag1 " << eqdsk.psimag1 << std::endl; // psiaxis in SMARDDA
+      std::cout << "Flux at boundary ssibry1 "<< eqdsk.psibdry1 << std::endl;
+      std::cout << "Plasma centre in R eqdsk.rmaxis " << eqdsk.rqcen << std::endl;
+      std::cout << "Plasma centre in Z eqdsk.zmaxis " << eqdsk.zqcen << std::endl;
+      std::cout << "Plasma current " << eqdsk.cpasma << std::endl;
     }
     // Read 1D array data
 
@@ -118,7 +131,7 @@ void EquilData::read_eqdsk(std::string filename)
     }
     else
     {
-      LOG_FATAL << "Error reading 1D data from eqdsk";
+      log_string(LogLevel::WARNING, "Error reading 1D data from eqdsk");
     }
 
     // Read Psi(R,Z) data
@@ -128,45 +141,53 @@ void EquilData::read_eqdsk(std::string filename)
     }
     else
     {
-      LOG_FATAL << "Error reading 2D data from eqdsk";
+      log_string(LogLevel::WARNING, "Error reading 2D data from eqdsk");
     }
 
     // Read the rest of the data
     eqdsk.qpsi = read_array(nw, "eqdsk.qpsi");
     eqdsk_file >> eqdsk.nbdry >> eqdsk.nlim;
-    LOG_WARNING << "Number of boundary points " << eqdsk.nbdry;
-    LOG_WARNING << "Number of limiter points " << eqdsk.nlim;
+    if (rank == 0)
+    {
+      LOG_WARNING << "Number of boundary points " << eqdsk.nbdry;
+      LOG_WARNING << "Number of limiter points " << eqdsk.nlim;
+    }
 
     if (eqdsk.nbdry > 0)
     {
       eqdsk.rbdry.resize(eqdsk.nbdry);
       eqdsk.zbdry.resize(eqdsk.nbdry);
-      LOG_INFO << "Reading eqdsk.rbdry and eqdsk.zbdry...";
+      
+      log_string(LogLevel::WARNING, "Reading eqdsk.rbdry and eqdsk.zbdry...");
       for(int i=0; i<eqdsk.nbdry; i++) // Read in n elements into vector from file
       {
         eqdsk_file >> eqdsk.rbdry[i] >> eqdsk.zbdry[i];
       }
-      LOG_WARNING << "Number of eqdsk.rbdry/eqdsk.zbdry values read " << eqdsk.nbdry;
+      std::stringstream numberOfBdryVals;
+      numberOfBdryVals << "Number of eqdsk.rbdry/eqdsk.zbdry values read " << eqdsk.nbdry;
+      log_string(LogLevel::WARNING, numberOfBdryVals.str());
     }
     else
     {
-      LOG_FATAL << "Error reading boundary data from eqdsk";
+      log_string(LogLevel::FATAL, "Error reading boundary data from eqdsk");
     }
 
     if (eqdsk.nlim > 0)
     {
-      LOG_INFO << "Reading eqdsk.rlim and eqdsk.zlim...";
+      log_string(LogLevel::INFO, "Reading eqdsk.rlim and eqdsk.zlim...");
       eqdsk.rlim.resize(eqdsk.nlim);
       eqdsk.zlim.resize(eqdsk.nlim);
       for (int i=0; i<eqdsk.nlim; i++)
       {
         eqdsk_file >> eqdsk.rlim[i] >> eqdsk.zlim[i];
       }
-      LOG_WARNING << "Number of eqdsk.rlim/eqdsk.zlim values read " << eqdsk.nlim;
+      std::stringstream numberOfLimVals;
+      numberOfLimVals << "Number of eqdsk.rlim/eqdsk.zlim values read " << eqdsk.nlim;
+      log_string(LogLevel::WARNING, numberOfLimVals.str());
     }
     else
     {
-      LOG_FATAL << "Error reading limiter data from eqdsk";
+      log_string(LogLevel::FATAL, "Error reading limiter data from eqdsk");
     }
 
     //initialise rest of EquilData attributes
@@ -191,7 +212,7 @@ void EquilData::read_eqdsk(std::string filename)
     
     if (OVERRIDE_ITER == true)
     {
-     LOG_INFO << "Override for ITER case applied. Sign of psi flipped";
+     log_string(LogLevel::INFO, "Override for ITER case applied. Sign of psi flipped");
      if (eqdsk.psimag1 > eqdsk.psibdry1)
       {
         psiaxis = -eqdsk.psimag1*psifac; // flip sign
@@ -202,7 +223,6 @@ void EquilData::read_eqdsk(std::string filename)
           for (auto& i:row) 
             {
               i = -i;
-              //std::cout << i << std::endl;
             }
         }
       }
@@ -216,20 +236,20 @@ void EquilData::read_eqdsk(std::string filename)
     dpsi = std::abs(rsig*(psiqbdry-psiaxis)/nw);
     psinorm = std::fabs(psiqbdry-psiaxis)/2;
 
-    if (debug)
+    if (debug && rank == 0)
     { 
-      LOG_WARNING << "DPSI =  " << dpsi;
-      LOG_WARNING << "PSIQBDRY = " << psiqbdry;
-      LOG_WARNING << "PSIAXIS = " << psiaxis;
-      LOG_WARNING << "RSIG = " << rsig;
-      LOG_WARNING << "RMIN = " << rmin;
-      LOG_WARNING << "RMAX = " << rmax;
-      LOG_WARNING << "ZMIN = " << zmin;
-      LOG_WARNING << "ZMAX = " << zmax;
-      LOG_WARNING << "dR = " << dr;
-      LOG_WARNING << "dZ = " << dz;
-      LOG_WARNING << "PSINORM = " << psinorm;
-      LOG_WARNING << "IVAC = " << ivac;
+      std::cout << "DPSI =  " << dpsi << std::endl;
+      std::cout << "PSIQBDRY = " << psiqbdry << std::endl;
+      std::cout << "PSIAXIS = " << psiaxis << std::endl;
+      std::cout << "RSIG = " << rsig << std::endl;
+      std::cout << "RMIN = " << rmin << std::endl;
+      std::cout << "RMAX = " << rmax << std::endl;
+      std::cout << "ZMIN = " << zmin << std::endl;
+      std::cout << "ZMAX = " << zmax << std::endl;
+      std::cout << "dR = " << dr << std::endl;
+      std::cout << "dZ = " << dz << std::endl;
+      std::cout << "PSINORM = " << psinorm << std::endl;
+      std::cout << "IVAC = " << ivac << std::endl;
     }
 
 
@@ -243,15 +263,14 @@ void EquilData::read_eqdsk(std::string filename)
 // Read 1D array from eqdsk (PRIVATE)
 std::vector<double> EquilData::read_array(int n, std::string varName)
 {
-  LOG_TRACE << "-----EquilData.read_array()-----";
-
   std::vector<double> work1d(n); // working vector of doubles of size n
-  LOG_INFO << "Reading " << varName << " values...";
   for(int i=0; i<nw; i++) // Read in n elements into vector from file
   {
     eqdsk_file >> work1d[i];
   }
-  LOG_WARNING << "Number of " << varName << " values read = " << n;
+  std::stringstream arrayOut; 
+  arrayOut << "Number of " << varName << " values read = " << n;
+  log_string(LogLevel::INFO, arrayOut.str());
   return work1d;
 
 
@@ -260,28 +279,24 @@ std::vector<double> EquilData::read_array(int n, std::string varName)
 // Read 2D array from eqdsk (PRIVATE)
 std::vector<std::vector<double>> EquilData::read_2darray(int nx, int ny, std::string varName)
 {
-  LOG_TRACE << "-----EquilData.read_2darray()-----";
-
   std::vector<std::vector<double>> work2d(nw, std::vector<double>(nh));
-  LOG_INFO << "Reading " << varName << " values...";
   for (int i=0; i<nx; i++)
   {
     for(int j=0; j<ny; j++)
     {
       eqdsk_file >> work2d[i][j];
-      // work2d[i][j] = -work2d[i][j]; // reverse sign of psi if needed
     }
   }
-  LOG_WARNING << "Number of " << varName << " values read = " << nx*ny;
+  std::stringstream arrayOut;
+  arrayOut << "Number of " << varName << " values read = " << nx*ny;
+  log_string(LogLevel::INFO, arrayOut.str());
   return work2d;
-
 
 }
 
 // Write out eqdsk data back out in eqdsk format
 void EquilData::write_eqdsk_out()
 {
-  LOG_TRACE << "-----EquilData.write_eqdsk_out()-----";
   std::ofstream eqdsk_out("eqdsk.out");
   eqdsk_out << std::setprecision(9) << std::scientific;
   eqdsk_out << std::setiosflags(std::ios::uppercase);
@@ -361,7 +376,6 @@ void EquilData::write_eqdsk_out()
 // Write singular line out in EQDSK format (PRIVATE)
 int EquilData::eqdsk_line_out(std::ofstream &file, double element, int counter)
     {
-      LOG_TRACE << "-----EquilData.eqdsk_line_out()-----";
       if (counter == 5)
       {
         file << std::endl;
@@ -385,7 +399,6 @@ int EquilData::eqdsk_line_out(std::ofstream &file, double element, int counter)
 // Write out eqdsk arrays (PRIVATE)
 void EquilData::eqdsk_write_array(std::ofstream &file, std::vector<double> array, int counter)
 {
-  LOG_TRACE << "-----EquilData.eqdsk_write_array()-----";
   double element;
   for(int i=0; i<nw; i++)
   {
@@ -398,7 +411,6 @@ void EquilData::eqdsk_write_array(std::ofstream &file, std::vector<double> array
 // Initialise the 1D arrays and 2d spline functions
 void EquilData::init_interp_splines()
 {
-  LOG_TRACE << "-----EquilData.init_interp_splines()-----";
   std::vector<double> r_pts(nw);
   std::vector<double> z_pts(nh);
   r_pts[0] = rmin;
@@ -478,7 +490,6 @@ void EquilData::init_interp_splines()
 // Write out psi(R,Z) data for gnuplotting
 void EquilData::gnuplot_out()
 {
-  LOG_TRACE << "-----EquilData.gnuplot_out()-----";
   std::ofstream psiRZ_out;
   psiRZ_out.open("psi_RZ.gnu");
 
@@ -498,7 +509,6 @@ void EquilData::gnuplot_out()
 // (+1 -> Increase outwards, -1 -> Decrease outwards)
 void EquilData::set_rsig()
 {
-  LOG_TRACE << "-----EquilData.set_rsig()-----";
   if (psiqbdry-psiaxis < 0)
   {
     rsig = -1.0;
@@ -508,7 +518,7 @@ void EquilData::set_rsig()
     rsig = +1.0;
   }
   
-  if (debug) {
+  if (debug && rank == 0) {
     LOG_WARNING << "Value of rsig (psiqbdry-psiaxis) = " << rsig;
   }
 }
@@ -516,7 +526,6 @@ void EquilData::set_rsig()
 // Find central psi extrema
 void EquilData::centre(int cenopt)
 {
-  LOG_TRACE << "-----EquilData.centre-----";
   int igr; // R position index of global extremum
   int igz; // Z position index of global extremum
   int soutr = 10; // maximum number of outer searches
@@ -544,7 +553,7 @@ void EquilData::centre(int cenopt)
   case 1:
     rcen = eqdsk.rqcen;
     zcen = eqdsk.zqcen;
-    LOG_INFO << "(Rcen,Zcen) values taken from eqdsk (Rmaxis,Zmaxis)";
+    log_string(LogLevel::INFO, "(Rcen,Zcen) values taken from eqdsk (Rmaxis,Zmaxis)");
     break; // end case 1
 
   case 2:
@@ -630,13 +639,17 @@ void EquilData::centre(int cenopt)
     zcen = zmin+(igz-1)*dz;
     
 
-    LOG_INFO << "New (Rcen,Zcen) values calculated";
+    log_string(LogLevel::INFO, "New (Rcen,Zcen) values calculated");
     break; // end case 2
   }
   psicen = alglib::spline2dcalc(psiSpline, rcen, zcen);
-  LOG_WARNING << "Rcen value calculated from EquilData.centre() = " << rcen;
-  LOG_WARNING << "Zcen value calculated from EquilData.centre() = " << zcen;
-  LOG_WARNING << "Psicen value calculated from EquilData.centre() = " << psicen;
+
+  if (rank == 0)
+  {
+    std::cout << "Rcen value calculated from EquilData.centre() = " << rcen << std::endl;
+    std::cout << "Zcen value calculated from EquilData.centre() = " << zcen << std::endl;
+    std::cout << "Psicen value calculated from EquilData.centre() = " << psicen << std::endl;
+  }
   
 
 }
@@ -644,7 +657,6 @@ void EquilData::centre(int cenopt)
 // ***TODO***
 void EquilData::r_extrema()
 {
-  LOG_TRACE << "-----EquilData.r_extrema()-----";
   int nrsrsamp; // number of samples in r
   double zpsi; // psi
   double zdpdr; // dpsi/dr
@@ -699,14 +711,14 @@ void EquilData::r_extrema()
       re = rcen + zsr*zcostheta;
       if (re>=rmax || re<=rmin)
       {
-        LOG_WARNING << "Rejecting direction-extremum not found. Rejecting in R";
+        log_string(LogLevel::WARNING, "Rejecting direction-extremum not found. Rejecting in R");
         work1[j] = 2;
         break;
       }
       ze = zcen + zsr*zsintheta;
       if (ze>=zmax || ze<=zmin)
       {
-        LOG_WARNING << "Rejecting direction-extremum not found. Rejecting in Z";
+        log_string(LogLevel::WARNING, "Rejecting direction-extremum not found. Rejecting in Z");
         work1[j] = 2;
         break;
       }
@@ -725,7 +737,6 @@ void EquilData::r_extrema()
 // Create 2d spline structures for R(psi,theta) and Z(psi,theta) ***TODO***
 void EquilData::rz_splines()
 {
-  LOG_TRACE << "-----EquilData.rz_splines()-----";
   int iext; // maximum allowed number of knots for spline in r
   int iknot; // actual number of knots for splinie in r
   int intheta; // actual number of angles defining R,Z(psi,theta)
@@ -857,7 +868,6 @@ std::vector<double> EquilData::b_field_cart(std::vector<double> polarBVector, do
 
 void EquilData::write_bfield(bool plotRZ, bool plotXYZ)
 {
-  LOG_TRACE << "-----EquilData.b_field_write()-----";
   std::vector<double> polarPos(3); // cartesian position P(x,y,z)
   std::vector<double> polarB(3); // polar toroidal magnetic field B(Br, Bz, Bphi)
 
@@ -913,7 +923,7 @@ void EquilData::write_bfield(bool plotRZ, bool plotXYZ)
           // test for negative Rs
           if (polarPos[0] < 0 )
           {
-            LOG_ERROR << "Negative R Values when attempting plot magnetic field. Fixup eqdsk required";
+            log_string(LogLevel::ERROR, "Negative R Values when attempting plot magnetic field. Fixup eqdsk required");
           }
           polarB = b_field(polarPos, "polar"); // calculate B(R,Z,phi)
           cartB = b_field_cart(polarB, polarPos[2], 0); // transform to B(x,y,z)
@@ -967,7 +977,6 @@ void EquilData::boundary_rb()
 {
   // mostly copied from r_extrema()
 
-  LOG_TRACE << "-----EquilData.boundary_rb()-----";
   std::string functionName = ".boundary_rb(): ";
   int nrsrsamp; // number of samples in r
 
@@ -1102,7 +1111,7 @@ void EquilData::boundary_rb()
 
   if ((zpsiinr-zpsioutr)*rsig >=0)
   {
-    LOG_FATAL << className << functionName << "No suitable psi range exists";
+    log_string(LogLevel::FATAL, className + functionName + " No suitable psi range exists");
   }
 
   zsrmin = zsrinr;
@@ -1136,7 +1145,7 @@ void EquilData::boundary_rb()
     if (i>1 && zdpdsrl*zdpdsr<=0)
     {
       // should only be small non-monotone region, try to ignore
-      LOG_ERROR << className << functionName << "Lack of monotincity";
+      log_string(LogLevel::ERROR, className + functionName + " Lack of monotincity");
       // fix up
       zdpdsr = zdpdsrl;
     }
@@ -1166,13 +1175,13 @@ void EquilData::boundary_rb()
 
 
   zpsi = psiqbdry;
-  LOG_WARNING << "psiqbdry from EQDSK = " << zpsi;
+  if (rank == 0) {LOG_WARNING << "psiqbdry from EQDSK = " << zpsi;}
   re = rcen + zsr*zcostheta;
   ze = zcen + zsr*zsintheta;
   alglib::spline2ddiff(psiSpline, re, ze, zpsi, zdpdr, zdpdz, zddpdz);
   psibdry = zpsi;
 
-  LOG_WARNING << "psibdry calculated from splines = " << zpsi;
+  if (rank == 0) {LOG_WARNING << "psibdry calculated from splines = " << zpsi;}
 
 
 
@@ -1191,24 +1200,26 @@ void EquilData::boundary_rb()
   zf = alglib::spline1dcalc(fSpline, zpsi);
   btotbdry = sqrt(std::max(0.0, pow(bpbdry, 2) + pow((zf/re), 2)));
 
-  LOG_WARNING << className << functionName << "Reference Boundary values";
-  LOG_WARNING << "psiqbdry (psi_m) " << psiqbdry;
-  LOG_WARNING << "rbdry (R_m) " << rbdry;
-  LOG_WARNING << "zbdry (Z_m) " << ze;
-  LOG_WARNING << "bpbdry (B_pm) " << bpbdry;
-  LOG_WARNING << "btotbdry (B_m) " << btotbdry;
-
   cylj = std::abs(zsr*bpbdry/2.0e-7);
-  std::cout << "ZSR = " << zsr << " BPBDRY = " << bpbdry << std::endl;
-  LOG_WARNING << "Estimated cylindrical current " << cylj;
+
 
   zbr = -(1/re)*zdpdz;
   zbz = (1/re)*zdpdr;
   zbt = zf/re;
-
-  LOG_WARNING << "Radial BField component (Br) " << zbr;
-  LOG_WARNING << "Vertical BField component (Bz) " << zbz;
-  LOG_WARNING << "Toroidal BField component (Bt) " << zbt;
+  if (rank == 0)
+  {
+    LOG_WARNING << className << functionName << "Reference Boundary values";
+    LOG_WARNING << "psiqbdry (psi_m) " << psiqbdry;
+    LOG_WARNING << "rbdry (R_m) " << rbdry;
+    LOG_WARNING << "zbdry (Z_m) " << ze;
+    LOG_WARNING << "bpbdry (B_pm) " << bpbdry;
+    LOG_WARNING << "btotbdry (B_m) " << btotbdry;
+    std::cout << "ZSR = " << zsr << " BPBDRY = " << bpbdry << std::endl;
+    LOG_WARNING << "Estimated cylindrical current " << cylj;
+    LOG_WARNING << "Radial BField component (Br) " << zbr;
+    LOG_WARNING << "Vertical BField component (Bz) " << zbz;
+    LOG_WARNING << "Toroidal BField component (Bt) " << zbt;
+  }
 }
 
 double EquilData::omp_power_dep(double psi, double bn, std::string formula)
@@ -1318,20 +1329,19 @@ void EquilData::psi_limiter(std::vector<std::vector<double>> vertices)
   bpbdry = zbpbdry;
   btotbdry = zbtotbdry;
 
-  std::cout << "PSI_LIMITER() RBDRY = " << rbdry << std::endl;
-  std::cout << "PSI_LIMITER() BPBDRY = " << bpbdry << std::endl;
-  std::cout << "PSI_LIMITER() BTOTBDRY = " << btotbdry << std::endl;
-
+  if (rank == 0)
+  {
+    std::cout << "PSI_LIMITER() RBDRY = " << rbdry << std::endl;
+    std::cout << "PSI_LIMITER() BPBDRY = " << bpbdry << std::endl;
+    std::cout << "PSI_LIMITER() BTOTBDRY = " << btotbdry << std::endl;
+  }
 
 }
 
 void EquilData::move()
 {
   double zgfac; // geometrical factor
-  std::cout << "BField Data has been moved and scaled by:" << std::endl;
-  std::cout << "RMOVE = " << rmove << std::endl;
-  std::cout << "ZMOVE = " << zmove << std::endl;
-  std::cout << "FSCALE = " << fscale << std::endl;
+
 
   // move (R,Z) values
   rmin = rmin + rmove;
@@ -1342,13 +1352,22 @@ void EquilData::move()
   eqdsk.zqcen = eqdsk.zqcen + zmove;
 
   zgfac = eqdsk.rqcen/(eqdsk.rqcen-rmove);
-  std::cout << "MOVE FUNCTION INCOMPLETE. NEED TO FIX" << std::endl;
-  // adjust \f$ f \f$ approximately (should use R instead of R_c,
-  // but then f becomes a function of \f$ \theta \f$)
+
 
   for (int i=0; i<nw; i++) {i*zgfac;}
   // scale f
   for (int i=0; i<nw; i++) {i*fscale;}
+
+  if (rank == 0)
+  {
+    std::cout << "BField Data has been moved and scaled by:" << std::endl;
+    std::cout << "RMOVE = " << rmove << std::endl;
+    std::cout << "ZMOVE = " << zmove << std::endl;
+    std::cout << "FSCALE = " << fscale << std::endl;
+    std::cout << "MOVE FUNCTION INCOMPLETE. NEED TO FIX" << std::endl;
+  // adjust \f$ f \f$ approximately (should use R instead of R_c,
+  // but then f becomes a function of \f$ \theta \f$)
+  }
 
 }
 
