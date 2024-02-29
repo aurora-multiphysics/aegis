@@ -129,7 +129,7 @@ void VtkInterface::write_unstructuredGrid(std::string fileName)
 
 void VtkInterface::write_particle_track(std::string branchName, double heatflux){
   
-  if (drawParticleTracks && rank == 0) 
+  if (drawParticleTracks) 
   { 
     init_Ptrack_branch(branchName);
     vtkNew<vtkPolyData> polydataTrack;
