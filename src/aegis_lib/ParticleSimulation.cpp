@@ -22,7 +22,8 @@ void ParticleSimulation::Execute_mpi(){
 
   MPI_Status mpiStatus;
 
-  vtkInterface->init();  
+  vtkInterface->init();
+  vtkInterface->new_vtkArray("Q", 1);
   moab::Range targetSurfaceList = select_target_surface();
   integrator = std::make_unique<SurfaceIntegrator>(targetSurfaceList);
 
@@ -34,11 +35,12 @@ void ParticleSimulation::Execute_mpi(){
   std::vector<double> handlerQVals(num_facets());
 
   int workerStartIndex;
+  MPI_Request request;
 
 
   if(rank == 0)  
   { // handler process...
-    std::cout << "Dynamic task scheduling with " << (nprocs-1) << "processes, each handling "<< dynamicTaskSize << " facets" << std::endl;
+    std::cout << "Dynamic task scheduling with " << (nprocs-1) << " processes, each handling "<< dynamicTaskSize << " facets" << std::endl;
     int facetsHandled = 0;
     for(int procID = 1; procID < nprocs; procID++)
     { // Send the initial indexes for each process statically
@@ -60,13 +62,14 @@ void ParticleSimulation::Execute_mpi(){
         MPI_Send(&facetsHandled, 1, MPI_INT, avaialbleProcess, 1, MPI_COMM_WORLD);  
 
         facetsHandled += dynamicTaskSize;
+        MPI_Irecv(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, MPI_ANY_SOURCE, 100, MPI_COMM_WORLD, &request);
+        MPI_Irecv(&workerStartIndex, 1, MPI_INT, MPI_ANY_SOURCE, 101, MPI_COMM_WORLD, &request);
 
-        MPI_Recv(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, avaialbleProcess, avaialbleProcess*100, MPI_COMM_WORLD, &mpiStatus);
-        MPI_Recv(&workerStartIndex, 1, MPI_INT, avaialbleProcess, avaialbleProcess*101, MPI_COMM_WORLD, &mpiStatus);
+        if (rank == 0) {std::cout << "Facets Handled = " << workerStartIndex  << std::endl;}
 
-        int workerEndIndex = workerStartIndex + dynamicTaskSize;
-        std::vector<double>::iterator itr = handlerQVals.begin() + workerStartIndex;
-        handlerQVals.insert(itr, bufferQVals.begin(), bufferQVals.end());
+        // int workerEndIndex = workerStartIndex + dynamicTaskSize;
+        // std::vector<double>::iterator itr = handlerQVals.begin() + workerStartIndex;
+        // handlerQVals.insert(itr, bufferQVals.begin(), bufferQVals.end());
         
       }
       else
@@ -134,8 +137,10 @@ void ParticleSimulation::Execute_mpi(){
       { // processing the next set of available work that has been dynamically allocated 
         bufferQVals = loop_over_facets(start, end, targetSurfaceList);
         // send local (to worker) array back to handler process
-        MPI_Send(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, 0, rank*100, MPI_COMM_WORLD);
-        MPI_Send(&start, 1, MPI_INT, 0, rank*101, MPI_COMM_WORLD);
+        
+        MPI_Igatherv(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, NULL, NULL, NULL, MPI_DOUBLE, 0, MPI_COMM_WORLD, &request);
+        // MPI_Send(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
+        MPI_Send(&start, 1, MPI_INT, 0, 101, MPI_COMM_WORLD);
  
         // for (int ctr=0; ctr<bufferQVals.size(); ++ctr)
         // {
@@ -251,7 +256,12 @@ void ParticleSimulation::init_geometry(){
   DAG->moab_instance()->get_entities_by_type(0, MBTRI, facetsList);
 
   if (rank == 0) {std::cout << "Number of Triangles in Geometry " << facetsList.size() << std::endl;}
-  volID = DAG->entity_by_index(3,1);
+  implComplementVol = DAG->entity_by_index(3, volsList.size());
+  
+  if (!DAG->is_implicit_complement(implComplementVol))
+    {
+      std::cout << "Particle not in implicit complement. Check volumes." << std::endl;
+    }
 
   // setup B Field data
   
@@ -262,8 +272,9 @@ void ParticleSimulation::init_geometry(){
 
   std::vector<double> vertexCoordinates;
   DAG->moab_instance()->get_vertex_coordinates(vertexCoordinates);
-  if (rank == 0) {std::cout << "NUMBER OF NODES = " <<  vertexCoordinates.size() << std::endl;}
   int numNodes = vertexCoordinates.size()/3;
+  if (rank == 0) {std::cout << "NUMBER OF NODES = " <<  numNodes << std::endl;}
+
   std::vector<std::vector<double>> vertexList(numNodes, std::vector<double> (3));
 
   for (int i = 0; i<numNodes; i++)
@@ -323,8 +334,10 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
       //vtkInterface->insert_zero_uStrGrid();
       continue;
     }
+
+
     vtkInterface->init_new_vtkPoints();
-    // vtkInterface->insert_next_point_in_track(particle.launchPos);
+    vtkInterface->insert_next_point_in_track(particle.launchPos);
 
     particle.set_dir(equilibrium);
     polarPos = CoordTransform::cart_to_polar(particle.launchPos, "forwards");
@@ -340,10 +353,11 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
     
     // Start ray tracing
     DagMC::RayHistory history;
-    ray_hit_on_launch(particle, history);
+    //ray_hit_on_launch(particle, history);
     trackLength = trackStepSize;
 
     particle.update_vectors(trackStepSize, equilibrium);
+
     vtkInterface->insert_next_point_in_track(particle.pos);
 
 
@@ -360,11 +374,17 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
 // loop over single particle track from launch to termination
 terminationState ParticleSimulation::loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history)
 {
+  double euclidDistToNextSurf = 0.0;
+  nextSurf = 0;
 
   for (int step=0; step<maxTrackSteps; ++step)
   {
     trackLength += trackStepSize;
-    DAG->ray_fire(volID, particle.pos.data(), particle.dir.data(), nextSurf, nextSurfDist, &history, trackStepSize, rayOrientation);
+    counter++;
+
+    DAG->ray_fire(implComplementVol, particle.pos.data(), particle.dir.data(), nextSurf, nextSurfDist, &history, trackStepSize, rayOrientation);
+    numberOfRayFireCalls++; 
+
 
     if (nextSurf != 0)
     {
@@ -447,17 +467,17 @@ void ParticleSimulation::terminate_particle(const moab::EntityHandle &facet, Dag
       if (rank == 0) {LOG_INFO << "Fieldline trace reached maximum length before intersection";}
   }
 
-//  vtkInterface->insert_next_uStrGrid("Q", heatflux);
   qValues.push_back(heatflux);
   psiQ_values.push_back(std::make_pair(psiOnSurface, Q));
 }
 
 void ParticleSimulation::ray_hit_on_launch(ParticleBase &particle, DagMC::RayHistory &history){
-  DAG->ray_fire(volID, particle.launchPos.data(), particle.dir.data(), nextSurf, nextSurfDist, &history,trackStepSize,rayOrientation);
+  DAG->ray_fire(implComplementVol, particle.launchPos.data(), particle.dir.data(), nextSurf, nextSurfDist, &history,trackStepSize,rayOrientation);
   if (nextSurf != 0) 
   {
     history.get_last_intersection(intersectedFacet);
-    DAG->next_vol(nextSurf, volID, volID);
+    EntityHandle nextVolEH;
+    DAG->next_vol(nextSurf, implComplementVol, nextVolEH);
     if (rank == 0) {LOG_INFO << "---- RAY HIT ON LAUNCH [" << facetCounter << "] ----";}
   }
 }
@@ -575,17 +595,27 @@ void ParticleSimulation::mpi_particle_stats(){
 // run AEGIS simulation on single core
 void ParticleSimulation::Execute(){
 
-  MPI_Status mpiStatus;
-
   vtkInterface->init();  
+  vtkInterface->new_vtkArray("Q", 1);
+  // vtkInterface->new_vtkArray("B.n_direction", 1);
+  // vtkInterface->new_vtkArray("Normal", 3);
+  // vtkInterface->new_vtkArray("B_field", 3);
+  // vtkInterface->new_vtkArray("Psi_Start", 1);
+  // vtkInterface->new_vtkArray("B.n", 1);
+
   moab::Range targetSurfaceList = select_target_surface();
   integrator = std::make_unique<SurfaceIntegrator>(targetSurfaceList);
+
+  
+  std::cout << "Has graveyard? " << DAG->has_graveyard() << std::endl;
+  DAG->create_graveyard();
+  std::cout << "Has graveyard? " << DAG->has_graveyard() << std::endl;
+  implicit_complement_testing();
 
   int start = 0;
   int end = targetSurfaceList.size();
 
   std::vector<double> qvalues;
-
   qvalues = loop_over_facets(start, end, targetSurfaceList);
 
   // write out data and print final
@@ -598,8 +628,110 @@ void ParticleSimulation::Execute(){
   }
 
     vtkInterface->write_unstructuredGrid("out.vtk");
-  //   vtkInterface->write_multiBlockData("particle_tracks.vtm");
+    vtkInterface->write_multiBlockData("particle_tracks.vtm");
     print_particle_stats(particleStats);
 
-
+    std::cout << "Number of Ray fire calls = " << numberOfRayFireCalls << std::endl;
+    std::cout << "Number of Closest Location calls = " << numberOfClosestLocCalls << std::endl;
+    std::cout << "Number of iterations performed = " << counter << std::endl;
   }
+
+void ParticleSimulation::Execute_split(){
+
+  vtkInterface->init();  
+  vtkInterface->new_vtkArray("Q", 1);
+
+
+  moab::Range targetSurfaceList = select_target_surface();
+  integrator = std::make_unique<SurfaceIntegrator>(targetSurfaceList);
+
+  int totalNumberOfFacets = targetSurfaceList.size();
+  int numberofFacets = totalNumberOfFacets / nprocs;
+  int startFacet = rank * numberofFacets;
+  int endFacet = startFacet + numberofFacets;
+  nFacets = 0;
+  int root_rank = 0;
+
+
+  std::vector<double> qvalues;
+  std::vector<double> rootQvalues;
+  MPI_Request request;
+  std::vector<int> recvCounts(nprocs);
+  std::vector<int> displacements(nprocs);
+  displacements[0] = startFacet;
+
+  for (auto i: recvCounts)
+  {
+    i = numberofFacets;
+  }
+
+  for (int i=0; i<nprocs; ++i)
+  {
+    displacements[i] = numberofFacets*rank;
+  }
+
+  qvalues = loop_over_facets(startFacet, endFacet, targetSurfaceList);
+  // for (int i=0; i<qvalues.size(); ++i)
+  // {
+  //   rootQvalues[i] = qvalues[i];
+  // }  
+
+  if (rank != 0)
+  { 
+    MPI_Gather(qvalues.data(), qvalues.size(), MPI_DOUBLE, NULL, qvalues.size(), MPI_DOUBLE, root_rank, MPI_COMM_WORLD);
+  }
+  else
+  {
+    MPI_Gather(qvalues.data(), qvalues.size(), MPI_DOUBLE, rootQvalues.data(), qvalues.size(), MPI_DOUBLE, root_rank, MPI_COMM_WORLD);
+    std::cout << "ROOTQVALUES SIZE = " << rootQvalues.size() << std::endl;
+  }
+  // write out data and print final
+
+
+  std::array<int, 4> particleStats = integrator->particle_stats(); 
+
+  for (int i=0; i<num_facets(); ++i){
+    vtkInterface->insert_next_uStrGrid("Q", qvalues[i]);
+  //  vtkInterface->insert_next_uStrGrid("Psi_Start", allPsiValues[i]);
+  }
+
+  vtkInterface->write_unstructuredGrid("out.vtk");
+//   vtkInterface->write_multiBlockData("particle_tracks.vtm");
+  print_particle_stats(particleStats);
+
+
+}
+
+// get surfaces attributed to the aegis_target group set in cubit
+void ParticleSimulation::implicit_complement_testing()
+{
+
+  std::vector<EntityHandle> children;
+  DAG->moab_instance()->get_child_meshsets(implComplementVol, children, 1);
+  std::vector<EntityHandle> vertices;
+
+  for (const auto &i:children)
+  {
+    std::vector<EntityHandle> temp;
+    DAG->moab_instance()->get_entities_by_type(i, MBVERTEX, vertices, false); 
+    vertices.insert(vertices.begin(), temp.begin(), temp.end());
+  }
+  std::vector<double> vertexCoords(vertices.size()*3);
+
+  DAG->moab_instance()->get_coords(&vertices[0], vertices.size(), vertexCoords.data());
+
+  // DAG->moab_instance()->list_entities(children);
+
+  std::ofstream implcitComplCoords("implcit_complement.txt");
+  for (int i=0; i<vertexCoords.size(); i+=3)
+  {
+    implcitComplCoords << vertexCoords[i] << " " << vertexCoords[i+1] << " " << vertexCoords[i+2] << std::endl;
+  }
+
+  std::cout << "Number of Nodes in implicit complement = " << vertexCoords.size() << std::endl;
+
+  return;
+
+}
+
+  

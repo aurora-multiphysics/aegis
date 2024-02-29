@@ -64,6 +64,7 @@ class ParticleSimulation : public AegisBase
   ParticleSimulation(std::string filename);
   void Execute();
   void Execute_mpi(); 
+  void Execute_split();
   void init_geometry();
   int num_facets();
   std::vector<std::pair<double,double>> psiQ_values; // for l2 norm test
@@ -73,6 +74,7 @@ class ParticleSimulation : public AegisBase
 
   private:
   void dynamic_task_init();
+  void implicit_complement_testing(); 
   moab::Range select_target_surface(); // get target surfaces of interest from aegis_settings.json
   std::vector<double> loop_over_facets(int startFacet, int endFacet,const  moab::Range targetSurfaceList); // loop over facets in target surfaces
   terminationState loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history); // loop over individual particle tracks
@@ -102,8 +104,9 @@ class ParticleSimulation : public AegisBase
   double psiref = 0.0;
   bool noMidplaneTermination = false;
   std::vector<int> vectorOfTargetSurfs;
-
-  std::stringstream stringToPrint;
+  unsigned int numberOfRayFireCalls = 0;
+  unsigned int numberOfClosestLocCalls = 0;
+  unsigned int counter=0;
 
   std::unique_ptr<moab::DagMC> DAG;
   std::unique_ptr<moab::DagMC> polarDAG;
@@ -114,12 +117,13 @@ class ParticleSimulation : public AegisBase
   int numNodes = 0;
   moab::EntityHandle prevSurf;
   moab::EntityHandle nextSurf;
-  moab::EntityHandle volID; 
+  moab::EntityHandle implComplementVol; 
   double nextSurfDist = 0.0; // distance to next surface
   moab::EntityHandle intersectedFacet;
   int rayOrientation = 1; // rays are fired along surface normals
   double trackLength = 0.0;
   int facetCounter = 0;
+
   std::vector<double> qValues;
   std::vector<double> psiValues;
 

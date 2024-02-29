@@ -26,6 +26,9 @@ class ParticleBase : public AegisBase
   double lengthTravelled = 0.0; // total length travelled by particle
   bool directionUp = false; 
   std::vector<double> previousPos;
+  double thresholdDistanceThreshold = 0.0;
+  double euclidDistTravelled = 0.0;
+  bool thresholdDistanceCrossed = false;
   //DagMC::RayHistory history; // stores entity handles of surfaces crossed and facets hit
 
   public:
@@ -36,6 +39,7 @@ class ParticleBase : public AegisBase
   std::vector<double> launchPos; // initial starting position of particle on triangle
   int atMidplane; // 0 == Not at midplane; 1 == At Inner-Midplane; 2 == At Outer-Midplane  
   bool outOfBounds = false;
+  bool thresholdDistanceSet = false;
 
   void set_pos(std::vector<double> newPosition); // set new particle position
   void set_pos(double newPosition[]); // overload for C-style array
@@ -48,6 +52,8 @@ class ParticleBase : public AegisBase
   void update_vectors(double distanceTravelled); // update position  
   void update_vectors(double distanceTravelled, EquilData &EquData); // overload to update dir as well
   void check_if_midplane_reached(const std::array<double, 3> &midplaneParameters); // check if particle has reached inner or outer midplane and set value of atMidplane
+  void set_intersection_threshold(double distanceThreshold);
+  bool check_if_threshold_crossed();
 
 };
 

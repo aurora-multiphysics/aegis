@@ -124,6 +124,13 @@ void ParticleBase::update_vectors(double distanceTravelled)
   // This will update the position 
   std::vector<double> newPt(3);
 
+  double x2= pow((newPt[0]-pos[0]), 2);
+  double y2= pow((newPt[1]-pos[1]), 2);
+  double z2= pow((newPt[2]-pos[2]), 2);
+  double thresholdDistUpdate = sqrt(x2 + y2 + z2);
+
+  euclidDistTravelled += thresholdDistUpdate;
+
   newPt[0] = pos[0] + dir[0] * distanceTravelled;
   newPt[1] = pos[1] + dir[1] * distanceTravelled;
   newPt[2] = pos[2] + dir[2] * distanceTravelled;
@@ -176,4 +183,27 @@ void ParticleBase::check_if_midplane_reached(const std::array<double, 3> &midpla
       else if (r >= rOuterMidplane) {atMidplane = 2;}
     }
   }
+}
+
+// set distance threshold where if particle has travlled less, ray_fire() calls do not happen
+void ParticleBase::set_intersection_threshold(double distanceThreshold)
+{
+  thresholdDistanceThreshold = distanceThreshold;
+  thresholdDistanceCrossed = false;
+  thresholdDistanceSet = true;
+}
+
+// check if the distance threshold for ray_fire() calls has been called
+// if true returned ray_fire() should be called
+// if false returned then particle position should update without ray_fire()
+bool ParticleBase::check_if_threshold_crossed()
+{
+  if (euclidDistTravelled > thresholdDistanceThreshold)
+    {
+      thresholdDistanceThreshold = 0.0;
+      euclidDistTravelled = 0.0;
+      thresholdDistanceSet = false;
+      return true;
+    }
+  return false;
 }

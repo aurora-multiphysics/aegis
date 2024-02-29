@@ -16,11 +16,12 @@ set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREAD ON)
 ADD_DEFINITIONS(-DBOOST_LOG_DYN_LINK)
 set(Boost_PACKAGES system log log_setup)
-set(BOOST_REQUESTED_VERSION 1.71)
+# set(BOOST_REQUESTED_VERSION 1.71)
 
 find_package(Boost REQUIRED COMPONENTS ${Boost_PACKAGES})
 find_package(OpenMP REQUIRED)
 find_package(MPI REQUIRED)
+# find_package(CGAL REQUIRED)
 add_subdirectory(externals/json)
 include_directories(externals/json/include)
 
@@ -60,13 +61,14 @@ vtk_module_autoinit(
 
 # Import DAGMC
 message(STATUS "Looking for DAGMC...")
-set(DAGMC_DIR="~/dagmc_bld/DAGMC/" CACHE PATH "Path to the DAGMC build or install prefix.")
+set(DAGMC_DIR="/home/waqar/dagmc_bld/DAGMC/" CACHE PATH "Path to the DAGMC build or install prefix.")
 
 if(DAGMC_DIR) 
    find_package(DAGMC REQUIRED NAMES DAGMC HINTS "${DAGMC_DIR}" 
 		"${DAGMC_DIR}/lib/cmake/dagmc" NO_DEFAULT PATH)
 else()
-find_package(DAGMC REQUIRED lib/cmake)
+list(APPEND CMAKE_PREFIX_PATH "/home/waqar/dagmc_bld/DAGMC")
+find_package(DAGMC REQUIRED)
 endif()
 message(STATUS "Found DAGMC config in: ${DAGMC_DIR}")
 

@@ -47,14 +47,6 @@ void VtkInterface::init(){
     init_Ptrack_root();
   }
 
-  new_vtkArray("Q", 1);
-  // new_vtkArray("B.n_direction", 1);
-  // new_vtkArray("Normal", 3);
-  // new_vtkArray("B_field", 3);
-  // new_vtkArray("Psi_Start", 1);
-  // new_vtkArray("B.n", 1);
-
-  
   if (drawParticleTracks && rank == 0){
     std::cout << "vtkMultiBlockDataSet initialised for particle tracks" << std::endl; 
   }
@@ -137,8 +129,8 @@ void VtkInterface::write_unstructuredGrid(std::string fileName)
 
 void VtkInterface::write_particle_track(std::string branchName, double heatflux){
   
-  if (!drawParticleTracks) {return;} // early return if drawing particle tracks disabled
-  else{
+  if (drawParticleTracks && rank == 0) 
+  { 
     init_Ptrack_branch(branchName);
     vtkNew<vtkPolyData> polydataTrack;
     polydataTrack = new_track(branchName, particleTrackPoints, heatflux);
