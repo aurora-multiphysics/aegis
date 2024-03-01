@@ -23,7 +23,6 @@ void ParticleSimulation::Execute_mpi(){
   MPI_Status mpiStatus;
 
   vtkInterface->init();
-  vtkInterface->new_vtkArray("Q", 1);
   moab::Range targetSurfaceList = select_target_surface();
   integrator = std::make_unique<SurfaceIntegrator>(targetSurfaceList);
 
@@ -197,18 +196,11 @@ void ParticleSimulation::Execute_mpi(){
     }
   }
 
-   if (rank == 0){
-    for (int i=0; i<num_facets(); ++i){
-      vtkInterface->insert_next_uStrGrid("Q", handlerQVals[i]);
-    //  vtkInterface->insert_next_uStrGrid("Psi_Start", allPsiValues[i]);
-    }
 
-    vtkInterface->write_unstructuredGrid("out.vtk");
-  //   vtkInterface->write_multiBlockData("particle_tracks.vtm");
-    print_particle_stats(totalParticleStats);
-  }
-
+  //write_aegis_out()
   mpi_particle_stats();
+
+  print_particle_stats(totalParticleStats);
 
   }
 
@@ -331,7 +323,6 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
     if (particle.outOfBounds)
     {
       if (rank == 0) {LOG_INFO << "Particle start is out of magnetic field bounds. Skipping to next triangle. Check correct eqdsk is being used for the given geometry";}
-      //vtkInterface->insert_zero_uStrGrid();
       continue;
     }
 
@@ -537,13 +528,6 @@ moab::Range ParticleSimulation::select_target_surface(){
   }
   if (rank == 0) {LOG_WARNING << "Total Number of Triangles rays launched from = " << numTargetFacets;}
 
-  moab::EntityHandle targetFacetsSet;
-  moab::Range target_facets;
-  DAG->moab_instance()->create_meshset(MESHSET_SET, targetFacetsSet);
-  DAG->moab_instance()->add_entities(targetFacetsSet, targetFacets);
-  target_facets.insert(targetFacetsSet);
-  DAG->moab_instance()->write_file("target_facets.stl", NULL, NULL, target_facets);
-
   numFacets = targetFacets.size();
   return targetFacets;
 }
@@ -556,6 +540,7 @@ int ParticleSimulation::num_facets(){
 // print particle stats for the entire run
 void ParticleSimulation::print_particle_stats(std::array<int, 4> particleStats){
   int particlesCounted = 0;
+  MPI_Barrier(MPI_COMM_WORLD); // barrier to ensure this is always printed last
   for (const auto i:particleStats){
     particlesCounted += i;
   }
@@ -596,12 +581,6 @@ void ParticleSimulation::mpi_particle_stats(){
 void ParticleSimulation::Execute(){
 
   vtkInterface->init();  
-  vtkInterface->new_vtkArray("Q", 1);
-  // vtkInterface->new_vtkArray("B.n_direction", 1);
-  // vtkInterface->new_vtkArray("Normal", 3);
-  // vtkInterface->new_vtkArray("B_field", 3);
-  // vtkInterface->new_vtkArray("Psi_Start", 1);
-  // vtkInterface->new_vtkArray("B.n", 1);
 
   moab::ErrorCode rval;
 
@@ -635,12 +614,6 @@ void ParticleSimulation::Execute(){
 
   std::array<int, 4> particleStats = integrator->particle_stats(); 
 
-  for (int i=0; i<num_facets(); ++i){
-    vtkInterface->insert_next_uStrGrid("Q", qvalues[i]);
-  //  vtkInterface->insert_next_uStrGrid("Psi_Start", allPsiValues[i]);
-  }
-
-    vtkInterface->write_unstructuredGrid("out.vtk");
     vtkInterface->write_multiBlockData("particle_tracks.vtm");
     print_particle_stats(particleStats);
 
@@ -652,7 +625,6 @@ void ParticleSimulation::Execute(){
 void ParticleSimulation::Execute_split(){
 
   vtkInterface->init();  
-  vtkInterface->new_vtkArray("Q", 1);
   MPI_Status mpiStatus;
 
   moab::Range targetSurfaceList = select_target_surface();
@@ -709,13 +681,9 @@ void ParticleSimulation::Execute_split(){
   }
   // write out data and print final
 
-  for (int i=0; i<num_facets(); ++i){
-    vtkInterface->insert_next_uStrGrid("Q", rootQvalues[i]);
-  //  vtkInterface->insert_next_uStrGrid("Psi_Start", allPsiValues[i]);
-  }
 
-  vtkInterface->write_unstructuredGrid("out.vtk");
-//   vtkInterface->write_multiBlockData("particle_tracks.vtm");
+  //write_aegis_out();
+
   mpi_particle_stats();
   print_particle_stats(totalParticleStats);
 

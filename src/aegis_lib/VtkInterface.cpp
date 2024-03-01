@@ -6,13 +6,11 @@
 VtkInterface::VtkInterface(const std::shared_ptr<InputJSON> &inputs)
 {
   json vtkNamelist;
-  unstructuredGrid = vtkSmartPointer<vtkUnstructuredGrid>::New();
 
   if (inputs->data.contains("vtk_params"))
   {
     vtkNamelist = inputs->data["vtk_params"];
     drawParticleTracks = vtkNamelist["draw_particle_tracks"];
-    vtk_input_file = vtkNamelist["VTK"];
   }
 
 }
@@ -82,51 +80,6 @@ vtkNew<vtkPolyData> VtkInterface::new_track(std::string branchName, vtkSmartPoin
 }
 
 
-
-void VtkInterface::new_vtkArray(std::string arrName, int nComponents)
-{
-  vtkSmartPointer<vtkDoubleArray> tempArray = vtkSmartPointer<vtkDoubleArray>::New(); 
-  tempArray->SetNumberOfComponents(nComponents);
-  tempArray->SetName(arrName.data());
-  arrays.insert(std::make_pair(arrName.data(), tempArray));
-  std::stringstream newVtkArrayOut;
-  newVtkArrayOut << "Initialised new vtkDoubleArray '" << arrName  << "' with nComponents = " << nComponents;
-  log_string(LogLevel::INFO, newVtkArrayOut.str());
-}
-
-void VtkInterface::add_vtkArrays() // read stl and add arrays
-{
-  // Read in STL file 
-  vtkNew<vtkSTLReader> vtkstlReader; // STL reader 
-  vtkstlReader->SetFileName(vtk_input_file.data());
-  vtkstlReader->Update();
-  
-  log_string(LogLevel::INFO,"Initialising vtkUnstructuredGrid...");
-
-
-  // Transform PolyData to vtkUnstructuredGrid datatype using append filter
-  vtkNew<vtkAppendFilter> appendFilter;
-  vtkPolyData* vtkTargetPD = vtkstlReader->GetOutput(); 
-  appendFilter->AddInputData(vtkTargetPD);
-  appendFilter->Update();
-  unstructuredGrid->ShallowCopy(appendFilter->GetOutput());
-
-  for (const auto &arr: arrays)
-  {
-    unstructuredGrid->GetCellData()->AddArray(arr.second);
-  }
-}
-
-
-void VtkInterface::write_unstructuredGrid(std::string fileName)
-{
-  add_vtkArrays();
-  vtkNew<vtkUnstructuredGridWriter> vtkUstrWriter;
-  vtkUstrWriter->SetFileName(fileName.data());
-  vtkUstrWriter->SetInputData(unstructuredGrid);
-  vtkUstrWriter->Write();
-}
-
 void VtkInterface::write_particle_track(std::string branchName, double heatflux){
   
   if (drawParticleTracks) 
@@ -149,27 +102,6 @@ void VtkInterface::write_multiBlockData(std::string fileName){
   }
 }
 
-void VtkInterface::insert_next_uStrGrid(std::string arrayName, std::vector<double> valuesToAdd){
-  if (valuesToAdd.size() > 3) 
-  { 
-    return;
-  }
-  arrays[arrayName]->InsertNextTuple3(valuesToAdd[0], valuesToAdd[1], valuesToAdd[2]);
-}
-
-void VtkInterface::insert_next_uStrGrid(std::string arrayName, double valueToAdd){
-  arrays[arrayName]->InsertNextTuple1(valueToAdd);
-}
-
-void VtkInterface::insert_zero_uStrGrid()
-{
-  for (const auto &i:arrays) // loop through all arrays and insert next value as 0.0
-  {
-    // check number of components in array before inserting 0
-    if (i.second->GetSize() == 3) {i.second->InsertNextTuple3(0.0, 0.0, 0.0);}
-    else if (i.second->GetSize() == 1) {i.second->InsertNextTuple1(0.0);}
-  }
-}
 
 void VtkInterface::init_new_vtkPoints(){
   particleTrackPoints = vtkSmartPointer<vtkPoints>::New();
@@ -179,8 +111,3 @@ void VtkInterface::insert_next_point_in_track(std::vector<double> pointsToAdd){
   particleTrackPoints->InsertNextPoint(pointsToAdd[0], pointsToAdd[1], pointsToAdd[2]);
 }
 
-void VtkInterface::mpi_write_uStrGrid(std::string vtk_input_file, std::vector<double> heatfluxVector){
-
-
-
-}
