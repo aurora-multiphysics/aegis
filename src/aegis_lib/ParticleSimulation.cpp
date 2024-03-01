@@ -603,13 +603,14 @@ void ParticleSimulation::Execute(){
   // vtkInterface->new_vtkArray("Psi_Start", 1);
   // vtkInterface->new_vtkArray("B.n", 1);
 
+  moab::ErrorCode rval;
+
   moab::Range targetSurfaceList = select_target_surface();
   integrator = std::make_unique<SurfaceIntegrator>(targetSurfaceList);
 
+  moab::Tag heatfluxTag; 
+  double heatfluxTagValue;
   
-  std::cout << "Has graveyard? " << DAG->has_graveyard() << std::endl;
-  DAG->create_graveyard();
-  std::cout << "Has graveyard? " << DAG->has_graveyard() << std::endl;
   implicit_complement_testing();
 
   int start = 0;
@@ -617,6 +618,18 @@ void ParticleSimulation::Execute(){
 
   std::vector<double> qvalues;
   qvalues = loop_over_facets(start, end, targetSurfaceList);
+
+  DAG->moab_instance()->tag_get_handle("HEATFLUX", 1, MB_TYPE_DOUBLE, heatfluxTag, MB_TAG_CREAT | MB_TAG_DENSE, &heatfluxTagValue);
+
+  DAG->moab_instance()->tag_set_data(heatfluxTag, targetSurfaceList, &qValues[0]);
+  
+  DAG->remove_graveyard();
+  EntityHandle targetMeshset;
+  DAG->moab_instance()->create_meshset(MESHSET_SET, targetMeshset);
+  DAG->moab_instance()->add_entities(targetMeshset, targetSurfaceList);
+
+  DAG->moab_instance()->write_mesh("aegis_out_target.vtk", &targetMeshset, 1);
+  DAG->write_mesh("aegis_out.vtk", 1);
 
   // write out data and print final
 
@@ -640,7 +653,7 @@ void ParticleSimulation::Execute_split(){
 
   vtkInterface->init();  
   vtkInterface->new_vtkArray("Q", 1);
-
+  MPI_Status mpiStatus;
 
   moab::Range targetSurfaceList = select_target_surface();
   integrator = std::make_unique<SurfaceIntegrator>(targetSurfaceList);
@@ -654,7 +667,7 @@ void ParticleSimulation::Execute_split(){
 
 
   std::vector<double> qvalues;
-  std::vector<double> rootQvalues;
+  std::vector<double> rootQvalues(totalNumberOfFacets);
   MPI_Request request;
   std::vector<int> recvCounts(nprocs);
   std::vector<int> displacements(nprocs);
@@ -671,33 +684,40 @@ void ParticleSimulation::Execute_split(){
   }
 
   qvalues = loop_over_facets(startFacet, endFacet, targetSurfaceList);
-  // for (int i=0; i<qvalues.size(); ++i)
-  // {
-  //   rootQvalues[i] = qvalues[i];
-  // }  
+  std::array<int, 4> particleStats = integrator->particle_stats(); 
+  std::array<int, 4> totalParticleStats;
 
   if (rank != 0)
   { 
     MPI_Gather(qvalues.data(), qvalues.size(), MPI_DOUBLE, NULL, qvalues.size(), MPI_DOUBLE, root_rank, MPI_COMM_WORLD);
+    MPI_Send(particleStats.data(), particleStats.size(), MPI_INT, 0, 11, MPI_COMM_WORLD);
+
   }
   else
   {
+    totalParticleStats = integrator->particle_stats();
     MPI_Gather(qvalues.data(), qvalues.size(), MPI_DOUBLE, rootQvalues.data(), qvalues.size(), MPI_DOUBLE, root_rank, MPI_COMM_WORLD);
     std::cout << "ROOTQVALUES SIZE = " << rootQvalues.size() << std::endl;
+
+    for(int i=1; i<nprocs; ++i)
+    {
+      MPI_Recv(particleStats.data(), particleStats.size(), MPI_INT, i, 11, MPI_COMM_WORLD, &mpiStatus);
+      for (int j=0; j<particleStats.size(); ++j){
+        totalParticleStats[j] += particleStats[j]; 
+      }
+    }
   }
   // write out data and print final
 
-
-  std::array<int, 4> particleStats = integrator->particle_stats(); 
-
   for (int i=0; i<num_facets(); ++i){
-    vtkInterface->insert_next_uStrGrid("Q", qvalues[i]);
+    vtkInterface->insert_next_uStrGrid("Q", rootQvalues[i]);
   //  vtkInterface->insert_next_uStrGrid("Psi_Start", allPsiValues[i]);
   }
 
   vtkInterface->write_unstructuredGrid("out.vtk");
 //   vtkInterface->write_multiBlockData("particle_tracks.vtm");
-  print_particle_stats(particleStats);
+  mpi_particle_stats();
+  print_particle_stats(totalParticleStats);
 
 
 }
@@ -729,6 +749,7 @@ void ParticleSimulation::implicit_complement_testing()
   }
 
   std::cout << "Number of Nodes in implicit complement = " << vertexCoords.size() << std::endl;
+
 
   return;
 

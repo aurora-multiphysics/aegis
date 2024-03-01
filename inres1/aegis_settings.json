@@ -23,6 +23,6 @@
   },
   "vtk_params":{
       "VTK": "target_facets.stl",
-      "draw_particle_tracks": true
+      "draw_particle_tracks": false
   }
  }
