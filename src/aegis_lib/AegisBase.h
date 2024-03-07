@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <fstream>
 #include <SimpleLogger.h>
 #include <boost/log/trivial.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
@@ -32,6 +33,8 @@ class AegisBase
   void error_exit_mpi(std::string inString, std::string file, std::string func, int line, int rank);
   void print_mpi(std::string inString);
   void log_string(LogLevel level, std::string inString);
+  void setup_profiling();
+  void out_mpi_wtime(std::string inString, double totalTime);
   void set_mpi_params();
   int get_mpi_rank();
   int get_mpi_size();
@@ -40,6 +43,7 @@ class AegisBase
 
   int rank; 
   int nprocs;
+  std::ofstream profiling;
 
   private:
 

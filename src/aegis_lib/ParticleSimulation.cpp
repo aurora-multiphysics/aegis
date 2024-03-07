@@ -5,6 +5,7 @@
 ParticleSimulation::ParticleSimulation(std::string filename)
 {
   set_mpi_params();
+  setup_profiling();
 
   JSONsettings = std::make_shared<InputJSON>(filename);
 
@@ -18,16 +19,16 @@ ParticleSimulation::ParticleSimulation(std::string filename)
 }
 
 // perform AEGIS simulation solve with dynamic mpi load balancing
-void ParticleSimulation::Execute_mpi(){
+void ParticleSimulation::Execute_dynamic_mpi(){
 
   MPI_Status mpiStatus;
 
   vtkInterface->init();
-  moab::Range targetSurfaceList = select_target_surface();
-  integrator = std::make_unique<SurfaceIntegrator>(targetSurfaceList);
+  targetFacets = select_target_surface();
+  integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
 
-  int totalNumberOfFacets = targetSurfaceList.size();
-  int numberofFacets = totalNumberOfFacets / nprocs;
+  int totalFacets = targetFacets.size();
+  int nFacetsPerProc = totalFacets / nprocs;
 
   const int noMoreWork = -1;
 
@@ -35,6 +36,8 @@ void ParticleSimulation::Execute_mpi(){
 
   int workerStartIndex;
   MPI_Request request;
+
+  std::ofstream fg("");
 
 
   if(rank == 0)  
@@ -56,7 +59,7 @@ void ParticleSimulation::Execute_mpi(){
       int avaialbleProcess = 0;
       // call recieve from any source to get an avaialble process
       MPI_Recv(&avaialbleProcess, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &mpiStatus);
-      if(facetsHandled < totalNumberOfFacets)
+      if(facetsHandled < totalFacets)
       { // send that process the next index to start on in the total list
         MPI_Send(&facetsHandled, 1, MPI_INT, avaialbleProcess, 1, MPI_COMM_WORLD);  
 
@@ -104,7 +107,7 @@ void ParticleSimulation::Execute_mpi(){
     int end = start + dynamicTaskSize;
 
     // processing the initial set of facets. Call loop over facets here
-    bufferQVals = loop_over_facets(start, end, targetSurfaceList);
+    bufferQVals = loop_over_facets(start, end);
     // send local (to worker) array back to handler process
     // MPI_Send(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, 0, rank*100, MPI_COMM_WORLD);
     // MPI_Send(&start, 1, MPI_INT, 0, rank*101, MPI_COMM_WORLD);
@@ -134,7 +137,7 @@ void ParticleSimulation::Execute_mpi(){
 
       if(startFacetIndex != noMoreWork)
       { // processing the next set of available work that has been dynamically allocated 
-        bufferQVals = loop_over_facets(start, end, targetSurfaceList);
+        bufferQVals = loop_over_facets(start, end);
         // send local (to worker) array back to handler process
         
         MPI_Igatherv(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, NULL, NULL, NULL, MPI_DOUBLE, 0, MPI_COMM_WORLD, &request);
@@ -163,8 +166,8 @@ void ParticleSimulation::Execute_mpi(){
 
   // write out data and print final
 
-  std::array<int, 4> particleStats = integrator->particle_stats(); 
-  std::array<int, 4> totalParticleStats;
+  std::array<int, 5> particleStats = integrator->particle_stats(); 
+  std::array<int, 5> totalParticleStats;
 
 
    if (rank != 0){
@@ -281,8 +284,9 @@ void ParticleSimulation::init_geometry(){
 }
 
 // loop over facets in target surfaces
-std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int endFacet,const moab::Range targetSurfaceList)
+std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
 { 
+
   int size = endFacet - startFacet;  
   std::vector<double> heatfluxVals;
 
@@ -294,8 +298,14 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
 
   for (int i=startFacet; i<endFacet; ++i)
   { // loop over all facets
-
-    const auto facet = targetSurfaceList[i];
+    
+    if (i >= targetFacets.size()) // handle padded values
+    {
+      heatfluxVals.push_back(-1);
+      integrator->count_particle(0, terminationState::PADDED, 0.0);
+      continue;
+    }
+    const auto facet = targetFacets[i];
     ParticleBase particle;
     std::vector<moab::EntityHandle> triNodes;
     DAG->moab_instance()->get_adjacencies(&facet, 1, 0, false, triNodes);
@@ -359,6 +369,7 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
 
   }
 
+
   return heatfluxVals;
 }
 
@@ -371,7 +382,7 @@ terminationState ParticleSimulation::loop_over_particle_track(const moab::Entity
   for (int step=0; step<maxTrackSteps; ++step)
   {
     trackLength += trackStepSize;
-    counter++;
+    iterationCounter++;
 
     DAG->ray_fire(implComplementVol, particle.pos.data(), particle.dir.data(), nextSurf, nextSurfDist, &history, trackStepSize, rayOrientation);
     numberOfRayFireCalls++; 
@@ -538,19 +549,21 @@ int ParticleSimulation::num_facets(){
 }
 
 // print particle stats for the entire run
-void ParticleSimulation::print_particle_stats(std::array<int, 4> particleStats){
+void ParticleSimulation::print_particle_stats(std::array<int, 5> particleStats){
   int particlesCounted = 0;
-  MPI_Barrier(MPI_COMM_WORLD); // barrier to ensure this is always printed last
+  //MPI_Barrier(MPI_COMM_WORLD); // barrier to ensure this is always printed last
   for (const auto i:particleStats){
     particlesCounted += i;
   }
+  particlesCounted -=  particleStats[4]; // remove padded particles
   if (rank == 0)
   {
-    LOG_WARNING << "Number of particles launched = " << particlesCounted<< std::endl;
+    LOG_WARNING << "Number of particles launched = " << particlesCounted << std::endl;
     LOG_WARNING << "Number of particles depositing power from omp = " << particleStats[0] << std::endl;
     LOG_WARNING << "Number of shadowed particle intersections = " << particleStats[1] << std::endl;
     LOG_WARNING << "Number of particles lost from magnetic domain = " << particleStats[2] << std::endl;
     LOG_WARNING << "Number of particles terminated upon reaching max tracking length = " << particleStats[3] << std::endl; 
+    LOG_WARNING << "Number of padded null particles = " << particleStats[4] << std::endl;
     LOG_WARNING << "Number of particles not accounted for = " << (num_facets() - particlesCounted) << std::endl;
   }
 }
@@ -572,7 +585,7 @@ void ParticleSimulation::mpi_particle_stats(){
                                 + localRankParticleStats[2] + localRankParticleStats[3];
 
       std::cout << "TOTAL - " << totalParticlesHandled << std::endl;
-    
+
     }
   }
 }
@@ -584,92 +597,81 @@ void ParticleSimulation::Execute(){
 
   moab::ErrorCode rval;
 
-  moab::Range targetSurfaceList = select_target_surface();
-  integrator = std::make_unique<SurfaceIntegrator>(targetSurfaceList);
+  targetFacets = select_target_surface();
+  integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
 
-  moab::Tag heatfluxTag; 
-  double heatfluxTagValue;
-  
   implicit_complement_testing();
 
   int start = 0;
-  int end = targetSurfaceList.size();
+  int end = targetFacets.size();
 
   std::vector<double> qvalues;
-  qvalues = loop_over_facets(start, end, targetSurfaceList);
+  qvalues = loop_over_facets(start, end);
+  if (qvalues.empty())
+  {
+    log_string(LogLevel::ERROR, "Error - loop over facets returned no heatfluxes, please check logfile. Exiting...");
+    std::exit(EXIT_FAILURE);
+  }
+  attach_mesh_attribute("Heatflux", targetFacets, qvalues);
+  write_out_mesh(meshWriteOptions::BOTH); 
 
-  DAG->moab_instance()->tag_get_handle("HEATFLUX", 1, MB_TYPE_DOUBLE, heatfluxTag, MB_TAG_CREAT | MB_TAG_DENSE, &heatfluxTagValue);
-
-  DAG->moab_instance()->tag_set_data(heatfluxTag, targetSurfaceList, &qValues[0]);
-  
-  DAG->remove_graveyard();
-  EntityHandle targetMeshset;
-  DAG->moab_instance()->create_meshset(MESHSET_SET, targetMeshset);
-  DAG->moab_instance()->add_entities(targetMeshset, targetSurfaceList);
-
-  DAG->moab_instance()->write_mesh("aegis_out_target.vtk", &targetMeshset, 1);
-  DAG->write_mesh("aegis_out.vtk", 1);
 
   // write out data and print final
 
-  std::array<int, 4> particleStats = integrator->particle_stats(); 
+  std::array<int, 5> particleStats = integrator->particle_stats(); 
 
     vtkInterface->write_multiBlockData("particle_tracks.vtm");
     print_particle_stats(particleStats);
 
     std::cout << "Number of Ray fire calls = " << numberOfRayFireCalls << std::endl;
     std::cout << "Number of Closest Location calls = " << numberOfClosestLocCalls << std::endl;
-    std::cout << "Number of iterations performed = " << counter << std::endl;
+    std::cout << "Number of iterations performed = " << iterationCounter << std::endl;
   }
 
-void ParticleSimulation::Execute_split(){
+void ParticleSimulation::Execute_padded_mpi(){
 
   vtkInterface->init();  
   MPI_Status mpiStatus;
 
-  moab::Range targetSurfaceList = select_target_surface();
-  integrator = std::make_unique<SurfaceIntegrator>(targetSurfaceList);
+  targetFacets = select_target_surface();
+  integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
 
-  int totalNumberOfFacets = targetSurfaceList.size();
-  int numberofFacets = totalNumberOfFacets / nprocs;
-  int startFacet = rank * numberofFacets;
-  int endFacet = startFacet + numberofFacets;
-  nFacets = 0;
+  int totalFacets = num_facets();
+  int remainder = totalFacets % nprocs;
+  int nPadded = 0;
+  if (remainder != 0)
+  {
+    int paddedTotalFacets = num_facets() + (nprocs-remainder);
+    nPadded = paddedTotalFacets - totalFacets;
+    totalFacets = paddedTotalFacets;
+  }
+  int nFacetsPerProc = totalFacets / nprocs;
+  int startFacet = rank * nFacetsPerProc;
+  int endFacet = startFacet + nFacetsPerProc;
   int root_rank = 0;
 
 
-  std::vector<double> qvalues;
-  std::vector<double> rootQvalues(totalNumberOfFacets);
-  MPI_Request request;
-  std::vector<int> recvCounts(nprocs);
-  std::vector<int> displacements(nprocs);
-  displacements[0] = startFacet;
+  std::vector<double> qvalues; // qvalues buffer local to each processor
+  std::vector<double> rootQvalues(totalFacets); // total qvalues buffer on root process for IO  
 
-  for (auto i: recvCounts)
-  {
-    i = numberofFacets;
-  }
+  qvalues = loop_over_facets(startFacet, endFacet); // perform main loop
 
-  for (int i=0; i<nprocs; ++i)
-  {
-    displacements[i] = numberofFacets*rank;
-  }
-
-  qvalues = loop_over_facets(startFacet, endFacet, targetSurfaceList);
-  std::array<int, 4> particleStats = integrator->particle_stats(); 
-  std::array<int, 4> totalParticleStats;
-
+  std::array<int, 5> particleStats = integrator->particle_stats(); 
+  std::array<int, 5> totalParticleStats;
+  std::vector<double> nonRootQvals(nFacetsPerProc);
   if (rank != 0)
   { 
-    MPI_Gather(qvalues.data(), qvalues.size(), MPI_DOUBLE, NULL, qvalues.size(), MPI_DOUBLE, root_rank, MPI_COMM_WORLD);
+    MPI_Gather(qvalues.data(), qvalues.size(), MPI_DOUBLE, NULL, 0, MPI_DOUBLE, root_rank, MPI_COMM_WORLD);
     MPI_Send(particleStats.data(), particleStats.size(), MPI_INT, 0, 11, MPI_COMM_WORLD);
-
   }
   else
   {
     totalParticleStats = integrator->particle_stats();
     MPI_Gather(qvalues.data(), qvalues.size(), MPI_DOUBLE, rootQvalues.data(), qvalues.size(), MPI_DOUBLE, root_rank, MPI_COMM_WORLD);
-    std::cout << "ROOTQVALUES SIZE = " << rootQvalues.size() << std::endl;
+    if (rootQvalues.size() > num_facets())
+    {
+      rootQvalues.resize(rootQvalues.size() - nPadded);
+    }
 
     for(int i=1; i<nprocs; ++i)
     {
@@ -678,14 +680,95 @@ void ParticleSimulation::Execute_split(){
         totalParticleStats[j] += particleStats[j]; 
       }
     }
+    attach_mesh_attribute("Heatflux", targetFacets, rootQvalues);
+    write_out_mesh(meshWriteOptions::BOTH, targetFacets); 
   }
-  // write out data and print final
 
-
-  //write_aegis_out();
 
   mpi_particle_stats();
   print_particle_stats(totalParticleStats);
+
+
+}
+
+void ParticleSimulation::Execute_mpi(){
+  startTime = MPI_Wtime();
+  vtkInterface->init();  
+  MPI_Status mpiStatus;
+
+  targetFacets = select_target_surface();
+  integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
+
+  int totalFacets = num_facets();
+  int nFacetsPerProc = totalFacets / nprocs;
+  int remainder = totalFacets % nprocs;
+
+  int root_rank = 0;
+
+
+  std::vector<double> qvalues; // qvalues buffer local to each processor
+  std::vector<double> rootQvalues(totalFacets); // total qvalues buffer on root process for IO  
+
+  std::vector<int> recieveCounts(nprocs, nFacetsPerProc); 
+  std::vector<int>::iterator recvItr = recieveCounts.begin();
+
+  int remaindersHandled = 0;  
+  while (remaindersHandled < remainder) // distribute remainders across processes
+  {
+    *recvItr += 1;
+    std::advance(recvItr, 1);
+    remaindersHandled++;
+    if (recvItr == recieveCounts.end()) { recvItr = recieveCounts.begin(); }
+  }
+
+  std::vector<int> displacements(nprocs, 0);
+  int displ = 0;
+  
+  for (int i=0; i<nprocs; ++i) // calculate displacements
+  {
+    displacements[i] = displ;
+    displ += recieveCounts[i];
+  }
+
+  int startFacet = displacements[rank];
+  int endFacet = startFacet + recieveCounts[rank];
+
+  startTime = MPI_Wtime();
+  qvalues = loop_over_facets(startFacet, endFacet); // perform main loop
+  endTime = MPI_Wtime();
+
+  std::array<int, 5> particleStats = integrator->particle_stats(); 
+  std::array<int, 5> totalParticleStats;
+  if (rank != 0)
+  { 
+    MPI_Gatherv(qvalues.data(), qvalues.size(), MPI_DOUBLE, NULL, NULL, NULL, MPI_DOUBLE, root_rank, MPI_COMM_WORLD);
+    // MPI_Gather(qvalues.data(), qvalues.size(), MPI_DOUBLE, NULL, 0, MPI_DOUBLE, root_rank, MPI_COMM_WORLD);
+    MPI_Send(particleStats.data(), particleStats.size(), MPI_INT, 0, 11, MPI_COMM_WORLD);
+  }
+  else
+  {
+    totalParticleStats = integrator->particle_stats();
+    MPI_Gatherv(qvalues.data(), qvalues.size(), MPI_DOUBLE, rootQvalues.data(), recieveCounts.data(), displacements.data(), MPI_DOUBLE, root_rank, MPI_COMM_WORLD);
+    // MPI_Gather(qvalues.data(), qvalues.size(), MPI_DOUBLE, rootQvalues.data(), qvalues.size(), MPI_DOUBLE, root_rank, MPI_COMM_WORLD);
+    // for (auto i:rootQvalues) { temp << i << std::endl; }
+
+    for(int i=1; i<nprocs; ++i)
+    {
+      MPI_Recv(particleStats.data(), particleStats.size(), MPI_INT, i, 11, MPI_COMM_WORLD, &mpiStatus);
+      for (int j=0; j<particleStats.size(); ++j){
+        totalParticleStats[j] += particleStats[j]; 
+      }
+    }
+    attach_mesh_attribute("Heatflux", targetFacets, rootQvalues);
+    write_out_mesh(meshWriteOptions::BOTH, targetFacets); 
+  }
+
+
+  mpi_particle_stats();
+  print_particle_stats(totalParticleStats);
+
+  endTime = MPI_Wtime();
+  out_mpi_wtime("Execute_mpi()", endTime - startTime);
 
 
 }
@@ -724,3 +807,61 @@ void ParticleSimulation::implicit_complement_testing()
 }
 
   
+// create a moab tag and attach that data to each element in the moab::Range provided
+void ParticleSimulation::attach_mesh_attribute(const std::string &tagName, moab::Range &entities, std::vector<double> &dataToAttach)
+{
+  moab::Tag tag;
+  double tagValue;
+
+  DAG->moab_instance()->tag_get_handle(tagName.c_str(), 1, MB_TYPE_DOUBLE, tag, MB_TAG_CREAT | MB_TAG_DENSE, &tagValue);
+  DAG->moab_instance()->tag_set_data(tag, entities, &dataToAttach[0]);
+
+}
+
+// write out the mesh and target mesh with attributed data
+// meshWriteOptions::FULL -- Write out the entire mesh 
+// meshWriteOptions::TARGET -- Only write out target mesh with heatfluxes (useful if full mesh particularly large)
+// meshWriteOptions::PARTIAL -- Write out specified entities
+// default -- Full mesh is written
+void ParticleSimulation::write_out_mesh(meshWriteOptions option, moab::Range rangeofEntities)
+{
+  DAG->remove_graveyard();
+  EntityHandle targetMeshset;
+  DAG->moab_instance()->create_meshset(MESHSET_SET, targetMeshset);
+  DAG->moab_instance()->add_entities(targetMeshset, targetFacets);
+
+  switch (option)
+  {
+  case meshWriteOptions::FULL:
+    DAG->write_mesh("aegis_full.vtk", 1);
+    break;
+  
+  case meshWriteOptions::TARGET:
+    DAG->moab_instance()->write_mesh("aegis_target.vtk", &targetMeshset, 1);
+    break;
+
+  case meshWriteOptions::BOTH:
+    DAG->moab_instance()->write_mesh("aegis_target.vtk", &targetMeshset, 1);
+    DAG->write_mesh("aegis_full.vtk", 1);
+    break;
+
+  case meshWriteOptions::PARTIAL:
+    if (!rangeofEntities.empty()){
+      EntityHandle meshset;
+      DAG->moab_instance()->create_meshset(MESHSET_SET, meshset);
+      DAG->moab_instance()->add_entities(meshset, rangeofEntities);
+      DAG->moab_instance()->write_mesh("aegis_partial.vtk", &meshset, 1);
+    }
+    else{
+      log_string(LogLevel::ERROR, "No meshsets provided for partial mesh write out. Defaulting to full mesh");
+      DAG->write_mesh("aegis_full.vtk", 1);
+    }
+    break;
+  
+  default: // default to full mesh and target
+    DAG->moab_instance()->write_mesh("aegis_out_target.vtk", &targetMeshset, 1);
+    DAG->write_mesh("aegis_full.vtk", 1);
+    break;
+  }
+
+}

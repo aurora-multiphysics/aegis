@@ -26,6 +26,18 @@ void AegisBase::print_mpi(std::string inString)
   }
 }
 
+void AegisBase::setup_profiling()
+{
+  profiling.open("aegis_profiling.txt");
+  profiling << "Object to time | " << " elapsed wall time | " << "Rank of process" << std::endl;
+  log_string(LogLevel::WARNING, "saving aegis profiling data to aegis_profiling.txt");
+}
+
+void AegisBase::out_mpi_wtime(std::string inString, double totalTime)
+{
+  profiling << inString << " | " << totalTime << "s | " << rank << std::endl;
+}
+
 // wrapper for boost LOG macros to test for MPI rank
 void AegisBase::log_string(LogLevel level, std::string inString)
 {

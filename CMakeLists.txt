@@ -29,7 +29,11 @@ include_directories(externals/json/include)
 
 # Default to cpmpile with debugging symbols
 set(CMAKE_BUILD_TYPE DEBUG)
-
+#set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+#set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+# set(BUILD_TYPE "PROFILING")
+# set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg")
+# set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -pg")
 #set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 
 # Import VTK
@@ -104,8 +108,7 @@ elseif(BUILD_TYPE STREQUAL "RELEASE")
   message(STATUS "BUILD_TYPE SET TO RELEASE")
 
 elseif(BUILD_TYPE STREQUAL "PROFILING")
-  set(BUILD_TYPE_COMPILE_FLAGS "-g;-O0;")
-  set(TEST_LIBRARIES "")
+  set(BUILD_TYPE_COMPILE_FLAGS "-g;-O0;-pg")
   set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg")
   set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -pg")
   message(STATUS "BUILD_TYPE SET TO PROFILING")

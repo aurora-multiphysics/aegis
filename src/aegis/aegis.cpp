@@ -27,10 +27,12 @@ int main(int argc, char **argv) {
   {
     std::cout << "Running on a single core in serial mode... \n";
     simulation.Execute();
+    // simulation.Execute_padded_mpi();
   }
   else
-  {
-    simulation.Execute_split();
+  { 
+    simulation.Execute_mpi();
+    //simulation.Execute_padded_mpi();
   }
 
 

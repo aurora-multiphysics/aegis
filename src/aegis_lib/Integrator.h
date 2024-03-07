@@ -42,7 +42,8 @@ enum class terminationState{
 DEPOSITING, // midplane reached 
 SHADOWED, // shadow geometry hit
 LOST, // left magnetic domain
-MAXLENGTH // max length reached
+MAXLENGTH, // max length reached
+PADDED // padded null particle
 };
 
 
@@ -56,7 +57,7 @@ class SurfaceIntegrator : public AegisBase
   void count_hit(EntityHandle facet_hit); // count hits belonging to each facet
   void count_lost_ray();
   void store_heat_flux(EntityHandle facet, double heatflux); // store the power associated with a particular facet
-  void count_particle(EntityHandle facet, terminationState termination, double heatflux);
+  void count_particle(const EntityHandle &facet, terminationState termination,const double &heatflux);
 
   void ray_reflect_dir(double const prev_dir[3], double const surface_normal[3], // get reflected dir
                          double reflected_dir[3]); 
@@ -71,14 +72,15 @@ class SurfaceIntegrator : public AegisBase
   void print_particle_stats(); // return number of particles depositing, shadowed, lost, etc...
 
   void set_launch_position(const moab::EntityHandle &facet, const std::vector<double> &position);
-  std::array<int, 4> particle_stats(); // return array of integers corresponding to particle stats
-
+  std::array<int, 5> particle_stats(); // return array of integers corresponding to particle stats
+  void clear_stats();
   private:
   int nParticlesTotal=0; // Total number of rays fired into geometry
   int nParticlesShadowed=0; // Number of particles shadowed
   int nParticlesLost=0; // number of particles lost from magnetic domain
   int nParticlesHeatDep=0; // number of particles despositing heat
   int nParticlesMaxLength=0; // number of particles reached max termination length
+  int nParticlesPadded=0; // number of padded null particles 
 
   int nFacets=0; // Number of facets in geometry
   std::vector<EntityHandle> facetEntities; // list of all entity handles in geometry

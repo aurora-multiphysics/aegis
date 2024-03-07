@@ -57,7 +57,7 @@ void SurfaceIntegrator::store_heat_flux(EntityHandle facet, double heatflux)
   if (heatflux > 0 ) {nParticlesHeatDep += 1;} 
 }
 
-void SurfaceIntegrator::count_particle(EntityHandle facet, terminationState termination, double heatflux = 0.0)
+void SurfaceIntegrator::count_particle(const EntityHandle &facet, terminationState termination,const double &heatflux)
 {
 
   if (heatflux < 0.0){
@@ -67,35 +67,39 @@ void SurfaceIntegrator::count_particle(EntityHandle facet, terminationState term
   // count number of particles that reach each state and store the associated heatflux
   switch(termination){
     case terminationState::DEPOSITING:
-      nParticlesHeatDep += 1;
+      nParticlesHeatDep++;
       break;
   
     case terminationState::SHADOWED:
-      nParticlesShadowed += 1;
+      nParticlesShadowed++;
       if (heatflux > 0.0) {
         throw std::invalid_argument("Heatflux should be 0 for SHADOWED particles");
       }
       break;
 
     case terminationState::LOST:
-      nParticlesLost += 1;
+      nParticlesLost++;
       if (heatflux > 0.0) {
         throw std::invalid_argument("Heatflux should be 0 for LOST particles");
       }
       break;
 
     case terminationState::MAXLENGTH:
-      nParticlesMaxLength += 1;
+      nParticlesMaxLength++;
       if (heatflux > 0.0) {
         throw std::invalid_argument("Heatflux should be 0 for particles that have reached MAX LENGTH");
       }
+      break;
+
+    case terminationState::PADDED:
+      nParticlesPadded++;
       break;
 
     default: 
       throw std::invalid_argument("Invalid particle termination state provided.");
   }
 
-  powFac[facet] += heatflux;
+  if (facet != 0) {powFac[facet] += heatflux;}
 }
 
 
@@ -229,6 +233,7 @@ void SurfaceIntegrator::print_particle_stats(){ // return number of particles de
     LOG_WARNING << "Number of shadowed particle intersections = " << nParticlesShadowed;
     LOG_WARNING << "Number of particles lost from magnetic domain = " << nParticlesLost;
     LOG_WARNING << "Number of particles terminated upon reaching max tracking length = " << nParticlesMaxLength; 
+    LOG_WARNING << "Number of padded particles = " << nParticlesPadded; 
   }
 };
 
@@ -236,14 +241,23 @@ void SurfaceIntegrator::set_launch_position(const moab::EntityHandle &facet, con
   launchPositions[facet] = position;
 }
 
-std::array<int, 4> SurfaceIntegrator::particle_stats(){
-  int rank, size;
+std::array<int, 5> SurfaceIntegrator::particle_stats(){
 
-  std::array<int, 4> particleStats;
+  std::array<int, 5> particleStats;
   particleStats[0] = nParticlesHeatDep;
   particleStats[1] = nParticlesShadowed;
   particleStats[2] = nParticlesLost;
   particleStats[3] = nParticlesMaxLength;
+  particleStats[4] = nParticlesPadded;
 
   return particleStats;
+}
+
+void SurfaceIntegrator::clear_stats()
+{
+  nParticlesHeatDep = 0;
+  nParticlesShadowed = 0;
+  nParticlesLost = 0;
+  nParticlesShadowed = 0;
+  nParticlesTotal = 0;
 }
