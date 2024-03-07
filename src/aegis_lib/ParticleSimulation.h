@@ -53,16 +53,27 @@
 #include "alglib/interpolation.h"
 #include "Particle.h"
 #include "VtkInterface.h"
-
+#include "AegisBase.h"
 
 
 using namespace moab;
 
-class ParticleSimulation  
+
+enum class meshWriteOptions{
+FULL, // write out all mesh sets
+TARGET, // write out only the target mesh set
+BOTH, // write out target and full mesh to seperate files
+PARTIAL // write out multiple specified mesh sets to a single file
+};
+
+class ParticleSimulation : public AegisBase
 {
   public:
   ParticleSimulation(std::string filename);
-  void Execute(); 
+  void Execute(); // serial
+  void Execute_mpi(); // MPI_Gatherv
+  void Execute_dynamic_mpi(); // dynamic load balancing
+  void Execute_padded_mpi(); // padded MPI_Gather
   void init_geometry();
   int num_facets();
   std::vector<std::pair<double,double>> psiQ_values; // for l2 norm test
@@ -71,15 +82,21 @@ class ParticleSimulation
   protected:
 
   private:
-  moab::Range select_target_surface();
-  void loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history);
-  void terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination);
-  void ray_hit_on_launch(ParticleBase &particle, DagMC::RayHistory &history);
-  void print_particle_stats(std::array<int, 4> particleStats);
-  void mpi_particle_stats();
-  int rank, nprocs;
+  void dynamic_task_init();
+  void implicit_complement_testing(); 
+  moab::Range select_target_surface(); // get target surfaces of interest from aegis_settings.json
+  std::vector<double> loop_over_facets(int startFacet, int endFacet); // loop over facets in target surfaces
+  terminationState loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history); // loop over individual particle tracks
+  void terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination); // end particle track
+  void ray_hit_on_launch(ParticleBase &particle, DagMC::RayHistory &history); // particle hit on initial launch from surface
+  void print_particle_stats(std::array<int, 5> particleStats); // print number of particles that reached each termination state
+  void mpi_particle_stats(); // get inidividual particle stats for each process
+  void read_params(const std::shared_ptr<InputJSON> &inputs); // read parameters from aegis_settings.json
+  void attach_mesh_attribute(const std::string &tagName, moab::Range &entities, std::vector<double> &dataToAttach);
+  void write_out_mesh(meshWriteOptions option, moab::Range rangeOfEntities = {});
+
+  
   int nFacets;
-  void read_params(const std::shared_ptr<InputJSON> &inputs);
   
   std::string settingsFileName;
   std::shared_ptr<InputJSON> JSONsettings; 
@@ -93,32 +110,39 @@ class ParticleSimulation
   std::string particleLaunchPos;
   double userROutrBdry;
   std::string drawParticleTracks;
+  int dynamicTaskSize;
   double rmove = 0.0;
   double zmove = 0.0;
   double fscale = 1.0;
   double psiref = 0.0;
   bool noMidplaneTermination = false;
   std::vector<int> vectorOfTargetSurfs;
-
-  std::stringstream stringToPrint;
+  unsigned int numberOfRayFireCalls = 0;
+  unsigned int numberOfClosestLocCalls = 0;
+  unsigned int iterationCounter=0;
 
   std::unique_ptr<moab::DagMC> DAG;
   std::unique_ptr<moab::DagMC> polarDAG;
   moab::Range surfsList;
   moab::Range volsList;
   moab::Range facetsList;
+  moab::Range targetFacets;
   int numFacets = 0;
   int numNodes = 0;
   moab::EntityHandle prevSurf;
   moab::EntityHandle nextSurf;
-  moab::EntityHandle volID; 
+  moab::EntityHandle implComplementVol; 
   double nextSurfDist = 0.0; // distance to next surface
   moab::EntityHandle intersectedFacet;
   int rayOrientation = 1; // rays are fired along surface normals
   double trackLength = 0.0;
   int facetCounter = 0;
+
   std::vector<double> qValues;
   std::vector<double> psiValues;
+  double startTime;
+  double endTime;
+  double facetsLoopTime;
 
   EquilData equilibrium;
   bool plotBFieldRZ = false;

@@ -17,7 +17,8 @@ using moab::DagMC;
 using moab::OrientedBoxTreeTool;
 
 
-class pointSource{
+class pointSource
+{
   public:
   double r[3];
   double dir[3];
@@ -29,14 +30,16 @@ class pointSource{
 };
 
 
-class sphereSource{
+class sphereSource
+{ 
   public:
   double sample[3]; //sampled position
   double origin[3]; // origin of sphere
   double r; // radius of sphere
 };
 
-class boxSource{
+class boxSource
+{
   public:
   double pA[3];
   double pB[3];
@@ -48,9 +51,8 @@ class boxSource{
 
 };
 
-class TriSource
+class TriSource : public AegisBase
 {
-
   private:
   std::vector<double> xyzA;
   std::vector<double> xyzB;
@@ -67,8 +69,6 @@ class TriSource
   std::vector<double> random_pt();
   std::vector<double> centroid();
   double dot_product(std::vector<double> externalVector);
-
-
 
 };
 

@@ -16,11 +16,12 @@ set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREAD ON)
 ADD_DEFINITIONS(-DBOOST_LOG_DYN_LINK)
 set(Boost_PACKAGES system log log_setup)
-set(BOOST_REQUESTED_VERSION 1.71)
+# set(BOOST_REQUESTED_VERSION 1.71)
 
 find_package(Boost REQUIRED COMPONENTS ${Boost_PACKAGES})
 find_package(OpenMP REQUIRED)
 find_package(MPI REQUIRED)
+# find_package(CGAL REQUIRED)
 add_subdirectory(externals/json)
 include_directories(externals/json/include)
 
@@ -28,7 +29,11 @@ include_directories(externals/json/include)
 
 # Default to cpmpile with debugging symbols
 set(CMAKE_BUILD_TYPE DEBUG)
-
+#set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+#set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+# set(BUILD_TYPE "PROFILING")
+# set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg")
+# set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -pg")
 #set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 
 # Import VTK
@@ -60,13 +65,14 @@ vtk_module_autoinit(
 
 # Import DAGMC
 message(STATUS "Looking for DAGMC...")
-set(DAGMC_DIR="~/dagmc_bld/DAGMC/" CACHE PATH "Path to the DAGMC build or install prefix.")
+set(DAGMC_DIR="/home/waqar/dagmc_bld/DAGMC/" CACHE PATH "Path to the DAGMC build or install prefix.")
 
 if(DAGMC_DIR) 
    find_package(DAGMC REQUIRED NAMES DAGMC HINTS "${DAGMC_DIR}" 
 		"${DAGMC_DIR}/lib/cmake/dagmc" NO_DEFAULT PATH)
 else()
-find_package(DAGMC REQUIRED lib/cmake)
+list(APPEND CMAKE_PREFIX_PATH "/home/waqar/dagmc_bld/DAGMC")
+find_package(DAGMC REQUIRED)
 endif()
 message(STATUS "Found DAGMC config in: ${DAGMC_DIR}")
 
@@ -102,8 +108,7 @@ elseif(BUILD_TYPE STREQUAL "RELEASE")
   message(STATUS "BUILD_TYPE SET TO RELEASE")
 
 elseif(BUILD_TYPE STREQUAL "PROFILING")
-  set(BUILD_TYPE_COMPILE_FLAGS "-g;-O0;")
-  set(TEST_LIBRARIES "")
+  set(BUILD_TYPE_COMPILE_FLAGS "-g;-O0;-pg")
   set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg")
   set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -pg")
   message(STATUS "BUILD_TYPE SET TO PROFILING")

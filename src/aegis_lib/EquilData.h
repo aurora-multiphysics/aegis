@@ -8,6 +8,7 @@
 #include "alglib/interpolation.h"
 #include "Inputs.h"
 #include "SimpleLogger.h"
+#include "AegisBase.h"
 
 
 struct eqdskData
@@ -47,7 +48,8 @@ struct eqdskData
 };
 
 
-class EquilData{
+class EquilData : public AegisBase
+{
 
   eqdskData eqdsk;  
   std::string className = "EquilData";
@@ -195,6 +197,8 @@ class EquilData{
   alglib::spline1dinterpolant fSpline; // 1d spline interpolant for f(psi) or I(psi) toroidal component
 
   private:
+  int rank, nprocs;
+
   bool debug = false;
   bool drawEquRZ = false;
   bool drawEquXYZ = false;

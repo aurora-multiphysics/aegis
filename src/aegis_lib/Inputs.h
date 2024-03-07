@@ -18,7 +18,8 @@
 
 using json = nlohmann::json;
 
-class InputJSON{
+class InputJSON
+{
   public:
   InputJSON();
   InputJSON(std::string filename);

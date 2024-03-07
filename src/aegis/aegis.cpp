@@ -17,12 +17,24 @@ int main(int argc, char **argv) {
   }
   else 
   {
-    std::cout << "Error - No config file provided, defaulting to 'aegis_settings.json'" << std::endl;
+    if (rank == 0) {std::cout << "Error - No config file provided, defaulting to 'aegis_settings.json'" << std::endl;}
     settingsFile = "aegis_settings.json";
   }
- 
+
   ParticleSimulation simulation(settingsFile);
-  simulation.Execute();
+  
+  if (nprocs < 2)
+  {
+    std::cout << "Running on a single core in serial mode... \n";
+    simulation.Execute();
+    // simulation.Execute_padded_mpi();
+  }
+  else
+  { 
+    simulation.Execute_mpi();
+    //simulation.Execute_padded_mpi();
+  }
+
 
   for (int i=0; i<nprocs; ++i){
     if (rank == i)
