@@ -29,50 +29,221 @@ void ParticleSimulation::Execute_dynamic_mpi(){
 
   int totalFacets = targetFacets.size();
   int nFacetsPerProc = totalFacets / nprocs;
+  const int noMoreWork = -1;
+
+  std::vector<double> handlerQVals(num_facets());
+  int counter = 0;
+
+  if(rank == 0)  
+  { // handler process...
+    counter = handler(handlerQVals);
+  }
+
+  else
+  { // worker processes...
+    worker();
+  }
+
+  std::array<int, 5> particleStats = integrator->particle_stats(); 
+  std::array<int, 5> totalParticleStats;
+
+  if (rank != 0){ MPI_Send(particleStats.data(), particleStats.size(), MPI_INT, 0, 11, MPI_COMM_WORLD); }
+  else { totalParticleStats = integrator->particle_stats(); }
+
+  for (int i=1; i<nprocs; ++i){
+    if (rank == 0){
+      MPI_Recv(particleStats.data(), particleStats.size(), MPI_INT, i, 11, MPI_COMM_WORLD, &mpiStatus);
+      for (int j=0; j<particleStats.size(); ++j){
+        totalParticleStats[j] += particleStats[j]; 
+      }
+    }
+  }
+
+  // write out data and print final
+
+  if (rank == 0) 
+  {
+    printf("Number of particles recieved on root rank = %d \n", counter);
+    std::cout << "HANDLERQVALS.SIZE() = " << handlerQVals.size() << std::endl;
+    attach_mesh_attribute("Heatflux", targetFacets, handlerQVals);
+    write_out_mesh(meshWriteOptions::BOTH, targetFacets); 
+  }
+
+  mpi_particle_stats();
+
+  print_particle_stats(totalParticleStats);
+
+  }
+
+int ParticleSimulation::handler(std::vector<double> &handlerQVals)
+{
+  MPI_Status status;
+  MPI_Request request;
+  int mpiDataTag = 100;
+  int mpiIndexTag = 101;
+  int workerStartIndex = 0;
+  int noMoreWork = -1;
+  int counter = 0;
+
+  std::vector<double>::iterator handlerItr;
+  std::vector<double> workerQVals(dynamicTaskSize);
+  std::cout << "Dynamic task scheduling with " << (nprocs-1) << " processes, each handling "<< dynamicTaskSize << " facets" << std::endl;
+  int particlesHandled = 0;
+  int initparticlesHandled = 0;
+
+  for(int procID = 1; procID < nprocs; procID++)
+  { // Send the initial indexes for each process statically
+    MPI_Send(&particlesHandled, 1, MPI_INT, procID, procID, MPI_COMM_WORLD); 
+    particlesHandled += dynamicTaskSize;  
+  }
+  
+  int recvCount = 0;
+  // while (recvCount < (nprocs-1))
+  // {
+  //   MPI_Recv(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, MPI_ANY_SOURCE, mpiDataTag, MPI_COMM_WORLD, &status);
+  //   MPI_Recv(&workerStartIndex, 1, MPI_INT, MPI_ANY_SOURCE, mpiIndexTag, MPI_COMM_WORLD, &status);
+  //   handlerItr = handlerQVals.begin();
+  //   std::advance(handlerItr, workerStartIndex);
+  //   for (const auto i:workerQVals)
+  //   {
+  //     *handlerItr = i;
+  //     std::advance(handlerItr, 1);
+  //     counter +=1;
+  //   }
+  //   //printf("process [%d] workerStartIndex = %d \n", status.MPI_SOURCE, workerStartIndex);
+  //   recvCount++;
+  // }
+  endTime = MPI_Wtime();
+  printf("Time taken to recieve initial data back = %f \n ", endTime);
+  int inactiveWorkers = 0;
+  
+  do{
+    int avaialbleProcess = 0;
+    MPI_Recv(&avaialbleProcess, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &status); // get avaialble process
+    if(particlesHandled < handlerQVals.size())
+    { // send that process the next index to start on in the total list
+      MPI_Send(&particlesHandled, 1, MPI_INT, avaialbleProcess, 1, MPI_COMM_WORLD);  
+
+      MPI_Recv(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, MPI_ANY_SOURCE, mpiDataTag, MPI_COMM_WORLD, &status);
+      MPI_Recv(&workerStartIndex, 1, MPI_INT, MPI_ANY_SOURCE, mpiIndexTag, MPI_COMM_WORLD, &status);
+      //printf("Time taken to recieve next data = %f \n", MPI_Wtime());
+
+      particlesHandled += dynamicTaskSize;
+      
+      handlerItr = handlerQVals.begin();
+      std::advance(handlerItr, workerStartIndex);
+
+      for (const auto i:workerQVals)
+      {
+        *handlerItr = i;
+        std::advance(handlerItr, 1);
+        counter +=1;
+      }
+      endTime = MPI_Wtime();
+    }
+    else
+    { // send message to workers to tell them no more work available
+      MPI_Send(&noMoreWork, 1, MPI_INT, avaialbleProcess, 1, MPI_COMM_WORLD);
+      inactiveWorkers++;
+    }
+
+  } while(inactiveWorkers < nprocs-1); // while some workers are still active
+
+  return counter;
+}
+
+void ParticleSimulation::worker()
+{
+  int noMoreWork = -1;
+  MPI_Status status;
+  MPI_Request request;
+  int mpiDataTag = 100;
+  int mpiIndexTag = 101;
+
+  std::vector<double> workerQVals;
+  int startFacetIndex = 0;
+  MPI_Recv(&startFacetIndex, 1, MPI_INT, 0, rank, MPI_COMM_WORLD, &status);    
+
+  int start = startFacetIndex;
+  int end = start + dynamicTaskSize;
+
+  workerQVals = loop_over_facets(start, end); // process initial facets
+  MPI_Send(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, 0, mpiDataTag, MPI_COMM_WORLD);
+  MPI_Send(&start, 1, MPI_INT, 0, mpiIndexTag, MPI_COMM_WORLD);
+  do
+  {
+    MPI_Send(&rank, 1, MPI_INT, 0, 1, MPI_COMM_WORLD);
+    MPI_Recv(&startFacetIndex, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
+    
+    if (startFacetIndex + dynamicTaskSize > num_facets())
+    {
+      dynamicTaskSize = num_facets() - startFacetIndex;
+    }
+
+    start = startFacetIndex;
+    end = start + dynamicTaskSize;
+
+    if(startFacetIndex != noMoreWork)
+    { // processing the next set of available work that has been dynamically allocated 
+      workerQVals = loop_over_facets(start, end);
+      // send local (to worker) array back to handler process
+      MPI_Send(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, 0, mpiDataTag, MPI_COMM_WORLD);
+      MPI_Send(&start, 1, MPI_INT, 0, mpiIndexTag, MPI_COMM_WORLD);
+
+    }
+  } while(startFacetIndex != noMoreWork); // while there is work available
+
+
+}
+
+void ParticleSimulation::Execute_dynamic_mpi_2(){
+
+  MPI_Status mpiStatus;
+
+  vtkInterface->init();
+  targetFacets = select_target_surface();
+  integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
+
+  int totalFacets = targetFacets.size();
+  int nFacetsPerProc = totalFacets / nprocs;
 
   const int noMoreWork = -1;
 
   std::vector<double> handlerQVals(num_facets());
 
-  int workerStartIndex;
+  int workerIndex;
   MPI_Request request;
 
-  std::ofstream fg("");
-
-
+  int counter=0;
   if(rank == 0)  
   { // handler process...
-    std::cout << "Dynamic task scheduling with " << (nprocs-1) << " processes, each handling "<< dynamicTaskSize << " facets" << std::endl;
-    int facetsHandled = 0;
+    std::cout << "Dynamic task scheduling with " << (nprocs-1) << " processes, each handling 1 facet" << std::endl;
+    int particlesHandled = 0;
     for(int procID = 1; procID < nprocs; procID++)
     { // Send the initial indexes for each process statically
-      MPI_Send(&facetsHandled, 1, MPI_INT, procID, procID, MPI_COMM_WORLD); 
-      facetsHandled += dynamicTaskSize;
+      MPI_Send(&particlesHandled, 1, MPI_INT, procID, procID, MPI_COMM_WORLD); 
+      particlesHandled += +1;
     }  
 
-
-    std::vector<double> bufferQVals(dynamicTaskSize);
+    double bufferQVal;
 
     int activeWorkers = nprocs - 1;
 
     do{
       int avaialbleProcess = 0;
+
       // call recieve from any source to get an avaialble process
       MPI_Recv(&avaialbleProcess, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &mpiStatus);
-      if(facetsHandled < totalFacets)
+      if(particlesHandled < totalFacets)
       { // send that process the next index to start on in the total list
-        MPI_Send(&facetsHandled, 1, MPI_INT, avaialbleProcess, 1, MPI_COMM_WORLD);  
+        MPI_Send(&particlesHandled, 1, MPI_INT, avaialbleProcess, 1, MPI_COMM_WORLD);  
 
-        facetsHandled += dynamicTaskSize;
-        MPI_Irecv(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, MPI_ANY_SOURCE, 100, MPI_COMM_WORLD, &request);
-        MPI_Irecv(&workerStartIndex, 1, MPI_INT, MPI_ANY_SOURCE, 101, MPI_COMM_WORLD, &request);
+        particlesHandled += 1;
+        MPI_Recv(&bufferQVal, 1, MPI_DOUBLE, MPI_ANY_SOURCE, 100, MPI_COMM_WORLD, &mpiStatus);
+        MPI_Recv(&workerIndex, 1, MPI_INT, MPI_ANY_SOURCE, 101, MPI_COMM_WORLD, &mpiStatus);
 
-        if (rank == 0) {std::cout << "Facets Handled = " << workerStartIndex  << std::endl;}
+        handlerQVals[workerIndex] = bufferQVal;
 
-        // int workerEndIndex = workerStartIndex + dynamicTaskSize;
-        // std::vector<double>::iterator itr = handlerQVals.begin() + workerStartIndex;
-        // handlerQVals.insert(itr, bufferQVals.begin(), bufferQVals.end());
-        
       }
       else
       { // send message to workers to tell them no more work available
@@ -82,129 +253,37 @@ void ParticleSimulation::Execute_dynamic_mpi(){
 
     } while(activeWorkers > 0); // while some workers are still active
 
-
-
-
-
-
-    // for (int ctr=0; ctr<bufferQVals.size(); ++ctr)
-    // {
-    //   printf("Qvals on rank [%d] = %f[%d] \n", rank, bufferQVals[ctr], ctr+1);     
-    // }
-  
-
   }
 
   else
   { // worker processes...
-    std::vector<double> bufferQVals;
-    int startFacetIndex = 0;
-    // recieve the initial set of indexes
-    MPI_Recv(&startFacetIndex, 1, MPI_INT, 0, rank, MPI_COMM_WORLD, &mpiStatus);    
-    // Work with the iterations startFacetIndex
+    double bufferQVal = 0;
+    int index = 0;
 
-    int start = startFacetIndex;
-    int end = start + dynamicTaskSize;
-
-    // processing the initial set of facets. Call loop over facets here
-    bufferQVals = loop_over_facets(start, end);
-    // send local (to worker) array back to handler process
-    // MPI_Send(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, 0, rank*100, MPI_COMM_WORLD);
-    // MPI_Send(&start, 1, MPI_INT, 0, rank*101, MPI_COMM_WORLD);
-    
-    // for (int ctr=0; ctr<bufferQVals.size(); ++ctr)
-    // {
-    //   printf("Qvals on rank [%d] = %f[%d] \n", rank, bufferQVals[ctr], ctr+1);     
-    // }
-
-    // for (int i=0; i<dynamicTaskSize; ++i)
-    // {
-    //   initialQValsRankn << "Qvals on rank[" << rank << "] = " << bufferQVals[i] << "[" << i << "]" << std::endl; 
-    // }
+    MPI_Recv(&index, 1, MPI_INT, 0, rank, MPI_COMM_WORLD, &mpiStatus);    
+    bufferQVal = facet_heatflux(targetFacets[index]);
+    MPI_Send(&bufferQVal, 1, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
+    MPI_Send(&index, 1, MPI_INT, 0, 101, MPI_COMM_WORLD);
 
     do
     {
       MPI_Send(&rank, 1, MPI_INT, 0, 1, MPI_COMM_WORLD);
-      MPI_Recv(&startFacetIndex, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &mpiStatus);
-      
-      if (startFacetIndex + dynamicTaskSize > num_facets())
-      {
-        dynamicTaskSize = num_facets() - startFacetIndex;
-      }
-
-      start = startFacetIndex;
-      end = start + dynamicTaskSize;
-
-      if(startFacetIndex != noMoreWork)
+      MPI_Recv(&index, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &mpiStatus);
+      if(index != noMoreWork)
       { // processing the next set of available work that has been dynamically allocated 
-        bufferQVals = loop_over_facets(start, end);
-        // send local (to worker) array back to handler process
-        
-        MPI_Igatherv(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, NULL, NULL, NULL, MPI_DOUBLE, 0, MPI_COMM_WORLD, &request);
-        // MPI_Send(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
-        MPI_Send(&start, 1, MPI_INT, 0, 101, MPI_COMM_WORLD);
- 
-        // for (int ctr=0; ctr<bufferQVals.size(); ++ctr)
-        // {
-        //   printf("Qvals on rank [%d] = %f[%d] \n", rank, bufferQVals[ctr], ctr+1); 
-        // }
- 
+        bufferQVal = facet_heatflux(targetFacets[index]);
+        MPI_Send(&bufferQVal, 1, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
+        MPI_Send(&index, 1, MPI_INT, 0, 101, MPI_COMM_WORLD);
+
       }
-    } while(startFacetIndex != noMoreWork); // while there is work available
+    } while(index != noMoreWork); // while there is work available
   }
 
-  // if (rank == 0)
-  // {
-  //   MPI_Recv(bufferQVals.data(), bufferQVals.size(), MPI_DOUBLE, MPI_ANY_SOURCE, 100, MPI_COMM_WORLD, &mpiStatus);
-  //   MPI_Recv(&workerStartIndex, 1, MPI_INT, MPI_ANY_SOURCE, 101, MPI_COMM_WORLD, &mpiStatus);
-
-  //   int workerEndIndex = workerStartIndex + dynamicTaskSize;
-  //   for (int i=workerStartIndex; i<workerEndIndex; ++i)
-  //   {
-  //   }
-  // }
-
-  // write out data and print final
-
-  std::array<int, 5> particleStats = integrator->particle_stats(); 
-  std::array<int, 5> totalParticleStats;
-
-
-   if (rank != 0){
-  //   MPI_Send(psiValues.data(), psiValues.size(), MPI_DOUBLE, 0, 9, MPI_COMM_WORLD);
-  //   MPI_Send(qValues.data(), qValues.size(), MPI_DOUBLE, 0, 10, MPI_COMM_WORLD);
-    MPI_Send(particleStats.data(), particleStats.size(), MPI_INT, 0, 11, MPI_COMM_WORLD);
-
-   }
-   else 
-   {
-  //   allPsiValues.insert(allPsiValues.end(), psiValues.begin(), psiValues.end());
-  //   allQValues.insert(allQValues.end(), qValues.begin(), qValues.end());
-    totalParticleStats = integrator->particle_stats();
+  if (rank == 0) 
+  {
+    attach_mesh_attribute("Heatflux", targetFacets, handlerQVals);
+    write_out_mesh(meshWriteOptions::BOTH, targetFacets); 
   }
-
-
-  for (int i=1; i<nprocs; ++i){
-    if (rank == 0){
-  //     MPI_Recv(psiValues.data(), psiValues.size(), MPI_DOUBLE, i, 9, MPI_COMM_WORLD, &mpiStatus);
-  //     allPsiValues.insert(allPsiValues.end(), psiValues.begin(), psiValues.end());
-
-  //     MPI_Recv(qValues.data(), qValues.size(), MPI_DOUBLE, i, 10, MPI_COMM_WORLD, &mpiStatus);
-  //     allQValues.insert(allQValues.end(), qValues.begin(), qValues.end());
-
-      MPI_Recv(particleStats.data(), particleStats.size(), MPI_INT, i, 11, MPI_COMM_WORLD, &mpiStatus);
-      for (int j=0; j<particleStats.size(); ++j){
-        totalParticleStats[j] += particleStats[j]; 
-      }
-    }
-  }
-
-
-  //write_aegis_out()
-  mpi_particle_stats();
-
-  print_particle_stats(totalParticleStats);
-
   }
 
 // Read parameters from aegis_settings.json config file
@@ -280,19 +359,77 @@ void ParticleSimulation::init_geometry(){
   }
 
   equilibrium.psi_limiter(vertexList);
-  equilibrium.write_bfield(plotBFieldRZ, plotBFieldXYZ);
+  equilibrium.write_bfield();
+}
+
+
+double ParticleSimulation::facet_heatflux(EntityHandle facet)
+{
+  double heatflux;
+  std::vector<double> triCoords(9);
+  std::vector<double> triA(3), triB(3), triC(3);
+
+    ParticleBase particle;
+    std::vector<moab::EntityHandle> triNodes;
+    DAG->moab_instance()->get_adjacencies(&facet, 1, 0, false, triNodes);
+    DAG->moab_instance()->get_coords(&triNodes[0], triNodes.size(), triCoords.data());
+
+    for (int j=0; j<3; j++)
+    {
+      triA[j] = triCoords[j];
+      triB[j] = triCoords[j+3];
+      triC[j] = triCoords[j+6];
+    }
+    TriSource Tri(triA, triB, triC, facet); 
+
+    if (particleLaunchPos == "fixed")
+    {
+      particle.set_pos(Tri.centroid());
+    }
+    else
+    {
+      particle.set_pos(Tri.random_pt());
+    }
+    integrator->set_launch_position(facet, particle.get_pos("cart"));
+    
+    particle.check_if_in_bfield(equilibrium); // if out of bounds skip to next triangle
+    if (particle.outOfBounds)
+    {
+      if (rank == 0) {LOG_INFO << "Particle start is out of magnetic field bounds. Skipping to next triangle. Check correct eqdsk is being used for the given geometry";}
+      return 0.0;
+    }
+
+    particle.set_dir(equilibrium);
+    BdotN = Tri.dot_product(particle.BfieldXYZ);
+
+    psi = particle.get_psi(equilibrium); 
+    psiOnSurface = psi;
+    psiValues.push_back(psi);
+    psid = psi + equilibrium.psibdry; 
+    
+    particle.align_dir_to_surf(BdotN);
+    Q = equilibrium.omp_power_dep(psid, BdotN, "exp");
+    
+    // Start ray tracing
+    DagMC::RayHistory history;
+    trackLength = trackStepSize;
+
+    particle.update_vectors(trackStepSize, equilibrium);
+
+    terminationState state = loop_over_particle_track(facet, particle, history);
+    if (state == terminationState::DEPOSITING) { heatflux = Q; }
+    else { heatflux = 0.0; }
+
+    return heatflux;
 }
 
 // loop over facets in target surfaces
 std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
 { 
-
+  double startTime = MPI_Wtime();
   int size = endFacet - startFacet;  
   std::vector<double> heatfluxVals;
 
-  std::vector<double> Bfield; 
-  std::vector<double> polarPos(3);
-  std::vector<double> newPt(3);  
   std::vector<double> triCoords(9);
   std::vector<double> triA(3), triB(3), triC(3);
 
@@ -332,7 +469,7 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
     particle.check_if_in_bfield(equilibrium); // if out of bounds skip to next triangle
     if (particle.outOfBounds)
     {
-      if (rank == 0) {LOG_INFO << "Particle start is out of magnetic field bounds. Skipping to next triangle. Check correct eqdsk is being used for the given geometry";}
+      log_string(LogLevel::INFO, "Particle start is out of magnetic field bounds. Skipping to next triangle. Check correct eqdsk is being used for the given geometry");
       continue;
     }
 
@@ -341,7 +478,6 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
     vtkInterface->insert_next_point_in_track(particle.launchPos);
 
     particle.set_dir(equilibrium);
-    polarPos = CoordTransform::cart_to_polar(particle.launchPos, "forwards");
     BdotN = Tri.dot_product(particle.BfieldXYZ);
 
     psi = particle.get_psi(equilibrium); 
@@ -354,7 +490,6 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
     
     // Start ray tracing
     DagMC::RayHistory history;
-    //ray_hit_on_launch(particle, history);
     trackLength = trackStepSize;
 
     particle.update_vectors(trackStepSize, equilibrium);
@@ -362,14 +497,15 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
     vtkInterface->insert_next_point_in_track(particle.pos);
 
 
-    terminationState state = loop_over_particle_track(facet, particle, history);
+    terminationState particleState = loop_over_particle_track(facet, particle, history);
 
-  if (state == terminationState::DEPOSITING) {heatfluxVals.push_back(Q);}
-  else {heatfluxVals.push_back(0.0);}
+  if (particleState == terminationState::DEPOSITING) { heatfluxVals.push_back(Q); }
+  else { heatfluxVals.push_back(0.0); }
 
   }
 
-
+  double endTime = MPI_Wtime();
+  printf("Loop over facets [%d:%d] time taken = %fs \n", startFacet, endFacet, endTime-startTime);
   return heatfluxVals;
 }
 
@@ -591,7 +727,7 @@ void ParticleSimulation::mpi_particle_stats(){
 }
 
 // run AEGIS simulation on single core
-void ParticleSimulation::Execute(){
+void ParticleSimulation::Execute_serial(){
 
   vtkInterface->init();  
 
@@ -761,7 +897,9 @@ void ParticleSimulation::Execute_mpi(){
     }
     attach_mesh_attribute("Heatflux", targetFacets, rootQvalues);
     write_out_mesh(meshWriteOptions::BOTH, targetFacets); 
+
   }
+
 
 
   mpi_particle_stats();
@@ -821,6 +959,7 @@ void ParticleSimulation::attach_mesh_attribute(const std::string &tagName, moab:
 // write out the mesh and target mesh with attributed data
 // meshWriteOptions::FULL -- Write out the entire mesh 
 // meshWriteOptions::TARGET -- Only write out target mesh with heatfluxes (useful if full mesh particularly large)
+// meshWriteOptions::BOTH -- Both FULL and TARGET meshes are written out
 // meshWriteOptions::PARTIAL -- Write out specified entities
 // default -- Full mesh is written
 void ParticleSimulation::write_out_mesh(meshWriteOptions option, moab::Range rangeofEntities)

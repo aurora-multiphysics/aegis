@@ -70,10 +70,11 @@ class ParticleSimulation : public AegisBase
 {
   public:
   ParticleSimulation(std::string filename);
-  void Execute(); // serial
+  void Execute_serial(); // serial
   void Execute_mpi(); // MPI_Gatherv
   void Execute_dynamic_mpi(); // dynamic load balancing
   void Execute_padded_mpi(); // padded MPI_Gather
+  void Execute_dynamic_mpi_2();
   void init_geometry();
   int num_facets();
   std::vector<std::pair<double,double>> psiQ_values; // for l2 norm test
@@ -82,9 +83,12 @@ class ParticleSimulation : public AegisBase
   protected:
 
   private:
+  void worker();
+  int handler(std::vector<double> &handlerQVals);
   void dynamic_task_init();
   void implicit_complement_testing(); 
   moab::Range select_target_surface(); // get target surfaces of interest from aegis_settings.json
+  double facet_heatflux(EntityHandle facet);
   std::vector<double> loop_over_facets(int startFacet, int endFacet); // loop over facets in target surfaces
   terminationState loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history); // loop over individual particle tracks
   void terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination); // end particle track

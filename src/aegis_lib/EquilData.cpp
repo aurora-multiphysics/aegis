@@ -866,12 +866,12 @@ std::vector<double> EquilData::b_field_cart(std::vector<double> polarBVector, do
 
 
 
-void EquilData::write_bfield(bool plotRZ, bool plotXYZ)
+void EquilData::write_bfield(int phiSamples)
 {
   std::vector<double> polarPos(3); // cartesian position P(x,y,z)
   std::vector<double> polarB(3); // polar toroidal magnetic field B(Br, Bz, Bphi)
 
-  if (plotRZ) // write out polar toroidal P(r,z) and B(Br,Bz)
+  if (drawEquRZ) // write out polar toroidal P(r,z) and B(Br,Bz)
   {
     std::ofstream BField_out_rz;
     BField_out_rz.open("BField_rz.txt");
@@ -892,7 +892,7 @@ void EquilData::write_bfield(bool plotRZ, bool plotXYZ)
     }
   }
 
-  if (plotXYZ) // write out cartesian P(x,y,z) and cartesian B(Bx,By,Bz)
+  if (drawEquXYZ) // write out cartesian P(x,y,z) and cartesian B(Bx,By,Bz)
   {
     std::ofstream BField_out_xyz;
     std::ofstream aegisB;
@@ -905,7 +905,6 @@ void EquilData::write_bfield(bool plotRZ, bool plotXYZ)
 
     std::vector<double> cartPos(3); // polar toroidal position P(r,z,phi)
     std::vector<double> cartB(3); // cartesian magnetic field B(Bx, By, Bz)
-    int phiSamples = 12;
     double dphi = 2*M_PI/phiSamples;
 
     BField_out_xyz << "x" << " " << "y" << " " << "z" << " "

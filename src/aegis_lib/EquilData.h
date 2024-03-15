@@ -116,7 +116,7 @@ class EquilData : public AegisBase
   std::vector<double> b_field_cart(std::vector<double> polarBVector, double phi, int normalise); 
 
   // Write out positions and associated BField vectors in cartesian and/or polar toroidal
-  void write_bfield(bool plotRZ, bool plotXYZ);
+  void write_bfield(int phiSamples = 12);
 
   std::vector<double> b_ripple(std::vector<double> pos, std::vector<double> bField);
 

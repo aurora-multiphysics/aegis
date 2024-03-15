@@ -81,7 +81,7 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
 
   if (std::filesystem::exists(aegisConfig)){
     MPI_Init(NULL, NULL);
-    aegis.Execute();
+    aegis.Execute_serial();
     MPI_Finalize();
   }
 
