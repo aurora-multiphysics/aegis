@@ -59,11 +59,19 @@
 using namespace moab;
 
 
-enum class meshWriteOptions{
-FULL, // write out all mesh sets
-TARGET, // write out only the target mesh set
-BOTH, // write out target and full mesh to seperate files
-PARTIAL // write out multiple specified mesh sets to a single file
+enum class meshWriteOptions
+{
+  FULL, // write out all mesh sets
+  TARGET, // write out only the target mesh set
+  BOTH, // write out target and full mesh to seperate files
+  PARTIAL // write out multiple specified mesh sets to a single file
+};
+
+enum class coordinateSystem
+{
+  CARTESIAN, // cartesian (x,y,z)
+  POLAR, // cylindrical polar (r,z,phi)
+  FLUX // flux (psi,theta,phi)
 };
 
 class ParticleSimulation : public AegisBase
@@ -74,7 +82,6 @@ class ParticleSimulation : public AegisBase
   void Execute_mpi(); // MPI_Gatherv
   void Execute_dynamic_mpi(); // dynamic load balancing
   void Execute_padded_mpi(); // padded MPI_Gather
-  void Execute_dynamic_mpi_2();
   void init_geometry();
   int num_facets();
   std::vector<std::pair<double,double>> psiQ_values; // for l2 norm test
@@ -98,7 +105,7 @@ class ParticleSimulation : public AegisBase
   void read_params(const std::shared_ptr<InputJSON> &inputs); // read parameters from aegis_settings.json
   void attach_mesh_attribute(const std::string &tagName, moab::Range &entities, std::vector<double> &dataToAttach);
   void write_out_mesh(meshWriteOptions option, moab::Range rangeOfEntities = {});
-
+  void mesh_coord_transform(coordinateSystem coordSys);
   
   int nFacets;
   
@@ -127,10 +134,14 @@ class ParticleSimulation : public AegisBase
 
   std::unique_ptr<moab::DagMC> DAG;
   std::unique_ptr<moab::DagMC> polarDAG;
-  moab::Range surfsList;
-  moab::Range volsList;
-  moab::Range facetsList;
-  moab::Range targetFacets;
+  std::unique_ptr<moab::DagMC> fluxDAG;
+  moab::Range surfsList; // list of moab::EntityHandle of surfaces in mesh
+  moab::Range volsList; // list of moab::EntityHandle of volumes in mesh
+  moab::Range facetsList; // list of moab::EntityHandle of facets in mesh
+  moab::Range targetFacets; // list of moab::EntityHandle of facets in target mesh
+  std::vector<EntityHandle> nodesList; // list of moab::EntityHandle of nodes in mesh
+  std::vector<double> nodeCoords; // 1D flattended list of node XYZ coordinates 
+  std::vector<double> nodeCoordsPol; // 1D flattended list of node polar coordinates
   int numFacets = 0;
   int numNodes = 0;
   moab::EntityHandle prevSurf;

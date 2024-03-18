@@ -13,6 +13,7 @@ ParticleSimulation::ParticleSimulation(std::string filename)
 
   equilibrium.setup(JSONsettings);
   DAG = std::make_unique<moab::DagMC>();
+  fluxDAG = std::make_unique<moab::DagMC>();
   vtkInterface = std::make_unique<VtkInterface>(JSONsettings);
 
   init_geometry();
@@ -161,10 +162,10 @@ void ParticleSimulation::worker()
   int mpiIndexTag = 101;
 
   std::vector<double> workerQVals;
-  int startFacetIndex = 0;
-  MPI_Recv(&startFacetIndex, 1, MPI_INT, 0, rank, MPI_COMM_WORLD, &status);    
+  int startIndex = 0;
+  MPI_Recv(&startIndex, 1, MPI_INT, 0, rank, MPI_COMM_WORLD, &status);
 
-  int start = startFacetIndex;
+  int start = startIndex;
   int end = start + dynamicTaskSize;
 
   workerQVals = loop_over_facets(start, end); // process initial facets
@@ -173,17 +174,17 @@ void ParticleSimulation::worker()
   do
   {
     MPI_Send(&rank, 1, MPI_INT, 0, 1, MPI_COMM_WORLD);
-    MPI_Recv(&startFacetIndex, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
+    MPI_Recv(&startIndex, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
     
-    if (startFacetIndex + dynamicTaskSize > num_facets())
+    if (startIndex + dynamicTaskSize > num_facets())
     {
-      dynamicTaskSize = num_facets() - startFacetIndex;
+      dynamicTaskSize = num_facets() - startIndex;
     }
 
-    start = startFacetIndex;
+    start = startIndex;
     end = start + dynamicTaskSize;
 
-    if(startFacetIndex != noMoreWork)
+    if(startIndex != noMoreWork)
     { // processing the next set of available work that has been dynamically allocated 
       workerQVals = loop_over_facets(start, end);
       // send local (to worker) array back to handler process
@@ -191,100 +192,11 @@ void ParticleSimulation::worker()
       MPI_Send(&start, 1, MPI_INT, 0, mpiIndexTag, MPI_COMM_WORLD);
 
     }
-  } while(startFacetIndex != noMoreWork); // while there is work available
+  } while(startIndex != noMoreWork); // while there is work available
 
 
 }
 
-void ParticleSimulation::Execute_dynamic_mpi_2(){
-
-  MPI_Status mpiStatus;
-
-  vtkInterface->init();
-  targetFacets = select_target_surface();
-  integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
-
-  int totalFacets = targetFacets.size();
-  int nFacetsPerProc = totalFacets / nprocs;
-
-  const int noMoreWork = -1;
-
-  std::vector<double> handlerQVals(num_facets());
-
-  int workerIndex;
-  MPI_Request request;
-
-  int counter=0;
-  if(rank == 0)  
-  { // handler process...
-    std::cout << "Dynamic task scheduling with " << (nprocs-1) << " processes, each handling 1 facet" << std::endl;
-    int particlesHandled = 0;
-    for(int procID = 1; procID < nprocs; procID++)
-    { // Send the initial indexes for each process statically
-      MPI_Send(&particlesHandled, 1, MPI_INT, procID, procID, MPI_COMM_WORLD); 
-      particlesHandled += +1;
-    }  
-
-    double bufferQVal;
-
-    int activeWorkers = nprocs - 1;
-
-    do{
-      int avaialbleProcess = 0;
-
-      // call recieve from any source to get an avaialble process
-      MPI_Recv(&avaialbleProcess, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &mpiStatus);
-      if(particlesHandled < totalFacets)
-      { // send that process the next index to start on in the total list
-        MPI_Send(&particlesHandled, 1, MPI_INT, avaialbleProcess, 1, MPI_COMM_WORLD);  
-
-        particlesHandled += 1;
-        MPI_Recv(&bufferQVal, 1, MPI_DOUBLE, MPI_ANY_SOURCE, 100, MPI_COMM_WORLD, &mpiStatus);
-        MPI_Recv(&workerIndex, 1, MPI_INT, MPI_ANY_SOURCE, 101, MPI_COMM_WORLD, &mpiStatus);
-
-        handlerQVals[workerIndex] = bufferQVal;
-
-      }
-      else
-      { // send message to workers to tell them no more work available
-        MPI_Send(&noMoreWork, 1, MPI_INT, avaialbleProcess, 1, MPI_COMM_WORLD);
-        activeWorkers--;
-      }
-
-    } while(activeWorkers > 0); // while some workers are still active
-
-  }
-
-  else
-  { // worker processes...
-    double bufferQVal = 0;
-    int index = 0;
-
-    MPI_Recv(&index, 1, MPI_INT, 0, rank, MPI_COMM_WORLD, &mpiStatus);    
-    bufferQVal = facet_heatflux(targetFacets[index]);
-    MPI_Send(&bufferQVal, 1, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
-    MPI_Send(&index, 1, MPI_INT, 0, 101, MPI_COMM_WORLD);
-
-    do
-    {
-      MPI_Send(&rank, 1, MPI_INT, 0, 1, MPI_COMM_WORLD);
-      MPI_Recv(&index, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &mpiStatus);
-      if(index != noMoreWork)
-      { // processing the next set of available work that has been dynamically allocated 
-        bufferQVal = facet_heatflux(targetFacets[index]);
-        MPI_Send(&bufferQVal, 1, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
-        MPI_Send(&index, 1, MPI_INT, 0, 101, MPI_COMM_WORLD);
-
-      }
-    } while(index != noMoreWork); // while there is work available
-  }
-
-  if (rank == 0) 
-  {
-    attach_mesh_attribute("Heatflux", targetFacets, handlerQVals);
-    write_out_mesh(meshWriteOptions::BOTH, targetFacets); 
-  }
-  }
 
 // Read parameters from aegis_settings.json config file
 void ParticleSimulation::read_params(const std::shared_ptr<InputJSON> &inputs){
@@ -914,32 +826,86 @@ void ParticleSimulation::Execute_mpi(){
 // get surfaces attributed to the aegis_target group set in cubit
 void ParticleSimulation::implicit_complement_testing()
 {
+  std::vector<EntityHandle> allVertices; 
+  DAG->moab_instance()->get_entities_by_type(0, MBVERTEX, allVertices, true);
 
-  std::vector<EntityHandle> children;
-  DAG->moab_instance()->get_child_meshsets(implComplementVol, children, 1);
-  std::vector<EntityHandle> vertices;
+  std::vector<double> allVertexCoords(allVertices.size()*3);
+  std::vector<double> allVertexCoordsFlux(allVertices.size()*3);
 
-  for (const auto &i:children)
+  DAG->moab_instance()->get_coords(&allVertices[0], allVertices.size(), allVertexCoords.data());
+  std::vector<double> temp1, temp2;
+  int ctr = 0;
+  for (int i=0; i<allVertexCoords.size(); i+=3)
   {
-    std::vector<EntityHandle> temp;
-    DAG->moab_instance()->get_entities_by_type(i, MBVERTEX, vertices, false); 
-    vertices.insert(vertices.begin(), temp.begin(), temp.end());
-  }
-  std::vector<double> vertexCoords(vertices.size()*3);
+    temp1 = CoordTransform::cart_to_polar(allVertexCoords[i], allVertexCoords[i+1], allVertexCoords[i+2], "forwards");
+    temp2 = CoordTransform::polar_to_flux(temp1, "forwards", equilibrium);
+    allVertexCoordsFlux[i] = temp2[0];
+    allVertexCoordsFlux[i+1] = temp2[1];
+    allVertexCoordsFlux[i+2] = temp2[2];
+    DAG->moab_instance()->set_coords(allVertices[ctr], 1, temp2.data());
+    ctr +=1;
+  } 
 
-  DAG->moab_instance()->get_coords(&vertices[0], vertices.size(), vertexCoords.data());
+
+  // std::vector<EntityHandle> children;
+  // DAG->moab_instance()->get_child_meshsets(implComplementVol, children, 1);
+  // std::vector<EntityHandle> vertices;
+
+  // for (const auto &i:children)
+  // {
+  //   std::vector<EntityHandle> temp;
+  //   DAG->moab_instance()->get_entities_by_type(i, MBVERTEX, vertices, false); 
+  //   vertices.insert(vertices.begin(), temp.begin(), temp.end());
+  // }
+  // std::vector<double> vertexCoords(vertices.size()*3);
+  // std::vector<double> vertexCoordsFlux(vertices.size()*3);
+
+  // DAG->moab_instance()->get_coords(&vertices[0], vertices.size(), vertexCoords.data());
 
   // DAG->moab_instance()->list_entities(children);
 
-  std::ofstream implcitComplCoords("implcit_complement.txt");
-  for (int i=0; i<vertexCoords.size(); i+=3)
-  {
-    implcitComplCoords << vertexCoords[i] << " " << vertexCoords[i+1] << " " << vertexCoords[i+2] << std::endl;
-  }
+  std::ofstream implicitComplCoordsxyz("implcit_complement_xyz.txt");
+  std::ofstream implicitComplCoordsFlux("implcit_complement_flux.txt");
+
+  // for (int i=0; i<vertexCoords.size(); i+=3)
+  // {
+  //   implicitComplCoordsxyz << vertexCoords[i] << " " << vertexCoords[i+1] << " " << vertexCoords[i+2] << std::endl;
+  //   temp1 = CoordTransform::cart_to_polar(vertexCoords[i], vertexCoords[i+1], vertexCoords[i+2], "forwards");
+  //   temp2 = CoordTransform::polar_to_flux(temp1, "forwards", equilibrium);
+  //   vertexCoordsFlux[i] = temp2[0];
+  //   vertexCoordsFlux[i+1] = temp2[1];
+  //   vertexCoordsFlux[i+2] = temp2[2];
+  // }  
+  
+  // moab::Range fluxCoords;
+  // int ctr = 1;
+  // fluxDAG->moab_instance()->create_vertices(vertexCoordsFlux.data(), vertexCoordsFlux.size(), fluxCoords);
+  // for (int i=0; i<fluxCoords.size(); i+=3)
+  // {
+  //   EntityHandle tri_conn[] = {fluxCoords[i], fluxCoords[i+1], fluxCoords[i+2]};
+  //   EntityHandle tri_handle = 0;
+  //   fluxDAG->moab_instance()->create_element(MBTRI, tri_conn, 3, tri_handle);  
+  // }
+  
+  // fluxDAG->moab_instance()->list_entities(fluxCoords);
+
+
+  // int ctr = 101;
+  // for (const auto &i:vertexCoordsFlux)
+  // {
+  //   implicitComplCoordsFlux << i[0] << " " << i[1] << " " << i[2] << std::endl;
+  //   EntityHandle vertexHandle = ctr;
+  //   fluxDAG->moab_instance()->create_vertex(i.data(), vertexHandle);
+  //   EntityHandle tri_conn[] = {i[0], vertex1, vertex2, vertex3};
+  //   EntityHandle quad_handle = 0;
+  //   create_element( MeshQuad, quad_conn, 4, quad_handle );  
+  //   ctr +=1;
+  // }
+
 
   std::cout << "Number of Nodes in implicit complement = " << vertexCoords.size() << std::endl;
 
-
+  std::exit(1);
   return;
 
 }

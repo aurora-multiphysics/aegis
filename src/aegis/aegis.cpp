@@ -47,7 +47,6 @@ int main(int argc, char **argv) {
     //simulation.Execute_mpi();
     //simulation.Execute_padded_mpi();
     simulation.Execute_dynamic_mpi();
-    //simulation.Execute_dynamic_mpi_2();
   
   }
 

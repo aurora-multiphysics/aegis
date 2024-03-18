@@ -97,3 +97,9 @@ void AegisBase::setup_logger()
 {
 
 }
+
+void AegisBase::string_to_lowercase(std::string &inputStr)
+{
+  std::transform(inputStr.begin(), inputStr.end(), inputStr.begin(), 
+                [](unsigned char c){return std::tolower(c);});
+}
