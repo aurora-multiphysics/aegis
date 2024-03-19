@@ -67,12 +67,6 @@ enum class meshWriteOptions
   PARTIAL // write out multiple specified mesh sets to a single file
 };
 
-enum class coordinateSystem
-{
-  CARTESIAN, // cartesian (x,y,z)
-  POLAR, // cylindrical polar (r,z,phi)
-  FLUX // flux (psi,theta,phi)
-};
 
 class ParticleSimulation : public AegisBase
 {
@@ -95,10 +89,16 @@ class ParticleSimulation : public AegisBase
   void dynamic_task_init();
   void implicit_complement_testing(); 
   moab::Range select_target_surface(); // get target surfaces of interest from aegis_settings.json
-  double facet_heatflux(EntityHandle facet);
   std::vector<double> loop_over_facets(int startFacet, int endFacet); // loop over facets in target surfaces
-  terminationState loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history); // loop over individual particle tracks
-  void terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination); // end particle track
+  
+  void setup_sources();
+
+  void cartesian_track();
+  void polar_track();
+  void flux_track();
+  
+  terminationState loop_over_particle_track(TriSource &tri, ParticleBase &particle, DagMC::RayHistory &history); // loop over individual particle tracks
+  void terminate_particle(TriSource &facet, DagMC::RayHistory &history, terminationState termination); // end particle track
   void ray_hit_on_launch(ParticleBase &particle, DagMC::RayHistory &history); // particle hit on initial launch from surface
   void print_particle_stats(std::array<int, 5> particleStats); // print number of particles that reached each termination state
   void mpi_particle_stats(); // get inidividual particle stats for each process
@@ -106,9 +106,12 @@ class ParticleSimulation : public AegisBase
   void attach_mesh_attribute(const std::string &tagName, moab::Range &entities, std::vector<double> &dataToAttach);
   void write_out_mesh(meshWriteOptions option, moab::Range rangeOfEntities = {});
   void mesh_coord_transform(coordinateSystem coordSys);
+  void select_coordinate_system();
   
   int nFacets;
   
+  std::vector<TriSource> listOfTriangles;
+
   std::string settingsFileName;
   std::shared_ptr<InputJSON> JSONsettings; 
   std::string dagmcInputFile;
@@ -122,6 +125,9 @@ class ParticleSimulation : public AegisBase
   double userROutrBdry;
   std::string drawParticleTracks;
   int dynamicTaskSize;
+  std::string coordInputStr;
+  coordinateSystem coordSys = coordinateSystem::CARTESIAN; // default cartesian 
+
   double rmove = 0.0;
   double zmove = 0.0;
   double fscale = 1.0;
@@ -164,11 +170,6 @@ class ParticleSimulation : public AegisBase
   bool plotBFieldXYZ = false;
   
   std::unique_ptr<SurfaceIntegrator> integrator;
-  double BdotN = 0.0; // dot product of magnetic field and triangle surface normal
-  double Q = 0.0; // heatflux incident on surface triangle
-  double psi = 0.0; // value of psi at current position
-  double psid = 0.0; // psi - psi_m
-  double psiOnSurface = 0.0;
 
   std::unique_ptr<VtkInterface> vtkInterface;
   const std::string branchShadowedPart = "Shadowed Particles";

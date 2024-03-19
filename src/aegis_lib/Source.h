@@ -57,18 +57,31 @@ class TriSource : public AegisBase
   std::vector<double> xyzA;
   std::vector<double> xyzB;
   std::vector<double> xyzC;
+  std::vector<double> launchPos;
+  double Q = 0.0; // Q of triangle
+  double psi = 0.0; // psi at particle start
+  double Bn = 0.0; // B.n of Triangle
+  moab::EntityHandle entityHandle;
   double D;
+
 
   public:
   std::vector<double> normal;
   std::vector<double> unitNormal;
-  double Bn; // B.n of current triangle 
-  moab::EntityHandle entityHandle; // moab EntityHandle of triangle
-  TriSource(std::vector<double> xyz1, std::vector<double> xyz2, std::vector<double> xyz3, moab::EntityHandle handle);
+
+  TriSource(std::vector<double> xyz1, std::vector<double> xyz2, std::vector<double> xyz3,
+            moab::EntityHandle handle, std::string launchType);
+  
   void dagmcInstance(moab::DagMC* DAG); 
   std::vector<double> random_pt();
   std::vector<double> centroid();
-  double dot_product(std::vector<double> externalVector);
+  // set BdotN and Q for the triangle
+  void set_heatflux_params(EquilData &equilibrium, const std::string formula);
+  void update_heatflux(double newHeatflux);
+  std::vector<double> launch_pos(); // return launch position on triangle
+  double BdotN();
+  double heatflux();
+  moab::EntityHandle entity_handle();
 
 };
 

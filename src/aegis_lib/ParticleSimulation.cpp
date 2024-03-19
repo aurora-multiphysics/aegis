@@ -5,7 +5,6 @@
 ParticleSimulation::ParticleSimulation(std::string filename)
 {
   set_mpi_params();
-  setup_profiling();
 
   JSONsettings = std::make_shared<InputJSON>(filename);
 
@@ -13,7 +12,6 @@ ParticleSimulation::ParticleSimulation(std::string filename)
 
   equilibrium.setup(JSONsettings);
   DAG = std::make_unique<moab::DagMC>();
-  fluxDAG = std::make_unique<moab::DagMC>();
   vtkInterface = std::make_unique<VtkInterface>(JSONsettings);
 
   init_geometry();
@@ -211,8 +209,13 @@ void ParticleSimulation::read_params(const std::shared_ptr<InputJSON> &inputs){
     particleLaunchPos = aegisNamelist["launch_pos"];
     noMidplaneTermination = aegisNamelist["force_no_deposition"];
     dynamicTaskSize = aegisNamelist["dynamic_task_size"];
+    coordInputStr = aegisNamelist["coordinate_system"];
 
-
+    if (rank == 0)
+    {
+      select_coordinate_system();
+    }
+    
     if (aegisNamelist.contains("target_surfs"))
     {
       for (auto i:aegisNamelist["target_surfs"])
@@ -233,6 +236,32 @@ void ParticleSimulation::read_params(const std::shared_ptr<InputJSON> &inputs){
 
 }
 
+// select coordinate system from json input
+void ParticleSimulation::select_coordinate_system()
+{
+  string_to_lowercase(coordInputStr);
+  if (coordInputStr == "cart" || coordInputStr == "cartesian" || coordInputStr == "xyz")
+  {
+    coordSys = coordinateSystem::CARTESIAN;
+    std::cout << "Tracking in CARTESIAN coordinates..." << std::endl;
+  }
+  if (coordInputStr == "pol" || coordInputStr == "polar" || coordInputStr == "rz")
+  {
+    coordSys = coordinateSystem::POLAR;
+    std::cout << "Tracking in POLAR coordinates..." << std::endl;
+  }
+  else if (coordInputStr == "flux" || coordInputStr == "psi")
+  {
+    coordSys = coordinateSystem::FLUX;
+    std::cout << "Tracking in FLUX coordinates..." << std::endl;
+  }
+  else
+  {
+    coordSys = coordinateSystem::CARTESIAN;
+    log_string(LogLevel::WARNING, "Invalid coordinate system, defaulting to cartesian...");
+  }
+}
+
 // initialise CAD geometry for AEGIS and magnetic field equilibrium for CAD Geometry
 void ParticleSimulation::init_geometry(){
   // setup dagmc instance
@@ -240,6 +269,10 @@ void ParticleSimulation::init_geometry(){
   DAG->init_OBBTree();
   DAG->setup_geometry(surfsList, volsList);
   DAG->moab_instance()->get_entities_by_type(0, MBTRI, facetsList);
+
+  DAG->moab_instance()->get_entities_by_type(0, MBVERTEX, nodesList, true);
+  nodeCoords.resize(nodesList.size()*3);
+  DAG->moab_instance()->get_coords(&nodesList[0], nodesList.size(), nodeCoords.data());
 
   if (rank == 0) {std::cout << "Number of Triangles in Geometry " << facetsList.size() << std::endl;}
   implComplementVol = DAG->entity_by_index(3, volsList.size());
@@ -272,111 +305,50 @@ void ParticleSimulation::init_geometry(){
 
   equilibrium.psi_limiter(vertexList);
   equilibrium.write_bfield();
-}
 
+  // if flux selected default to cartesian
+  if (coordSys == coordinateSystem::FLUX)
+  {
+    coordSys = coordinateSystem::CARTESIAN;
+    std::cout << "Flux coords tracking not currently implemented. Defaulting to CARTESIAN..." << std::endl;
+  } 
 
-double ParticleSimulation::facet_heatflux(EntityHandle facet)
-{
-  double heatflux;
-  std::vector<double> triCoords(9);
-  std::vector<double> triA(3), triB(3), triC(3);
-
-    ParticleBase particle;
-    std::vector<moab::EntityHandle> triNodes;
-    DAG->moab_instance()->get_adjacencies(&facet, 1, 0, false, triNodes);
-    DAG->moab_instance()->get_coords(&triNodes[0], triNodes.size(), triCoords.data());
-
-    for (int j=0; j<3; j++)
-    {
-      triA[j] = triCoords[j];
-      triB[j] = triCoords[j+3];
-      triC[j] = triCoords[j+6];
-    }
-    TriSource Tri(triA, triB, triC, facet); 
-
-    if (particleLaunchPos == "fixed")
-    {
-      particle.set_pos(Tri.centroid());
-    }
-    else
-    {
-      particle.set_pos(Tri.random_pt());
-    }
-    integrator->set_launch_position(facet, particle.get_pos("cart"));
-    
-    particle.check_if_in_bfield(equilibrium); // if out of bounds skip to next triangle
-    if (particle.outOfBounds)
-    {
-      if (rank == 0) {LOG_INFO << "Particle start is out of magnetic field bounds. Skipping to next triangle. Check correct eqdsk is being used for the given geometry";}
-      return 0.0;
-    }
-
-    particle.set_dir(equilibrium);
-    BdotN = Tri.dot_product(particle.BfieldXYZ);
-
-    psi = particle.get_psi(equilibrium); 
-    psiOnSurface = psi;
-    psiValues.push_back(psi);
-    psid = psi + equilibrium.psibdry; 
-    
-    particle.align_dir_to_surf(BdotN);
-    Q = equilibrium.omp_power_dep(psid, BdotN, "exp");
-    
-    // Start ray tracing
-    DagMC::RayHistory history;
-    trackLength = trackStepSize;
-
-    particle.update_vectors(trackStepSize, equilibrium);
-
-    terminationState state = loop_over_particle_track(facet, particle, history);
-    if (state == terminationState::DEPOSITING) { heatflux = Q; }
-    else { heatflux = 0.0; }
-
-    return heatflux;
 }
 
 // loop over facets in target surfaces
 std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
 { 
+
+  // transform coordinate system of mesh
+  if (coordSys != coordinateSystem::CARTESIAN)
+  {
+    mesh_coord_transform(coordSys);
+  }
+
   double startTime = MPI_Wtime();
-  int size = endFacet - startFacet;  
+  int size = endFacet - startFacet;
   std::vector<double> heatfluxVals;
 
   std::vector<double> triCoords(9);
   std::vector<double> triA(3), triB(3), triC(3);
 
+  setup_sources();
+
   for (int i=startFacet; i<endFacet; ++i)
   { // loop over all facets
+    auto tri = listOfTriangles[i];
     
     if (i >= targetFacets.size()) // handle padded values
     {
-      heatfluxVals.push_back(-1);
+      tri.update_heatflux(-1);
       integrator->count_particle(0, terminationState::PADDED, 0.0);
       continue;
     }
-    const auto facet = targetFacets[i];
-    ParticleBase particle;
-    std::vector<moab::EntityHandle> triNodes;
-    DAG->moab_instance()->get_adjacencies(&facet, 1, 0, false, triNodes);
-    DAG->moab_instance()->get_coords(&triNodes[0], triNodes.size(), triCoords.data());
 
-    for (int j=0; j<3; j++)
-    {
-      triA[j] = triCoords[j];
-      triB[j] = triCoords[j+3];
-      triC[j] = triCoords[j+6];
-    }
-    TriSource Tri(triA, triB, triC, facet); 
+    ParticleBase particle(coordSys);
+    particle.set_pos(tri.launch_pos());
 
-    if (particleLaunchPos == "fixed")
-    {
-      particle.set_pos(Tri.centroid());
-    }
-    else
-    {
-      particle.set_pos(Tri.random_pt());
-    }
-    integrator->set_launch_position(facet, particle.get_pos("cart"));
+    integrator->set_launch_position(tri.entity_handle(), tri.launch_pos());
     
     particle.check_if_in_bfield(equilibrium); // if out of bounds skip to next triangle
     if (particle.outOfBounds)
@@ -385,20 +357,12 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
       continue;
     }
 
-
     vtkInterface->init_new_vtkPoints();
     vtkInterface->insert_next_point_in_track(particle.launchPos);
 
     particle.set_dir(equilibrium);
-    BdotN = Tri.dot_product(particle.BfieldXYZ);
 
-    psi = particle.get_psi(equilibrium); 
-    psiOnSurface = psi;
-    psiValues.push_back(psi);
-    psid = psi + equilibrium.psibdry; 
-    
-    particle.align_dir_to_surf(BdotN);
-    Q = equilibrium.omp_power_dep(psid, BdotN, "exp");
+    particle.align_dir_to_surf(tri.BdotN());
     
     // Start ray tracing
     DagMC::RayHistory history;
@@ -406,13 +370,14 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
 
     particle.update_vectors(trackStepSize, equilibrium);
 
-    vtkInterface->insert_next_point_in_track(particle.pos);
+    vtkInterface->insert_next_point_in_track(particle.posXYZ);
 
+    terminationState particleState = loop_over_particle_track(tri, particle, history);
 
-    terminationState particleState = loop_over_particle_track(facet, particle, history);
-
-  if (particleState == terminationState::DEPOSITING) { heatfluxVals.push_back(Q); }
-  else { heatfluxVals.push_back(0.0); }
+  // if particle not depositing set heatflux to 0.0
+    if (particleState != terminationState::DEPOSITING){ tri.update_heatflux(0.0); }
+    
+    heatfluxVals.push_back(tri.heatflux());
 
   }
 
@@ -421,8 +386,34 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
   return heatfluxVals;
 }
 
+void ParticleSimulation::setup_sources()
+{
+
+  std::vector<double> triCoords(9);
+  std::vector<double> triA(3), triB(3), triC(3);
+
+  for (const auto &facet:targetFacets)
+  {
+    std::vector<moab::EntityHandle> triNodes;
+    DAG->moab_instance()->get_adjacencies(&facet, 1, 0, false, triNodes);
+    DAG->moab_instance()->get_coords(&triNodes[0], triNodes.size(), triCoords.data());
+
+    for (int j=0; j<3; j++)
+    {
+      triA[j] = triCoords[j];
+      triB[j] = triCoords[j+3];
+      triC[j] = triCoords[j+6];
+    }
+    
+    TriSource Tri(triA, triB, triC, facet, particleLaunchPos); 
+    Tri.set_heatflux_params(equilibrium, "exp");
+    listOfTriangles.push_back(Tri);    
+  }
+
+}
+
 // loop over single particle track from launch to termination
-terminationState ParticleSimulation::loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history)
+terminationState ParticleSimulation::loop_over_particle_track(TriSource &tri, ParticleBase &particle, DagMC::RayHistory &history)
 {
   double euclidDistToNextSurf = 0.0;
   nextSurf = 0;
@@ -432,14 +423,14 @@ terminationState ParticleSimulation::loop_over_particle_track(const moab::Entity
     trackLength += trackStepSize;
     iterationCounter++;
 
-    DAG->ray_fire(implComplementVol, particle.pos.data(), particle.dir.data(), nextSurf, nextSurfDist, &history, trackStepSize, rayOrientation);
+    DAG->ray_fire(implComplementVol, particle.posXYZ.data(), particle.dir.data(), nextSurf, nextSurfDist, &history, trackStepSize, rayOrientation);
     numberOfRayFireCalls++; 
 
 
     if (nextSurf != 0)
     {
       particle.update_vectors(nextSurfDist); // update position to surface intersection point
-      terminate_particle(facet, history, terminationState::SHADOWED);
+      terminate_particle(tri, history, terminationState::SHADOWED);
       return terminationState::SHADOWED;
     }
     else
@@ -447,28 +438,28 @@ terminationState ParticleSimulation::loop_over_particle_track(const moab::Entity
       particle.update_vectors(trackStepSize); // update position by stepsize
     }
     
-    vtkInterface->insert_next_point_in_track(particle.pos);
+    vtkInterface->insert_next_point_in_track(particle.posXYZ);
     particle.check_if_in_bfield(equilibrium);
     if (particle.outOfBounds){
-      terminate_particle(facet, history, terminationState::LOST);
+      terminate_particle(tri, history, terminationState::LOST);
       return terminationState::LOST;
     }
 
     else
     {
       particle.set_dir(equilibrium);
-      particle.align_dir_to_surf(BdotN);
+      particle.align_dir_to_surf(tri.BdotN());
     }
-    particle.check_if_midplane_reached(equilibrium.get_midplane_params());
+    particle.check_if_midplane_crossed(equilibrium.get_midplane_params());
     
     if (particle.atMidplane != 0 && !noMidplaneTermination){ 
-      terminate_particle(facet, history, terminationState::DEPOSITING);
+      terminate_particle(tri, history, terminationState::DEPOSITING);
       return terminationState::DEPOSITING;
     }
 
     if (step == (maxTrackSteps-1))
     {
-      terminate_particle(facet, history, terminationState::MAXLENGTH);
+      terminate_particle(tri, history, terminationState::MAXLENGTH);
       return terminationState::MAXLENGTH;
     }
 
@@ -484,41 +475,42 @@ terminationState ParticleSimulation::loop_over_particle_track(const moab::Entity
 // SHADOWED - Particle hits another piece of geometry. Heatflux = 0 
 // LOST - Particle leaves magnetic field so trace stops. Heatflux = 0
 // MAX LENGTH - Particle reaches maximum user set length before anything else. Heatflux = 0
-void ParticleSimulation::terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination){
+void ParticleSimulation::terminate_particle(TriSource &tri, DagMC::RayHistory &history, terminationState termination){
   double heatflux;
+  std::stringstream ss;
+
 
   switch(termination){
     case terminationState::DEPOSITING:
-      heatflux = Q;
+      heatflux = tri.heatflux();
       vtkInterface->write_particle_track(branchDepositingPart, heatflux);
-      integrator->count_particle(facet, termination, heatflux);
-      if (rank == 0) {LOG_INFO << "Midplane reached. Depositing power";}
+      integrator->count_particle(tri.entity_handle(), termination, heatflux);
+      log_string(LogLevel::INFO, "Midplane reached. Depositing power");
       break;
 
     case terminationState::SHADOWED:
       heatflux = 0.0;
       history.get_last_intersection(intersectedFacet);
       vtkInterface->write_particle_track(branchShadowedPart, heatflux);
-      integrator->count_particle(facet, termination, heatflux);
-      if (rank == 0) {LOG_INFO << "Surface " << nextSurf << " hit after travelling " << trackLength << " units";}
+      integrator->count_particle(tri.entity_handle(), termination, heatflux);
+      ss << "Surface " << nextSurf << " hit after travelling " << trackLength << " units";
+      log_string(LogLevel::INFO, ss.str());
       break;
 
     case terminationState::LOST:
       heatflux = 0.0;   
       vtkInterface->write_particle_track(branchLostPart, heatflux);
-      integrator->count_particle(facet, termination, heatflux);    
-      if (rank == 0) {LOG_INFO << "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD";}
+      integrator->count_particle(tri.entity_handle(), termination, heatflux);    
+      log_string(LogLevel::INFO, "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD");
       break;
 
     case terminationState::MAXLENGTH:
       heatflux = 0.0;
       vtkInterface->write_particle_track(branchMaxLengthPart, heatflux);
-      integrator->count_particle(facet, termination, heatflux);        
-      if (rank == 0) {LOG_INFO << "Fieldline trace reached maximum length before intersection";}
+      integrator->count_particle(tri.entity_handle(), termination, heatflux);        
+      log_string(LogLevel::INFO, "Fieldline trace reached maximum length before intersection");
   }
 
-  qValues.push_back(heatflux);
-  psiQ_values.push_back(std::make_pair(psiOnSurface, Q));
 }
 
 void ParticleSimulation::ray_hit_on_launch(ParticleBase &particle, DagMC::RayHistory &history){
@@ -648,12 +640,13 @@ void ParticleSimulation::Execute_serial(){
   targetFacets = select_target_surface();
   integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
 
-  implicit_complement_testing();
+  // implicit_complement_testing();
 
   int start = 0;
   int end = targetFacets.size();
 
   std::vector<double> qvalues;
+
   qvalues = loop_over_facets(start, end);
   if (qvalues.empty())
   {
@@ -818,7 +811,6 @@ void ParticleSimulation::Execute_mpi(){
   print_particle_stats(totalParticleStats);
 
   endTime = MPI_Wtime();
-  out_mpi_wtime("Execute_mpi()", endTime - startTime);
 
 
 }
@@ -826,70 +818,40 @@ void ParticleSimulation::Execute_mpi(){
 // get surfaces attributed to the aegis_target group set in cubit
 void ParticleSimulation::implicit_complement_testing()
 {
-  std::vector<EntityHandle> allVertices; 
-  DAG->moab_instance()->get_entities_by_type(0, MBVERTEX, allVertices, true);
 
-  std::vector<double> allVertexCoords(allVertices.size()*3);
-  std::vector<double> allVertexCoordsFlux(allVertices.size()*3);
+  std::vector<EntityHandle> children;
+  DAG->moab_instance()->get_child_meshsets(implComplementVol, children, 1);
+  std::vector<EntityHandle> vertices;
 
-  DAG->moab_instance()->get_coords(&allVertices[0], allVertices.size(), allVertexCoords.data());
-  std::vector<double> temp1, temp2;
-  int ctr = 0;
-  for (int i=0; i<allVertexCoords.size(); i+=3)
+  for (const auto &i:children)
   {
-    temp1 = CoordTransform::cart_to_polar(allVertexCoords[i], allVertexCoords[i+1], allVertexCoords[i+2], "forwards");
-    temp2 = CoordTransform::polar_to_flux(temp1, "forwards", equilibrium);
-    allVertexCoordsFlux[i] = temp2[0];
-    allVertexCoordsFlux[i+1] = temp2[1];
-    allVertexCoordsFlux[i+2] = temp2[2];
-    DAG->moab_instance()->set_coords(allVertices[ctr], 1, temp2.data());
-    ctr +=1;
-  } 
+    std::vector<EntityHandle> temp;
+    DAG->moab_instance()->get_entities_by_type(i, MBVERTEX, vertices, false); 
+    vertices.insert(vertices.begin(), temp.begin(), temp.end());
+  }
+  std::vector<double> vertexCoords(vertices.size()*3);
+  std::vector<double> vertexCoordsFlux(vertices.size()*3);
 
-
-  // std::vector<EntityHandle> children;
-  // DAG->moab_instance()->get_child_meshsets(implComplementVol, children, 1);
-  // std::vector<EntityHandle> vertices;
-
-  // for (const auto &i:children)
-  // {
-  //   std::vector<EntityHandle> temp;
-  //   DAG->moab_instance()->get_entities_by_type(i, MBVERTEX, vertices, false); 
-  //   vertices.insert(vertices.begin(), temp.begin(), temp.end());
-  // }
-  // std::vector<double> vertexCoords(vertices.size()*3);
-  // std::vector<double> vertexCoordsFlux(vertices.size()*3);
-
-  // DAG->moab_instance()->get_coords(&vertices[0], vertices.size(), vertexCoords.data());
+  DAG->moab_instance()->get_coords(&vertices[0], vertices.size(), vertexCoords.data());
 
   // DAG->moab_instance()->list_entities(children);
 
   std::ofstream implicitComplCoordsxyz("implcit_complement_xyz.txt");
   std::ofstream implicitComplCoordsFlux("implcit_complement_flux.txt");
+  std::vector<double> temp1, temp2;
 
-  // for (int i=0; i<vertexCoords.size(); i+=3)
-  // {
-  //   implicitComplCoordsxyz << vertexCoords[i] << " " << vertexCoords[i+1] << " " << vertexCoords[i+2] << std::endl;
-  //   temp1 = CoordTransform::cart_to_polar(vertexCoords[i], vertexCoords[i+1], vertexCoords[i+2], "forwards");
-  //   temp2 = CoordTransform::polar_to_flux(temp1, "forwards", equilibrium);
-  //   vertexCoordsFlux[i] = temp2[0];
-  //   vertexCoordsFlux[i+1] = temp2[1];
-  //   vertexCoordsFlux[i+2] = temp2[2];
-  // }  
+  for (int i=0; i<vertexCoords.size(); i+=3)
+  {
+    implicitComplCoordsxyz << vertexCoords[i] << " " << vertexCoords[i+1] << " " << vertexCoords[i+2] << std::endl;
+    temp1 = CoordTransform::cart_to_polar(vertexCoords[i], vertexCoords[i+1], vertexCoords[i+2], "forwards");
+    temp2 = CoordTransform::polar_to_flux(temp1, "forwards", equilibrium);
+    vertexCoordsFlux[i] = temp2[0];
+    vertexCoordsFlux[i+1] = temp2[1];
+    vertexCoordsFlux[i+2] = temp2[2];
+    implicitComplCoordsFlux << temp2[0] << " " << temp2[1] << " " << temp2[2] << std::endl;
+  }  
   
-  // moab::Range fluxCoords;
-  // int ctr = 1;
-  // fluxDAG->moab_instance()->create_vertices(vertexCoordsFlux.data(), vertexCoordsFlux.size(), fluxCoords);
-  // for (int i=0; i<fluxCoords.size(); i+=3)
-  // {
-  //   EntityHandle tri_conn[] = {fluxCoords[i], fluxCoords[i+1], fluxCoords[i+2]};
-  //   EntityHandle tri_handle = 0;
-  //   fluxDAG->moab_instance()->create_element(MBTRI, tri_conn, 3, tri_handle);  
-  // }
   
-  // fluxDAG->moab_instance()->list_entities(fluxCoords);
-
-
   // int ctr = 101;
   // for (const auto &i:vertexCoordsFlux)
   // {
@@ -902,10 +864,9 @@ void ParticleSimulation::implicit_complement_testing()
   //   ctr +=1;
   // }
 
-
   std::cout << "Number of Nodes in implicit complement = " << vertexCoords.size() << std::endl;
 
-  std::exit(1);
+
   return;
 
 }
@@ -966,6 +927,50 @@ void ParticleSimulation::write_out_mesh(meshWriteOptions option, moab::Range ran
   default: // default to full mesh and target
     DAG->moab_instance()->write_mesh("aegis_out_target.vtk", &targetMeshset, 1);
     DAG->write_mesh("aegis_full.vtk", 1);
+    break;
+  }
+
+}
+
+void ParticleSimulation::mesh_coord_transform(coordinateSystem coordSys)
+{
+  std::vector<double> temp(3);
+  int counter = 0;
+  switch (coordSys)
+  {
+  case coordinateSystem::CARTESIAN:
+    for (int i=0; i<nodeCoords.size(); i+=3)
+    {
+      temp = {nodeCoords[i], nodeCoords[i+1], nodeCoords[i+2]};
+      temp = CoordTransform::cart_to_polar(temp, "backwards");
+      DAG->moab_instance()->set_coords(&nodesList[counter], 1, temp.data());
+      counter +=1;
+    }
+    break;
+  
+  case coordinateSystem::POLAR:
+    for (int i=0; i<nodeCoords.size(); i+=3)
+    {
+      temp = {nodeCoords[i], nodeCoords[i+1], nodeCoords[i+2]};
+      temp = CoordTransform::cart_to_polar(temp, "forwards");
+      DAG->moab_instance()->set_coords(&nodesList[counter], 1, temp.data());
+      counter +=1;
+    }
+    break;
+
+  case coordinateSystem::FLUX:
+    // for (int i=0; i<nodeCoords.size(); i+=3)
+    // {
+    //   temp = {nodeCoords[i], nodeCoords[i+1], nodeCoords[i+2]};
+    //   temp = CoordTransform::cart_to_polar(temp, "forwards");
+    //   temp = CoordTransform::polar_to_flux(temp, "forwards", equilibrium);
+    //   DAG->moab_instance()->set_coords(&nodesList[counter], 1, temp.data());
+    //   counter +=1;
+    // }
+    break;
+
+  default:
+    std::cout << "No coordinate system provided for mesh coordinate transform" << std::endl;
     break;
   }
 

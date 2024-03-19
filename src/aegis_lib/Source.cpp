@@ -4,6 +4,7 @@
 #include <random>
 #include <math.h>
 #include "Source.h"
+#include "CoordTransform.h"
 
 
 pointSource::pointSource(std::vector<double> xyz)
@@ -89,7 +90,7 @@ void boxSource::get_dir()
 /////////
 
 // define plane via cartesian plane equation ax + by + cz + d = 0
-TriSource::TriSource(std::vector<double> xyz1, std::vector<double> xyz2, std::vector<double> xyz3, moab::EntityHandle handle)
+TriSource::TriSource(std::vector<double> xyz1, std::vector<double> xyz2, std::vector<double> xyz3, moab::EntityHandle handle, std::string launchType)
 {
   xyzA = xyz1;
   xyzB = xyz2;
@@ -120,6 +121,15 @@ TriSource::TriSource(std::vector<double> xyz1, std::vector<double> xyz2, std::ve
   unitNormal = normalVec;
 
   entityHandle = handle;
+
+  if (launchType == "random") 
+  {
+    launchPos = random_pt();
+  }
+  else
+  { 
+    launchPos = centroid();
+  }
 
 }
 
@@ -164,12 +174,55 @@ std::vector<double> TriSource::centroid()
 }
 
 
-double TriSource::dot_product(std::vector<double> externalVector) 
-{
-  double product = 0;
+
+void TriSource::set_heatflux_params(EquilData &equilibrium, const std::string formula)
+{ 
+  double psid;
+  std::vector<double> polarPos, fluxPos;
+  std::vector<double> bField;
+  std::vector<double> bFieldXYZ;
+
+  polarPos = CoordTransform::cart_to_polar(launchPos, "forwards");
+  fluxPos = CoordTransform::polar_to_flux(polarPos, "forwards", equilibrium);
+
+  bField = equilibrium.b_field(polarPos, "forwards");
+  bField = equilibrium.b_field_cart(bField, polarPos[2], 0);
+  double product = 0; 
   for (int i=0; i<3; i++)
   {
-    product = product + externalVector[i]*unitNormal[i];
+    product = product + bField[i]*unitNormal[i];
   }
-  return product;
+
+  Bn = product; // store B.n
+  
+
+  psi = fluxPos[0]; // store psi at particle start
+  psid = psi + equilibrium.psibdry;     
+  Q = equilibrium.omp_power_dep(psid, Bn, "exp"); // store Q at particle start
+}
+
+
+void TriSource::update_heatflux(double newHeatflux)
+{
+  Q = newHeatflux;
+}
+
+std::vector<double> TriSource::launch_pos()
+{
+  return launchPos;
+}
+
+double TriSource::BdotN()
+{
+  return Bn;
+}
+
+double TriSource::heatflux()
+{
+  return Q;
+}
+
+moab::EntityHandle TriSource::entity_handle()
+{
+  return entityHandle;
 }
