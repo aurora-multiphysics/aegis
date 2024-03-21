@@ -243,17 +243,17 @@ void ParticleSimulation::select_coordinate_system()
   if (coordInputStr == "cart" || coordInputStr == "cartesian" || coordInputStr == "xyz")
   {
     coordSys = coordinateSystem::CARTESIAN;
-    std::cout << "Tracking in CARTESIAN coordinates..." << std::endl;
+    log_string(LogLevel::WARNING, "Tracking in CARTESIAN coordinates...");
   }
-  if (coordInputStr == "pol" || coordInputStr == "polar" || coordInputStr == "rz")
+  else if (coordInputStr == "pol" || coordInputStr == "polar" || coordInputStr == "rz")
   {
     coordSys = coordinateSystem::POLAR;
-    std::cout << "Tracking in POLAR coordinates..." << std::endl;
+    log_string(LogLevel::WARNING, "Tracking in POLAR coordinates...");
   }
   else if (coordInputStr == "flux" || coordInputStr == "psi")
   {
     coordSys = coordinateSystem::FLUX;
-    std::cout << "Tracking in FLUX coordinates..." << std::endl;
+    log_string(LogLevel::WARNING, "Tracking in FLUX coordinates...");
   }
   else
   {

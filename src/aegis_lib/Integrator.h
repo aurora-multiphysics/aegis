@@ -74,6 +74,8 @@ class SurfaceIntegrator : public AegisBase
   void set_launch_position(const moab::EntityHandle &facet, const std::vector<double> &position);
   std::array<int, 5> particle_stats(); // return array of integers corresponding to particle stats
   void clear_stats();
+
+
   private:
   int nParticlesTotal=0; // Total number of rays fired into geometry
   int nParticlesShadowed=0; // Number of particles shadowed
