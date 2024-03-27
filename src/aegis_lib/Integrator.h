@@ -14,6 +14,7 @@
 #include <moab/OrientedBoxTreeTool.hpp>
 #include "EquilData.h"
 #include "AegisBase.h"
+#include "Source.h"
 
 
 
@@ -77,6 +78,8 @@ class SurfaceIntegrator : public AegisBase
 
 
   private:
+  std::vector<TriangleSource> listOfElements; // list of all elements in aegis run
+
   int nParticlesTotal=0; // Total number of rays fired into geometry
   int nParticlesShadowed=0; // Number of particles shadowed
   int nParticlesLost=0; // number of particles lost from magnetic domain

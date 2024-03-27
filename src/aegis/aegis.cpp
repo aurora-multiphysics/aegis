@@ -25,31 +25,9 @@ int main(int argc, char **argv) {
     settingsFile = "aegis_settings.json";
   }
 
-  if (argc > 2)
-  {
-    if (strcmp(argv[2], "-dbg") == 0)
-    {
-      if (rank == 0) { std::cout << "waiting to attach debugger to processes in vscode" << std::endl; }
-      int i=0;
-      while (i==0) { sleep(5); }
-    }
-  }
 
   ParticleSimulation simulation(settingsFile);
-  
-  if (nprocs < 2)
-  {
-    std::cout << "Running on a single core in serial mode... \n";
-    simulation.Execute_serial();
-  }
-  else
-  { 
-    //simulation.Execute_mpi();
-    //simulation.Execute_padded_mpi();
-    simulation.Execute_dynamic_mpi();
-  
-  }
-
+  simulation.Execute();
 
   for (int i=0; i<nprocs; ++i){
     if (rank == i)

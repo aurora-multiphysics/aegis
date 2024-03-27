@@ -17,6 +17,45 @@ ParticleSimulation::ParticleSimulation(std::string filename)
   init_geometry();
 }
 
+// Call different execute functions depending on which execute type selected 
+void ParticleSimulation::Execute()
+{
+  string_to_lowercase(exeType);
+
+  if (exeType == "serial") { 
+    log_string(LogLevel::WARNING, "Executing in serial mode...");
+    if (nprocs > 1) 
+    {
+      log_string(LogLevel::ERROR, "Aegis was invoked with mpirun but config suggests serial run. Defaulting to MPI with no load balancing...");
+      Execute_mpi();
+    }
+    else{
+      Execute_serial();
+    } 
+  }
+  
+  else if (exeType == "mpi") { 
+    log_string(LogLevel::WARNING, "Executing MPI with no load balancing...");
+    Execute_mpi(); 
+  }
+
+  else if (exeType == "mpi_padded" || exeType == "padded") { 
+    log_string(LogLevel::WARNING, "Executing padded MPI with no load balancing...");
+    Execute_padded_mpi(); 
+  }
+  
+  else if (exeType == "mpi_dynamic" || exeType == "dynamic") { 
+    log_string(LogLevel::WARNING, "Executing dynamic MPI load balancing...");
+    Execute_dynamic_mpi(); 
+  }
+  
+  else 
+  {
+    log_string(LogLevel::FATAL, "No suitable execution type ('serial', 'mpi', 'mpi_padded', 'mpi_dynamic') provided exiting...");
+    std::exit(1);
+  }
+}
+
 // perform AEGIS simulation solve with dynamic mpi load balancing
 void ParticleSimulation::Execute_dynamic_mpi(){
 
@@ -30,12 +69,21 @@ void ParticleSimulation::Execute_dynamic_mpi(){
   int nFacetsPerProc = totalFacets / nprocs;
   const int noMoreWork = -1;
 
-  std::vector<double> handlerQVals(num_facets());
+  std::vector<double> handlerQVals(num_facets(), -1);
   int counter = 0;
 
+  std::ofstream file("rank0.txt");
+  int depositCounter = 0;
   if(rank == 0)  
   { // handler process...
     counter = handler(handlerQVals);
+    for (const auto i:handlerQVals)
+    {
+      file << i << "\n";
+      if (i > 0 ) { depositCounter +=1; }
+    }
+    file << std::endl;
+    file << "Number of depositing particles = " << depositCounter << std::endl;
   }
 
   else
@@ -100,7 +148,7 @@ int ParticleSimulation::handler(std::vector<double> &handlerQVals)
   // while (recvCount < (nprocs-1))
   // {
   //   MPI_Recv(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, MPI_ANY_SOURCE, mpiDataTag, MPI_COMM_WORLD, &status);
-  //   MPI_Recv(&workerStartIndex, 1, MPI_INT, MPI_ANY_SOURCE, mpiIndexTag, MPI_COMM_WORLD, &status);
+  //   // MPI_Recv(&workerStartIndex, 1, MPI_INT, MPI_ANY_SOURCE, mpiIndexTag, MPI_COMM_WORLD, &status);
   //   handlerItr = handlerQVals.begin();
   //   std::advance(handlerItr, workerStartIndex);
   //   for (const auto i:workerQVals)
@@ -128,17 +176,11 @@ int ParticleSimulation::handler(std::vector<double> &handlerQVals)
       //printf("Time taken to recieve next data = %f \n", MPI_Wtime());
 
       particlesHandled += dynamicTaskSize;
-      
-      handlerItr = handlerQVals.begin();
-      std::advance(handlerItr, workerStartIndex);
+      counter += workerQVals.size();
+      double *ptr = handlerQVals.data();
+      ptr = handlerQVals.data() + workerStartIndex;
+      memcpy(ptr, workerQVals.data(), sizeof(double)*workerQVals.size());
 
-      for (const auto i:workerQVals)
-      {
-        *handlerItr = i;
-        std::advance(handlerItr, 1);
-        counter +=1;
-      }
-      endTime = MPI_Wtime();
     }
     else
     { // send message to workers to tell them no more work available
@@ -147,6 +189,17 @@ int ParticleSimulation::handler(std::vector<double> &handlerQVals)
     }
 
   } while(inactiveWorkers < nprocs-1); // while some workers are still active
+
+  for (int i=1; i<nprocs; ++i)
+  {
+    MPI_Recv(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, i, mpiDataTag, MPI_COMM_WORLD, &status);
+    MPI_Recv(&workerStartIndex, 1, MPI_INT, i, mpiIndexTag, MPI_COMM_WORLD, &status);
+    double *ptr = handlerQVals.data();
+    ptr = handlerQVals.data() + workerStartIndex;
+    memcpy(ptr, workerQVals.data(), sizeof(double)*workerQVals.size());
+    //printf("process [%d] workerStartIndex = %d \n", status.MPI_SOURCE, workerStartIndex);
+    recvCount++;
+  }
 
   return counter;
 }
@@ -158,6 +211,13 @@ void ParticleSimulation::worker()
   MPI_Request request;
   int mpiDataTag = 100;
   int mpiIndexTag = 101;
+  int counterDeposit = 0;
+  int index = 0;
+
+  std::ofstream file;
+  std::stringstream fileName;
+  fileName << "rank" << rank << ".txt";
+  file.open(fileName.str());
 
   std::vector<double> workerQVals;
   int startIndex = 0;
@@ -167,6 +227,16 @@ void ParticleSimulation::worker()
   int end = start + dynamicTaskSize;
 
   workerQVals = loop_over_facets(start, end); // process initial facets
+  file << "Loop over [" << start << ":" << end << "] facets: \n";
+  index = start;
+  for (auto i:workerQVals)
+  {
+    file << "[" << index+1 << "] " <<  i << "\n";
+    if (i > 0) { counterDeposit +=1; }
+    index +=1;
+  }
+  file << std::endl;
+
   MPI_Send(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, 0, mpiDataTag, MPI_COMM_WORLD);
   MPI_Send(&start, 1, MPI_INT, 0, mpiIndexTag, MPI_COMM_WORLD);
   do
@@ -189,10 +259,21 @@ void ParticleSimulation::worker()
       MPI_Send(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, 0, mpiDataTag, MPI_COMM_WORLD);
       MPI_Send(&start, 1, MPI_INT, 0, mpiIndexTag, MPI_COMM_WORLD);
 
+      file << "Loop over [" << start << ":" << end << "] facets: \n";
+      index = start;
+      for (auto i:workerQVals)
+      {
+        file << "[" << index+1 << "] " <<  i << "\n";
+        if (i > 0) { counterDeposit +=1; }
+        index +=1;
+      }
+      file << std::endl;
+
     }
   } while(startIndex != noMoreWork); // while there is work available
 
-
+  file << "Particle Stats:" << std::endl;
+  file << "Depositing particles = " << counterDeposit << std::endl;
 }
 
 
@@ -208,13 +289,11 @@ void ParticleSimulation::read_params(const std::shared_ptr<InputJSON> &inputs){
     maxTrackSteps = aegisNamelist["max_steps"];
     particleLaunchPos = aegisNamelist["launch_pos"];
     noMidplaneTermination = aegisNamelist["force_no_deposition"];
-    dynamicTaskSize = aegisNamelist["dynamic_task_size"];
     coordInputStr = aegisNamelist["coordinate_system"];
+    exeType = aegisNamelist["execution_type"];
+    dynamicTaskSize = aegisNamelist["dynamic_task_size"];
 
-    if (rank == 0)
-    {
-      select_coordinate_system();
-    }
+    select_coordinate_system();
     
     if (aegisNamelist.contains("target_surfs"))
     {
@@ -310,7 +389,7 @@ void ParticleSimulation::init_geometry(){
   if (coordSys == coordinateSystem::FLUX)
   {
     coordSys = coordinateSystem::CARTESIAN;
-    std::cout << "Flux coords tracking not currently implemented. Defaulting to CARTESIAN..." << std::endl;
+    log_string(LogLevel::WARNING, "Flux coords tracking not currently implemented. Defaulting to CARTESIAN...");
   } 
 
 }
@@ -382,7 +461,8 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
   }
 
   double endTime = MPI_Wtime();
-  printf("Loop over facets [%d:%d] time taken = %fs \n", startFacet, endFacet, endTime-startTime);
+  printf("Loop over facets [%d:%d] from rank[%d] time taken = %fs \n", startFacet, endFacet, rank, endTime-startTime);
+  fflush(stdout);
   return heatfluxVals;
 }
 
@@ -391,7 +471,6 @@ void ParticleSimulation::setup_sources()
 
   std::vector<double> triCoords(9);
   std::vector<double> triA(3), triB(3), triC(3);
-
   for (const auto &facet:targetFacets)
   {
     std::vector<moab::EntityHandle> triNodes;
@@ -405,7 +484,7 @@ void ParticleSimulation::setup_sources()
       triC[j] = triCoords[j+6];
     }
     
-    TriSource Tri(triA, triB, triC, facet, particleLaunchPos); 
+    TriangleSource Tri(triA, triB, triC, facet, particleLaunchPos); 
     Tri.set_heatflux_params(equilibrium, "exp");
     listOfTriangles.push_back(Tri);    
   }
@@ -413,7 +492,7 @@ void ParticleSimulation::setup_sources()
 }
 
 // loop over single particle track from launch to termination
-terminationState ParticleSimulation::loop_over_particle_track(TriSource &tri, ParticleBase &particle, DagMC::RayHistory &history)
+terminationState ParticleSimulation::loop_over_particle_track(TriangleSource &tri, ParticleBase &particle, DagMC::RayHistory &history)
 {
   double euclidDistToNextSurf = 0.0;
   nextSurf = 0;
@@ -475,7 +554,7 @@ terminationState ParticleSimulation::loop_over_particle_track(TriSource &tri, Pa
 // SHADOWED - Particle hits another piece of geometry. Heatflux = 0 
 // LOST - Particle leaves magnetic field so trace stops. Heatflux = 0
 // MAX LENGTH - Particle reaches maximum user set length before anything else. Heatflux = 0
-void ParticleSimulation::terminate_particle(TriSource &tri, DagMC::RayHistory &history, terminationState termination){
+void ParticleSimulation::terminate_particle(TriangleSource &tri, DagMC::RayHistory &history, terminationState termination){
   double heatflux;
   std::stringstream ss;
 

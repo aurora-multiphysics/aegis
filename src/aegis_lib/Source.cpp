@@ -6,91 +6,8 @@
 #include "Source.h"
 #include "CoordTransform.h"
 
-
-pointSource::pointSource(std::vector<double> xyz)
-{
-  for (int i=0; i<xyz.size(); i++)
-  {
-    r[i] = xyz[i];
-  }
-}
-
-void pointSource::set_dir(double newDir[3])
-{
-  dir[0] = newDir[0];
-  dir[1] = newDir[1];
-  dir[2] = newDir[2];
-}
-
-
-// sample a random direction isotropically from point 
-void pointSource::get_isotropic_dir()
-{
-  std::random_device dev;
-  std::mt19937 rng(dev());
-  std::uniform_real_distribution<double> dist(0.0,1.0);
-  double theta = 2 * M_PI * dist(rng);
-  double phi = acos(1 - 2 * dist(rng));
-  dir[0] = sin(phi) * cos(theta);
-  dir[1] = sin(phi) * sin(theta);
-  dir[2] = cos(phi);
-}
-
-void pointSource::get_hemisphere_surface_dir(double surfaceNormal[3])
-{
-  std::random_device dev;
-  std::mt19937 rng(dev());
-  std::uniform_real_distribution<double> dist(0.0,1.0);
-  double theta = 2 * M_PI * dist(rng);
-  double phi = acos(1 - 2 * dist(rng));
-  dir[0] = sin(phi) * cos(theta);
-  dir[1] = sin(phi) * sin(theta);
-  dir[2] = cos(phi);
-}
-
-
-// boxSource constructor, a square plane can be described by providing position vectors
-// with one dimension that is constant 
-boxSource::boxSource(double xyz1[3], double xyz2[3])
-{
-  for (int i=0; i<3; i++)
-  {  
-    pA[i] = xyz1[i];
-    pB[i] = xyz2[i];
-  }  
-}
-
-
-
-void boxSource::get_pt()
-{
-  std::random_device dev;
-  std::mt19937 rng(dev());
-  std::uniform_real_distribution<double> dist(0,1);
-  double random[3]={dist(rng), dist(rng), dist(rng)};
-
-  for (int i=0; i<3; i++){
-    pR[i] = pA[i] + random[i] * (pB[i]-pA[i]);
-  }
-}
-
-void boxSource::get_dir()
-{
-  std::vector<double> test(3);
-  std::random_device dev;
-  std::mt19937 rng(dev());
-  std::uniform_real_distribution<double> dist(0.0,1.0);
-  double theta = 2 * M_PI * dist(rng);
-  double phi = acos(1 - 2 * dist(rng));
-  dir[0] = sin(phi) * cos(theta);
-  dir[1] = sin(phi) * sin(theta);
-  dir[2] = cos(phi);
-}
-
-/////////
-
 // define plane via cartesian plane equation ax + by + cz + d = 0
-TriSource::TriSource(std::vector<double> xyz1, std::vector<double> xyz2, std::vector<double> xyz3, moab::EntityHandle handle, std::string launchType)
+TriangleSource::TriangleSource(std::vector<double> xyz1, std::vector<double> xyz2, std::vector<double> xyz3, moab::EntityHandle handle, std::string launchType)
 {
   xyzA = xyz1;
   xyzB = xyz2;
@@ -121,7 +38,7 @@ TriSource::TriSource(std::vector<double> xyz1, std::vector<double> xyz2, std::ve
   unitNormal = normalVec;
 
   entityHandle = handle;
-
+  
   if (launchType == "random") 
   {
     launchPos = random_pt();
@@ -135,7 +52,7 @@ TriSource::TriSource(std::vector<double> xyz1, std::vector<double> xyz2, std::ve
 
 
 
-std::vector<double> TriSource::random_pt()
+std::vector<double> TriangleSource::random_pt()
 {
   std::random_device dev;
   std::mt19937 rng(dev());
@@ -158,7 +75,7 @@ std::vector<double> TriSource::random_pt()
   return randomPt;
 }
 
-std::vector<double> TriSource::centroid()
+std::vector<double> TriangleSource::centroid()
 {
   std::vector<double> centroid(3);
   double x, y, z; // xyz coords of centroid
@@ -173,9 +90,8 @@ std::vector<double> TriSource::centroid()
   return centroid;
 }
 
-
-
-void TriSource::set_heatflux_params(EquilData &equilibrium, const std::string formula)
+// set heatflux and B.n on surface element at particle launch position
+void Sources::set_heatflux_params(EquilData &equilibrium, const std::string formula)
 { 
   double psid;
   std::vector<double> polarPos, fluxPos;
@@ -201,28 +117,12 @@ void TriSource::set_heatflux_params(EquilData &equilibrium, const std::string fo
   Q = equilibrium.omp_power_dep(psid, Bn, "exp"); // store Q at particle start
 }
 
+void Sources::update_heatflux(double newHeatflux) { Q = newHeatflux; }
 
-void TriSource::update_heatflux(double newHeatflux)
-{
-  Q = newHeatflux;
-}
+std::vector<double> Sources::launch_pos() { return launchPos; }
 
-std::vector<double> TriSource::launch_pos()
-{
-  return launchPos;
-}
+double Sources::BdotN() { return Bn; }
 
-double TriSource::BdotN()
-{
-  return Bn;
-}
+double Sources::heatflux() { return Q; }
 
-double TriSource::heatflux()
-{
-  return Q;
-}
-
-moab::EntityHandle TriSource::entity_handle()
-{
-  return entityHandle;
-}
+moab::EntityHandle Sources::entity_handle() { return entityHandle; }

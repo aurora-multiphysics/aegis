@@ -67,11 +67,19 @@ enum class meshWriteOptions
   PARTIAL // write out multiple specified mesh sets to a single file
 };
 
+enum class ExecuteOptions
+{
+  SERIAL,
+  MPI,
+  MPI_PADDED,
+  MPI_DYNAMIC
+};
 
 class ParticleSimulation : public AegisBase
 {
   public:
   ParticleSimulation(std::string filename);
+  void Execute(); // switch between runs
   void Execute_serial(); // serial
   void Execute_mpi(); // MPI_Gatherv
   void Execute_dynamic_mpi(); // dynamic load balancing
@@ -97,8 +105,8 @@ class ParticleSimulation : public AegisBase
   void polar_track();
   void flux_track();
   
-  terminationState loop_over_particle_track(TriSource &tri, ParticleBase &particle, DagMC::RayHistory &history); // loop over individual particle tracks
-  void terminate_particle(TriSource &facet, DagMC::RayHistory &history, terminationState termination); // end particle track
+  terminationState loop_over_particle_track(TriangleSource&tri, ParticleBase &particle, DagMC::RayHistory &history); // loop over individual particle tracks
+  void terminate_particle(TriangleSource&facet, DagMC::RayHistory &history, terminationState termination); // end particle track
   void ray_hit_on_launch(ParticleBase &particle, DagMC::RayHistory &history); // particle hit on initial launch from surface
   void print_particle_stats(std::array<int, 5> particleStats); // print number of particles that reached each termination state
   void mpi_particle_stats(); // get inidividual particle stats for each process
@@ -108,9 +116,10 @@ class ParticleSimulation : public AegisBase
   void mesh_coord_transform(coordinateSystem coordSys);
   void select_coordinate_system();
   
+  std::string exeType;
   int nFacets;
   
-  std::vector<TriSource> listOfTriangles;
+  std::vector<TriangleSource> listOfTriangles;
 
   std::string settingsFileName;
   std::shared_ptr<InputJSON> JSONsettings; 

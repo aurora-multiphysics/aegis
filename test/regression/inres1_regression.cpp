@@ -53,6 +53,8 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
 
  TEST_F(aegisRegressionTests, inres1)
  {
+  MPI_Init(NULL, NULL);
+
   std::string smarddaFile = "smardda_inres1_no_shadowQ.txt";
   double qvalue;
   std::vector<std::pair<double,double>> smardda_qValues;
@@ -80,15 +82,13 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
   ParticleSimulation aegis(aegisConfig);
 
   if (std::filesystem::exists(aegisConfig)){
-    MPI_Init(NULL, NULL);
     aegis.Execute_serial();
-    MPI_Finalize();
   }
 
   else {
     FAIL() << "Cannot find '" << aegisConfig << "'";
   }
-//-------------- RUN AEGIS -------------
+//-------------- COMPARE AEGIS AGAINST SMARDDA -------------
 
   std::sort(aegis.psiQ_values.begin(), aegis.psiQ_values.end());
   std::sort(smardda_qValues.begin(), smardda_qValues.end());
@@ -130,6 +130,7 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
   
   EXPECT_LT(MAX_REL_ERROR, percentTol);
   ASSERT_LT(L2_NORM_ERROR, percentTol);
+  MPI_Finalize();
 
  }
 

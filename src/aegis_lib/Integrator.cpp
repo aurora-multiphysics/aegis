@@ -195,31 +195,19 @@ void SurfaceIntegrator::piecewise_multilinear_out(std::unordered_map<moab::Entit
   std::sort(z.begin(), z.end());
   
   piecewise_multilinear_out << "AXIS X" << std::endl;
-  for (auto i:x)
-  {
-    piecewise_multilinear_out << i << " ";
-  }
+  for (auto i:x) { piecewise_multilinear_out << i << " "; }
   piecewise_multilinear_out << std::endl << std::endl;
-
+  
   piecewise_multilinear_out << "AXIS Y" << std::endl;
-  for (auto i:y)
-  {
-    piecewise_multilinear_out << i << " ";
-  }
+  for (auto i:y) { piecewise_multilinear_out << i << " "; }
   piecewise_multilinear_out << std::endl << std::endl;
 
   piecewise_multilinear_out << "AXIS Z" << std::endl;
-  for (auto i:z)
-  {
-    piecewise_multilinear_out << i << " ";
-  }
+  for (auto i:z) { piecewise_multilinear_out << i << " "; }
   piecewise_multilinear_out << std::endl << std::endl;
 
   piecewise_multilinear_out << "DATA" << std::endl;
-  for (auto i:value)
-  {
-    piecewise_multilinear_out << i << std::endl;
-  }
+  for (auto i:value) { piecewise_multilinear_out << i << std::endl; }
 
 
 }

@@ -44,8 +44,6 @@ class AegisBase
   int get_mpi_size();
   void string_to_lowercase(std::string &inputStr);
   
-  src::severity_logger_mt<boost::log::trivial::severity_level> logger;
-
   int rank; 
   int nprocs;
 

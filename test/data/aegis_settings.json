@@ -6,7 +6,9 @@
       "max_steps": 100000,
       "launch_pos": "fixed",
       "target_surfs": [1,2,3,4,5,6],
-      "force_no_deposition": false
+      "force_no_deposition": false,
+      "dynamic_task_size": 100,
+      "coordinate_system": "cart"
   },
   "equil_params":{
       "eqdsk": "EQ3.eqdsk",
@@ -16,12 +18,12 @@
       "psiref": -2.1628794,
       "r_outrbdry": 8.07385,
       "rmove": -0.006,
-      "draw_equil_rz": true,
-      "draw_equil_xyz": true,
+      "draw_equil_rz": false,
+      "draw_equil_xyz": false,
       "print_debug_info": false
   },
   "vtk_params":{
       "VTK": "target_facets.stl",
-      "draw_particle_tracks": true
+      "draw_particle_tracks": false
   }
  }
