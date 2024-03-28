@@ -69,21 +69,19 @@ void ParticleSimulation::Execute_dynamic_mpi(){
   int nFacetsPerProc = totalFacets / nprocs;
   const int noMoreWork = -1;
 
-  std::vector<double> handlerQVals(num_facets(), -1);
-  int counter = 0;
+  std::vector<double> handlerQVals(num_facets());
+  // int counter = 0;
 
-  std::ofstream file("rank0.txt");
-  int depositCounter = 0;
   if(rank == 0)  
   { // handler process...
-    counter = handler(handlerQVals);
-    for (const auto i:handlerQVals)
-    {
-      file << i << "\n";
-      if (i > 0 ) { depositCounter +=1; }
-    }
-    file << std::endl;
-    file << "Number of depositing particles = " << depositCounter << std::endl;
+    handler(handlerQVals);
+    // for (const auto i:handlerQVals)
+    // {
+    //   file << i << "\n";
+    //   if (i > 0 ) { depositCounter +=1; }
+    // }
+    // file << std::endl;
+    // file << "Number of depositing particles = " << depositCounter << std::endl;
   }
 
   else
@@ -110,8 +108,6 @@ void ParticleSimulation::Execute_dynamic_mpi(){
 
   if (rank == 0) 
   {
-    printf("Number of particles recieved on root rank = %d \n", counter);
-    std::cout << "HANDLERQVALS.SIZE() = " << handlerQVals.size() << std::endl;
     attach_mesh_attribute("Heatflux", targetFacets, handlerQVals);
     write_out_mesh(meshWriteOptions::BOTH, targetFacets); 
   }
@@ -122,7 +118,7 @@ void ParticleSimulation::Execute_dynamic_mpi(){
 
   }
 
-int ParticleSimulation::handler(std::vector<double> &handlerQVals)
+void ParticleSimulation::handler(std::vector<double> &handlerQVals)
 {
   MPI_Status status;
   MPI_Request request;
@@ -145,21 +141,7 @@ int ParticleSimulation::handler(std::vector<double> &handlerQVals)
   }
   
   int recvCount = 0;
-  // while (recvCount < (nprocs-1))
-  // {
-  //   MPI_Recv(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, MPI_ANY_SOURCE, mpiDataTag, MPI_COMM_WORLD, &status);
-  //   // MPI_Recv(&workerStartIndex, 1, MPI_INT, MPI_ANY_SOURCE, mpiIndexTag, MPI_COMM_WORLD, &status);
-  //   handlerItr = handlerQVals.begin();
-  //   std::advance(handlerItr, workerStartIndex);
-  //   for (const auto i:workerQVals)
-  //   {
-  //     *handlerItr = i;
-  //     std::advance(handlerItr, 1);
-  //     counter +=1;
-  //   }
-  //   //printf("process [%d] workerStartIndex = %d \n", status.MPI_SOURCE, workerStartIndex);
-  //   recvCount++;
-  // }
+
   endTime = MPI_Wtime();
   printf("Time taken to recieve initial data back = %f \n ", endTime);
   int inactiveWorkers = 0;
@@ -186,22 +168,19 @@ int ParticleSimulation::handler(std::vector<double> &handlerQVals)
     { // send message to workers to tell them no more work available
       MPI_Send(&noMoreWork, 1, MPI_INT, avaialbleProcess, 1, MPI_COMM_WORLD);
       inactiveWorkers++;
+
+      // recieve final work arrays
+
+      MPI_Recv(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, MPI_ANY_SOURCE, mpiDataTag, MPI_COMM_WORLD, &status);
+      MPI_Recv(&workerStartIndex, 1, MPI_INT, MPI_ANY_SOURCE, mpiIndexTag, MPI_COMM_WORLD, &status);
+    
+      double *ptr = handlerQVals.data();
+      ptr = handlerQVals.data() + workerStartIndex;
+      memcpy(ptr, workerQVals.data(), sizeof(double)*workerQVals.size());
     }
 
   } while(inactiveWorkers < nprocs-1); // while some workers are still active
 
-  for (int i=1; i<nprocs; ++i)
-  {
-    MPI_Recv(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, i, mpiDataTag, MPI_COMM_WORLD, &status);
-    MPI_Recv(&workerStartIndex, 1, MPI_INT, i, mpiIndexTag, MPI_COMM_WORLD, &status);
-    double *ptr = handlerQVals.data();
-    ptr = handlerQVals.data() + workerStartIndex;
-    memcpy(ptr, workerQVals.data(), sizeof(double)*workerQVals.size());
-    //printf("process [%d] workerStartIndex = %d \n", status.MPI_SOURCE, workerStartIndex);
-    recvCount++;
-  }
-
-  return counter;
 }
 
 void ParticleSimulation::worker()
@@ -214,10 +193,10 @@ void ParticleSimulation::worker()
   int counterDeposit = 0;
   int index = 0;
 
-  std::ofstream file;
-  std::stringstream fileName;
-  fileName << "rank" << rank << ".txt";
-  file.open(fileName.str());
+  // std::ofstream file;
+  // std::stringstream fileName;
+  // fileName << "rank" << rank << ".txt";
+  // file.open(fileName.str());
 
   std::vector<double> workerQVals;
   int startIndex = 0;
@@ -227,15 +206,15 @@ void ParticleSimulation::worker()
   int end = start + dynamicTaskSize;
 
   workerQVals = loop_over_facets(start, end); // process initial facets
-  file << "Loop over [" << start << ":" << end << "] facets: \n";
-  index = start;
-  for (auto i:workerQVals)
-  {
-    file << "[" << index+1 << "] " <<  i << "\n";
-    if (i > 0) { counterDeposit +=1; }
-    index +=1;
-  }
-  file << std::endl;
+  // file << "Loop over [" << start << ":" << end << "] facets: \n";
+  // index = start;
+  // for (auto i:workerQVals)
+  // {
+  //   file << "[" << index+1 << "] " <<  i << "\n";
+  //   if (i > 0) { counterDeposit +=1; }
+  //   index +=1;
+  // }
+  // file << std::endl;
 
   MPI_Send(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, 0, mpiDataTag, MPI_COMM_WORLD);
   MPI_Send(&start, 1, MPI_INT, 0, mpiIndexTag, MPI_COMM_WORLD);
@@ -259,21 +238,21 @@ void ParticleSimulation::worker()
       MPI_Send(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, 0, mpiDataTag, MPI_COMM_WORLD);
       MPI_Send(&start, 1, MPI_INT, 0, mpiIndexTag, MPI_COMM_WORLD);
 
-      file << "Loop over [" << start << ":" << end << "] facets: \n";
-      index = start;
-      for (auto i:workerQVals)
-      {
-        file << "[" << index+1 << "] " <<  i << "\n";
-        if (i > 0) { counterDeposit +=1; }
-        index +=1;
-      }
-      file << std::endl;
+      // file << "Loop over [" << start << ":" << end << "] facets: \n";
+      // index = start;
+      // for (auto i:workerQVals)
+      // {
+      //   file << "[" << index+1 << "] " <<  i << "\n";
+      //   if (i > 0) { counterDeposit +=1; }
+      //   index +=1;
+      // }
+      // file << std::endl;
 
     }
   } while(startIndex != noMoreWork); // while there is work available
 
-  file << "Particle Stats:" << std::endl;
-  file << "Depositing particles = " << counterDeposit << std::endl;
+  // file << "Particle Stats:" << std::endl;
+  // file << "Depositing particles = " << counterDeposit << std::endl;
 }
 
 

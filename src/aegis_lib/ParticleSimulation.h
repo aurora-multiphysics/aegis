@@ -93,7 +93,7 @@ class ParticleSimulation : public AegisBase
 
   private:
   void worker();
-  int handler(std::vector<double> &handlerQVals);
+  void handler(std::vector<double> &handlerQVals);
   void dynamic_task_init();
   void implicit_complement_testing(); 
   moab::Range select_target_surface(); // get target surfaces of interest from aegis_settings.json
