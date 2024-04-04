@@ -2,15 +2,14 @@
 #include <mpi.h>
 
 // setup AEGIS simulation 
-ParticleSimulation::ParticleSimulation(std::string filename)
+ParticleSimulation::ParticleSimulation(std::shared_ptr<InputJSON> configFile, std::shared_ptr<EquilData> equil)
 {
   set_mpi_params();
 
-  JSONsettings = std::make_shared<InputJSON>(filename);
+  JSONsettings = configFile;
 
   read_params(JSONsettings);
-
-  equilibrium.setup(JSONsettings);
+  equilibrium = equil;
   DAG = std::make_unique<moab::DagMC>();
   vtkInterface = std::make_unique<VtkInterface>(JSONsettings);
 
@@ -29,9 +28,7 @@ void ParticleSimulation::Execute()
       log_string(LogLevel::ERROR, "Aegis was invoked with mpirun but config suggests serial run. Defaulting to MPI with no load balancing...");
       Execute_mpi();
     }
-    else{
-      Execute_serial();
-    } 
+    else { Execute_serial(); } 
   }
   
   else if (exeType == "mpi") { 
@@ -75,6 +72,7 @@ void ParticleSimulation::Execute_dynamic_mpi(){
   if(rank == 0)  
   { // handler process...
     handler(handlerQVals);
+    
     // for (const auto i:handlerQVals)
     // {
     //   file << i << "\n";
@@ -128,22 +126,22 @@ void ParticleSimulation::handler(std::vector<double> &handlerQVals)
   int noMoreWork = -1;
   int counter = 0;
 
-  std::vector<double>::iterator handlerItr;
   std::vector<double> workerQVals(dynamicTaskSize);
   std::cout << "Dynamic task scheduling with " << (nprocs-1) << " processes, each handling "<< dynamicTaskSize << " facets" << std::endl;
   int particlesHandled = 0;
-  int initparticlesHandled = 0;
+  int batchesComplete = 0;
+  int totalBatches = num_facets() / dynamicTaskSize; 
+
 
   for(int procID = 1; procID < nprocs; procID++)
   { // Send the initial indexes for each process statically
     MPI_Send(&particlesHandled, 1, MPI_INT, procID, procID, MPI_COMM_WORLD); 
     particlesHandled += dynamicTaskSize;  
+    batchesComplete += 1;
   }
   
   int recvCount = 0;
 
-  endTime = MPI_Wtime();
-  printf("Time taken to recieve initial data back = %f \n ", endTime);
   int inactiveWorkers = 0;
   
   do{
@@ -158,6 +156,14 @@ void ParticleSimulation::handler(std::vector<double> &handlerQVals)
       //printf("Time taken to recieve next data = %f \n", MPI_Wtime());
 
       particlesHandled += dynamicTaskSize;
+      batchesComplete+=1;
+      // progress indicator 
+
+
+      if (batchesComplete == totalBatches / 4) { std::cout << "25% ... " << std::flush; }
+      else if (batchesComplete == totalBatches / 2) { std::cout << "50% ... " << std::flush; }
+      else if (batchesComplete == 3 * totalBatches / 4) { std::cout << "75% ... " << std::flush; }
+
       counter += workerQVals.size();
       double *ptr = handlerQVals.data();
       ptr = handlerQVals.data() + workerStartIndex;
@@ -170,17 +176,20 @@ void ParticleSimulation::handler(std::vector<double> &handlerQVals)
       inactiveWorkers++;
 
       // recieve final work arrays
+      int finalArraySize;
+      MPI_Probe(MPI_ANY_SOURCE, mpiDataTag, MPI_COMM_WORLD, &status);
+      MPI_Get_count(&status, MPI_DOUBLE, &finalArraySize);
+      std::vector<double> finalWorkArray(finalArraySize);
 
-      MPI_Recv(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, MPI_ANY_SOURCE, mpiDataTag, MPI_COMM_WORLD, &status);
-      MPI_Recv(&workerStartIndex, 1, MPI_INT, MPI_ANY_SOURCE, mpiIndexTag, MPI_COMM_WORLD, &status);
+      MPI_Recv(finalWorkArray.data(), finalWorkArray.size(), MPI_DOUBLE, status.MPI_SOURCE, mpiDataTag, MPI_COMM_WORLD, &status);
+      MPI_Recv(&workerStartIndex, 1, MPI_INT, status.MPI_SOURCE, mpiIndexTag, MPI_COMM_WORLD, &status);
     
       double *ptr = handlerQVals.data();
       ptr = handlerQVals.data() + workerStartIndex;
-      memcpy(ptr, workerQVals.data(), sizeof(double)*workerQVals.size());
+      memcpy(ptr, finalWorkArray.data(), sizeof(double)*finalWorkArray.size());
     }
 
   } while(inactiveWorkers < nprocs-1); // while some workers are still active
-
 }
 
 void ParticleSimulation::worker()
@@ -342,11 +351,6 @@ void ParticleSimulation::init_geometry(){
 
   // setup B Field data
   
-  equilibrium.move();
-  equilibrium.psiref_override();
-  equilibrium.init_interp_splines();
-  equilibrium.centre(1);
-
   std::vector<double> vertexCoordinates;
   DAG->moab_instance()->get_vertex_coordinates(vertexCoordinates);
   int numNodes = vertexCoordinates.size()/3;
@@ -361,8 +365,8 @@ void ParticleSimulation::init_geometry(){
     vertexList[i][2] = vertexCoordinates[i + numNodes*2];
   }
 
-  equilibrium.psi_limiter(vertexList);
-  equilibrium.write_bfield();
+  equilibrium->psi_limiter(vertexList);
+
 
   // if flux selected default to cartesian
   if (coordSys == coordinateSystem::FLUX)
@@ -440,8 +444,8 @@ std::vector<double> ParticleSimulation::loop_over_facets(int startFacet, int end
   }
 
   double endTime = MPI_Wtime();
-  printf("Loop over facets [%d:%d] from rank[%d] time taken = %fs \n", startFacet, endFacet, rank, endTime-startTime);
-  fflush(stdout);
+  // printf("Loop over facets [%d:%d] from rank[%d] time taken = %fs \n", startFacet, endFacet, rank, endTime-startTime);
+  // fflush(stdout);
   return heatfluxVals;
 }
 
@@ -508,7 +512,7 @@ terminationState ParticleSimulation::loop_over_particle_track(TriangleSource &tr
       particle.set_dir(equilibrium);
       particle.align_dir_to_surf(tri.BdotN());
     }
-    particle.check_if_midplane_crossed(equilibrium.get_midplane_params());
+    particle.check_if_midplane_crossed(equilibrium->get_midplane_params());
     
     if (particle.atMidplane != 0 && !noMidplaneTermination){ 
       terminate_particle(tri, history, terminationState::DEPOSITING);
@@ -646,14 +650,16 @@ int ParticleSimulation::num_facets(){
   return numFacets;
 }
 
-// print particle stats for the entire run
+// print stats for the entire run
 void ParticleSimulation::print_particle_stats(std::array<int, 5> particleStats){
-  int particlesCounted = 0;
-  //MPI_Barrier(MPI_COMM_WORLD); // barrier to ensure this is always printed last
+  unsigned int particlesCounted = 0;
+  
   for (const auto i:particleStats){
     particlesCounted += i;
   }
+  
   particlesCounted -=  particleStats[4]; // remove padded particles
+  
   if (rank == 0)
   {
     LOG_WARNING << "Number of particles launched = " << particlesCounted << std::endl;
@@ -662,8 +668,10 @@ void ParticleSimulation::print_particle_stats(std::array<int, 5> particleStats){
     LOG_WARNING << "Number of particles lost from magnetic domain = " << particleStats[2] << std::endl;
     LOG_WARNING << "Number of particles terminated upon reaching max tracking length = " << particleStats[3] << std::endl; 
     LOG_WARNING << "Number of padded null particles = " << particleStats[4] << std::endl;
-    LOG_WARNING << "Number of particles not accounted for = " << (num_facets() - particlesCounted) << std::endl;
+    LOG_WARNING << "Number of particles not accounted for = " << (num_facets() - particlesCounted) << std::endl;  
   }
+  // std::cout << "Number of Ray fire calls = " << numberOfRayFireCalls << std::endl;
+
 }
 
 // print individual particle stats for each MPI rank
@@ -711,7 +719,22 @@ void ParticleSimulation::Execute_serial(){
     log_string(LogLevel::ERROR, "Error - loop over facets returned no heatfluxes, please check logfile. Exiting...");
     std::exit(EXIT_FAILURE);
   }
+
+  std::vector<double> psiStart(num_facets());
+  std::vector<double> bnList(num_facets());
+  std::vector<std::vector<double>> normalList(num_facets());
+  for (int i=0; i<listOfTriangles.size(); ++i)
+  {
+    psiStart[i] = listOfTriangles[i].get_psi();
+    bnList[i] = listOfTriangles[i].BdotN(); 
+    normalList[i] = listOfTriangles[i].get_normal();
+
+  }
+
   attach_mesh_attribute("Heatflux", targetFacets, qvalues);
+  attach_mesh_attribute("Psi Start", targetFacets, psiStart);
+  attach_mesh_attribute("BdotN", targetFacets, bnList);
+  // attach_mesh_attribute("Normal", targetFacets, normalList);
   write_out_mesh(meshWriteOptions::BOTH); 
 
 
@@ -720,11 +743,9 @@ void ParticleSimulation::Execute_serial(){
   std::array<int, 5> particleStats = integrator->particle_stats(); 
 
     vtkInterface->write_multiBlockData("particle_tracks.vtm");
+
     print_particle_stats(particleStats);
 
-    std::cout << "Number of Ray fire calls = " << numberOfRayFireCalls << std::endl;
-    std::cout << "Number of Closest Location calls = " << numberOfClosestLocCalls << std::endl;
-    std::cout << "Number of iterations performed = " << iterationCounter << std::endl;
   }
 
 void ParticleSimulation::Execute_padded_mpi(){
@@ -938,9 +959,17 @@ void ParticleSimulation::attach_mesh_attribute(const std::string &tagName, moab:
 
   DAG->moab_instance()->tag_get_handle(tagName.c_str(), 1, MB_TYPE_DOUBLE, tag, MB_TAG_CREAT | MB_TAG_DENSE, &tagValue);
   DAG->moab_instance()->tag_set_data(tag, entities, &dataToAttach[0]);
-
 }
 
+void ParticleSimulation::attach_mesh_attribute(const std::string &tagName, moab::Range &entities, std::vector<std::vector<double>> &dataToAttach)
+{
+  moab::Tag tag;
+  double tagValue;
+
+  DAG->moab_instance()->tag_get_handle(tagName.c_str(), 1, MB_TYPE_OPAQUE, tag, MB_TAG_CREAT | MB_TAG_DENSE, &tagValue);
+  DAG->moab_instance()->tag_set_data(tag, entities, &dataToAttach[0]);
+
+}
 // write out the mesh and target mesh with attributed data
 // meshWriteOptions::FULL -- Write out the entire mesh 
 // meshWriteOptions::TARGET -- Only write out target mesh with heatfluxes (useful if full mesh particularly large)

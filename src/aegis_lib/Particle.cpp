@@ -45,9 +45,9 @@ void ParticleBase::set_pos(double newPosition[])
 }
 
 // Check if particle is currently in magnetic field
-void ParticleBase::check_if_in_bfield(EquilData &equilibrium)
+void ParticleBase::check_if_in_bfield(const std::shared_ptr<EquilData>  &equilibrium)
 {
-  std::vector<double> currentBfield = equilibrium.b_field(posXYZ, "cart");
+  std::vector<double> currentBfield = equilibrium->b_field(posXYZ, "cart");
   if (currentBfield.empty()) {outOfBounds = true;}
   else {outOfBounds = false;}
 }
@@ -60,7 +60,7 @@ std::vector<double> ParticleBase::get_pos()
 }
 
 // return double of psi at current posXYZ
-double ParticleBase::get_psi(EquilData &equilibrium) 
+double ParticleBase::get_psi(const std::shared_ptr<EquilData>  &equilibrium) 
 {
   std::vector<double> currentPosition;
   double psi;
@@ -72,7 +72,7 @@ double ParticleBase::get_psi(EquilData &equilibrium)
 }
 
 // set unit drection vector and Bfield at current posXYZition
-void ParticleBase::set_dir(EquilData &equilibrium) 
+void ParticleBase::set_dir(const std::shared_ptr<EquilData>  &equilibrium) 
 {
   check_if_in_bfield(equilibrium);
   if (outOfBounds) {return;} // exit function early if out of bounds
@@ -81,12 +81,12 @@ void ParticleBase::set_dir(EquilData &equilibrium)
   std::vector<double> normB(3); // normalised magnetic field
   std::vector<double> polarPos = CoordTransform::cart_to_polar(posXYZ, "forwards"); // polar posXYZition
   std::vector<double> magn(3); 
-  magn = equilibrium.b_field(posXYZ, "cart"); // magnetic field
+  magn = equilibrium->b_field(posXYZ, "cart"); // magnetic field
 
   switch (coordSystem)
   {
   case coordinateSystem::CARTESIAN:
-    magn = equilibrium.b_field_cart(magn, polarPos[2], 0);
+    magn = equilibrium->b_field_cart(magn, polarPos[2], 0);
     Bfield = magn;
     norm = sqrt(pow(magn[0],2) + pow(magn[1],2) + pow(magn[2],2));
     break;
@@ -147,7 +147,7 @@ void ParticleBase::update_vectors(double distanceTravelled)
 }
 
 // update posXYZition vector of particle with set distance travelled and update the particle direction at new posXYZition
-void ParticleBase::update_vectors(double distanceTravelled, EquilData &equilibrium)
+void ParticleBase::update_vectors(double distanceTravelled, const std::shared_ptr<EquilData>  &equilibrium)
 {
   // This will update the posXYZition and direction vector of the particle 
   std::vector<double> newPt(3);

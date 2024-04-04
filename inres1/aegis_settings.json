@@ -7,7 +7,7 @@
       "launch_pos": "fixed",
       "target_surfs": [1,2,3,4,5,6],
       "force_no_deposition": false,
-      "dynamic_task_size": 50,
+      "dynamic_task_size": 32,
       "coordinate_system": "flux",
       "execution_type": "dynamic"
   },
@@ -25,6 +25,6 @@
   },
   "vtk_params":{
       "VTK": "target_facets.stl",
-      "draw_particle_tracks": false
+      "draw_particle_tracks": true
   }
  }

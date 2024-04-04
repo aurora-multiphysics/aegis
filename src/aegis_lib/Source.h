@@ -18,12 +18,14 @@ using moab::OrientedBoxTreeTool;
 class Sources : public AegisBase
 {
   public:
-  void set_heatflux_params(EquilData &equilibrium, const std::string formula);
+  void set_heatflux_params(const std::shared_ptr<EquilData> &equilibrium, const std::string formula);
   void update_heatflux(double newHeatflux);
   std::vector<double> launch_pos(); // return launch position on triangle
   double BdotN();
   double heatflux();
   moab::EntityHandle entity_handle();
+  double get_psi();
+  std::vector<double> get_normal();
 
   protected:
   std::vector<double> launchPos;

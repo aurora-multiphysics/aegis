@@ -91,7 +91,7 @@ std::vector<double> TriangleSource::centroid()
 }
 
 // set heatflux and B.n on surface element at particle launch position
-void Sources::set_heatflux_params(EquilData &equilibrium, const std::string formula)
+void Sources::set_heatflux_params(const std::shared_ptr<EquilData> &equilibrium, const std::string formula)
 { 
   double psid;
   std::vector<double> polarPos, fluxPos;
@@ -101,8 +101,8 @@ void Sources::set_heatflux_params(EquilData &equilibrium, const std::string form
   polarPos = CoordTransform::cart_to_polar(launchPos, "forwards");
   fluxPos = CoordTransform::polar_to_flux(polarPos, "forwards", equilibrium);
 
-  bField = equilibrium.b_field(polarPos, "forwards");
-  bField = equilibrium.b_field_cart(bField, polarPos[2], 0);
+  bField = equilibrium->b_field(polarPos, "forwards");
+  bField = equilibrium->b_field_cart(bField, polarPos[2], 0);
   double product = 0; 
   for (int i=0; i<3; i++)
   {
@@ -113,8 +113,8 @@ void Sources::set_heatflux_params(EquilData &equilibrium, const std::string form
   
 
   psi = fluxPos[0]; // store psi at particle start
-  psid = psi + equilibrium.psibdry;     
-  Q = equilibrium.omp_power_dep(psid, Bn, "exp"); // store Q at particle start
+  psid = psi + equilibrium->psibdry;     
+  Q = equilibrium->omp_power_dep(psid, Bn, "exp"); // store Q at particle start
 }
 
 void Sources::update_heatflux(double newHeatflux) { Q = newHeatflux; }
@@ -126,3 +126,7 @@ double Sources::BdotN() { return Bn; }
 double Sources::heatflux() { return Q; }
 
 moab::EntityHandle Sources::entity_handle() { return entityHandle; }
+
+double Sources::get_psi() { return psi; }
+
+std::vector<double> Sources::get_normal() { return normal; }

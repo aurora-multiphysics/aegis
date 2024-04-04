@@ -89,7 +89,7 @@ std::vector<double> CoordTransform::cart_to_polar(double e0, double e1, double e
 }
 
 std::vector<double> CoordTransform::polar_to_flux(std::vector<double> inputVector,
-                                            std::string direction, EquilData& EquData)
+                                            std::string direction, const std::shared_ptr<EquilData>& equilibrium)
 {
   std::vector<double> outputVector(3);
   double r; // local polar r
@@ -112,9 +112,9 @@ std::vector<double> CoordTransform::polar_to_flux(std::vector<double> inputVecto
     z = inputVector[1];
     phi = inputVector[2];
 
-    psi = alglib::spline2dcalc(EquData.psiSpline, r, z); // spline interpolation of psi(R,Z)
+    psi = alglib::spline2dcalc(equilibrium->psiSpline, r, z); // spline interpolation of psi(R,Z)
 
-    theta = atan2(z-EquData.zcen, r-EquData.rcen);
+    theta = atan2(z-equilibrium->zcen, r-equilibrium->rcen);
     if (theta < -M_PI_2)
     {
       theta = 2*M_PI+theta;
@@ -130,7 +130,7 @@ std::vector<double> CoordTransform::polar_to_flux(std::vector<double> inputVecto
 }
 
 std::vector<double> CoordTransform::polar_to_flux(double e0, double e1, double e2,
-                                            std::string direction, EquilData& EquData)
+                                            std::string direction, const std::shared_ptr<EquilData>& equilibrium)
 {
   std::vector<double> outputVector(3);
   double r; // local polar r
@@ -153,9 +153,9 @@ std::vector<double> CoordTransform::polar_to_flux(double e0, double e1, double e
     z = e1;
     phi = e2;
 
-    psi = alglib::spline2dcalc(EquData.psiSpline, r, z); // spline interpolation of psi(R,Z)
+    psi = alglib::spline2dcalc(equilibrium->psiSpline, r, z); // spline interpolation of psi(R,Z)
 
-    theta = atan2(z-EquData.zcen, r-EquData.rcen);
+    theta = atan2(z-equilibrium->zcen, r-equilibrium->rcen);
     if (theta < -M_PI_2)
     {
       theta = 2*M_PI+theta;
@@ -169,49 +169,3 @@ std::vector<double> CoordTransform::polar_to_flux(double e0, double e1, double e
 
   return outputVector;
 }
-
-// coordSystem =
-// 1 - Cartesian
-// 2 - Polar-Toroidal
-// 3 - Flux Coordinates
-vecTfm::vecTfm(std::vector<double> vector, int coordSystem, EquilData &EquData)
-{
-  switch (coordSystem)
-  {
-    case 1:
-      cartCoord = vector;
-      polarCoord = CoordTransform::cart_to_polar(cartCoord, "forwards");
-      fluxCoord = CoordTransform::polar_to_flux(polarCoord, "forwards", EquData);
-    case 2:
-      polarCoord = vector;
-      fluxCoord = CoordTransform::polar_to_flux(polarCoord, "forwards", EquData);
-      cartCoord = CoordTransform::cart_to_polar(cartCoord, "backwards");
-    // case 3:
-    //   flux = vector;
-    //   // TODO backwards tfm from flux
-    default:
-      LOG_INFO << "No coordinate system provided for vecTfm constructor. Assume Cartesian";
-      cartCoord = vector;
-  }
-}
-
-
-// return cartesian vector
-std::vector<double> vecTfm::cart()
-{
-  return cartCoord;
-}
-
-std::vector<double> vecTfm::polar()
-{
-  // not sure why this is broken atm
-  // cart and flux returns work but this is broken for some reason
-  std::cout << polarCoord[0] << polarCoord[1] << polarCoord[2] << std::endl;
-  return polarCoord;
-}
-
-std::vector<double> vecTfm::flux()
-{
-  return fluxCoord;
-}
-

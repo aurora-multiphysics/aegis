@@ -78,7 +78,7 @@ enum class ExecuteOptions
 class ParticleSimulation : public AegisBase
 {
   public:
-  ParticleSimulation(std::string filename);
+  ParticleSimulation(std::shared_ptr<InputJSON> configFile, std::shared_ptr<EquilData> equil);
   void Execute(); // switch between runs
   void Execute_serial(); // serial
   void Execute_mpi(); // MPI_Gatherv
@@ -112,6 +112,8 @@ class ParticleSimulation : public AegisBase
   void mpi_particle_stats(); // get inidividual particle stats for each process
   void read_params(const std::shared_ptr<InputJSON> &inputs); // read parameters from aegis_settings.json
   void attach_mesh_attribute(const std::string &tagName, moab::Range &entities, std::vector<double> &dataToAttach);
+  void attach_mesh_attribute(const std::string &tagName, moab::Range &entities, std::vector<std::vector<double>> &dataToAttach);
+  
   void write_out_mesh(meshWriteOptions option, moab::Range rangeOfEntities = {});
   void mesh_coord_transform(coordinateSystem coordSys);
   void select_coordinate_system();
@@ -174,7 +176,7 @@ class ParticleSimulation : public AegisBase
   double endTime;
   double facetsLoopTime;
 
-  EquilData equilibrium;
+  std::shared_ptr<EquilData> equilibrium;
   bool plotBFieldRZ = false;
   bool plotBFieldXYZ = false;
   

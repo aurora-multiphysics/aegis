@@ -1281,18 +1281,22 @@ void EquilData::psi_limiter(std::vector<std::vector<double>> vertices)
   double zzmin, zzmax;
   double zr, zz, zpsi;
   double null;
+  double zphi, ztheta;
   for (auto &i:vertices)
   {
     std::vector<double> cartPos = i;
     std::vector<double> polarPos = CoordTransform::cart_to_polar(i, "forwards");
-    std::vector<double> fluxPos = CoordTransform::polar_to_flux(polarPos, "forwards", *this);
-    zpsi = fluxPos[0];
-    double ztheta = fluxPos[1];
+    
     zr = polarPos[0];
     zz = polarPos[1];
 
-    cartVert << cartPos[0] << " " << cartPos[1] << " " << cartPos[2] << std::endl;
-    fluxVert << fluxPos[0] << " " << fluxPos[1] << " " << fluxPos[2] << std::endl;
+    zpsi = alglib::spline2dcalc(this->psiSpline, zr, zz); // spline interpolation of psi(R,Z)
+
+    ztheta = atan2(zz-zcen, zr-rcen);
+    if (ztheta < -M_PI_2)
+    {
+      ztheta = 2*M_PI+ztheta;
+    }  
 
     if (zpsi < zpsimin)
     {
@@ -1309,10 +1313,6 @@ void EquilData::psi_limiter(std::vector<std::vector<double>> vertices)
 
     zthetamin = std::min(zthetamin, ztheta);
     zthetamax = std::max(zthetamax, ztheta);
-
-
-
-
   }
 
   double zdpdr;

@@ -14,19 +14,28 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
-  std::string settingsFile;
+  std::string configFileName;
   if (argc > 1) 
   {
-    settingsFile = argv[1];
+    configFileName = argv[1];
   }
   else 
   {
     if (rank == 0) {std::cout << "Error - No config file provided, defaulting to 'aegis_settings.json'" << std::endl;}
-    settingsFile = "aegis_settings.json";
+    configFileName = "aegis_settings.json";
   }
 
+  auto configFile = std::make_shared<InputJSON>(configFileName); 
 
-  ParticleSimulation simulation(settingsFile);
+  auto equilibrium = std::make_shared<EquilData>();
+  equilibrium->setup(configFile);
+  equilibrium->move();
+  equilibrium->psiref_override();
+  equilibrium->init_interp_splines();
+  equilibrium->centre(1);
+  equilibrium->write_bfield();
+
+  ParticleSimulation simulation(configFile, equilibrium);
   simulation.Execute();
 
   for (int i=0; i<nprocs; ++i){

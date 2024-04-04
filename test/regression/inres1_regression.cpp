@@ -78,15 +78,25 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
     FAIL() << "Cannot find '" << smarddaFile << "'";
   }
 //-------------- RUN AEGIS -------------
-  std::string aegisConfig = "aegis_settings.json";
-  ParticleSimulation aegis(aegisConfig);
+  std::string configFilename = "aegis_settings.json";
+  auto configFile = std::make_shared<InputJSON>(configFilename);
 
-  if (std::filesystem::exists(aegisConfig)){
+  auto equilibrium = std::make_shared<EquilData>();
+  equilibrium->setup(configFile);
+  equilibrium->move();
+  equilibrium->psiref_override();
+  equilibrium->init_interp_splines();
+  equilibrium->centre(1);
+  equilibrium->write_bfield();
+
+  ParticleSimulation aegis(configFile, equilibrium);
+
+  if (std::filesystem::exists(configFilename)){
     aegis.Execute_serial();
   }
 
   else {
-    FAIL() << "Cannot find '" << aegisConfig << "'";
+    FAIL() << "Cannot find '" << configFilename << "'";
   }
 //-------------- COMPARE AEGIS AGAINST SMARDDA -------------
 

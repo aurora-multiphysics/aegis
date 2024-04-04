@@ -55,6 +55,10 @@ class SurfaceIntegrator : public AegisBase
   public:
   SurfaceIntegrator(moab::Range const &Facets); // constructor (with moab::Range)
   SurfaceIntegrator(std::vector<EntityHandle> const &Facets); // constructor (with std::vector<EntityHandle>)
+  
+//   void q_values(); // return list of qvalues for each triangle
+//   void psi_values(); // return list of psi values for each triangle
+  
   void count_hit(EntityHandle facet_hit); // count hits belonging to each facet
   void count_lost_ray();
   void store_heat_flux(EntityHandle facet, double heatflux); // store the power associated with a particular facet

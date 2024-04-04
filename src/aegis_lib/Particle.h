@@ -58,17 +58,17 @@ class ParticleBase : public AegisBase
   std::vector<double> get_pos();
 
   // get psi value at current pos
-  double get_psi(EquilData &EquData); 
+  double get_psi(const std::shared_ptr<EquilData> &EquData); 
 
   // set unit drection vector and Bfield at current position
-  void set_dir(EquilData &EquData); 
+  void set_dir(const std::shared_ptr<EquilData> &EquData); 
 
   // return STL vector of unit direction
   std::vector<double> get_dir(); 
-  void check_if_in_bfield(EquilData &Equdata); // check if in magnetic field
+  void check_if_in_bfield(const std::shared_ptr<EquilData> &Equdata); // check if in magnetic field
   void align_dir_to_surf(double Bn); // align particle dir to surface normal
   void update_vectors(double distanceTravelled); // update position  
-  void update_vectors(double distanceTravelled, EquilData &EquData); // overload to update dir as well
+  void update_vectors(double distanceTravelled, const std::shared_ptr<EquilData> &EquData); // overload to update dir as well
   void check_if_midplane_crossed(const std::array<double, 3> &midplaneParameters); // check if particle has reached inner or outer midplane and set value of atMidplane
   void set_intersection_threshold(double distanceThreshold);
   bool check_if_threshold_crossed();

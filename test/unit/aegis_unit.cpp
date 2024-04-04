@@ -290,9 +290,9 @@ TEST_F(aegisUnitTest, SMARDDA_comparison_test) {
 
 TEST_F(aegisUnitTest, eqdsk_read) {
 
-  EquilData EquData;
-  EquData.read_eqdsk("test.eqdsk");
-  eqdskData eqdsk = EquData.get_eqdsk_struct();
+  auto equilibrium = std::make_shared<EquilData>();
+  equilibrium->read_eqdsk("test.eqdsk");
+  eqdskData eqdsk = equilibrium->get_eqdsk_struct();
 
   std::string header = " disr     610.00 msec    nw      nh      vde       0  65 129";
   // Test if header is correctly read
@@ -300,8 +300,8 @@ TEST_F(aegisUnitTest, eqdsk_read) {
 
   // Test if integer values are correctly read in
 
-  EXPECT_EQ(EquData.nw, 65);
-  EXPECT_EQ(EquData.nh, 129);
+  EXPECT_EQ(equilibrium->nw, 65);
+  EXPECT_EQ(equilibrium->nh, 129);
   EXPECT_EQ(eqdsk.nbdry, 89);
   EXPECT_EQ(eqdsk.nlim, 57);
 
@@ -351,17 +351,17 @@ TEST_F(aegisUnitTest, cart_polar_coord_transform){
 
 TEST_F(aegisUnitTest, polar_flux_coord_transform){
 
-  EquilData EquData;
-  EquData.read_eqdsk("test.eqdsk");
-  EquData.init_interp_splines();
-  EquData.centre(1);
+  auto equilibrium = std::make_shared<EquilData>();
+  equilibrium->read_eqdsk("test.eqdsk");
+  equilibrium->init_interp_splines();
+  equilibrium->centre(1);
 
   std::vector<double> input = {2.4, 5.3, -2.0};
   std::vector<double> output;
   std::string direction;
   output.reserve(3);
 
-  output = CoordTransform::polar_to_flux(input, direction, EquData);
+  output = CoordTransform::polar_to_flux(input, direction, equilibrium);
 
   EXPECT_FLOAT_EQ(output[0], -2.5001357);
   EXPECT_FLOAT_EQ(output[1], 2.1932724);
