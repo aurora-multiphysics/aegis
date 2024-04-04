@@ -1,0 +1,116 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+        "label": "cmake",
+        "type": "shell",
+        "options": {
+          "cwd": "${workspaceRoot}/bld"
+        },
+        "command": "cmake ../ -DDAGMC_DIR=/home/waqar/dagmc_bld/DAGMC"
+    },
+    {
+      "label": "make",
+      "type": "shell",
+      "command": "make",
+      "options": {
+        "cwd": "${workspaceRoot}/bld"
+      },
+    "dependsOn":["cmake"]
+    },
+    {
+      "label": "build",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceRoot}/bld"
+      },
+    "group": {
+      "kind": "build",
+      "isDefault": true
+    },
+    "dependsOn": ["make"]
+  },
+
+  {
+    "label": "Launch 4 GDB servers",
+    "isBackground": true,
+    "options": {
+      "cwd": "${workspaceRoot}/inres1"
+    },
+    "command": "${workspaceRoot}/scripts/parallel-gdb",
+    "args": [
+      "-n 4",
+      "-f ${input:configFile}"
+    ],
+    "type": "shell",
+  
+    "problemMatcher": [
+      {
+        "pattern": [
+          {
+            "regexp": ".",
+            "file": 1,
+            "location": 2,
+            "message": 3
+          }
+        ],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": ".",
+        }
+      }
+    ]
+  },
+
+  {
+    "label": "Launch 2 GDB servers",
+    "isBackground": true,
+    "options": {
+      "cwd": "${workspaceRoot}/inres1"
+    },
+    "command": "${workspaceRoot}/scripts/parallel-gdb",
+    "args": [
+      "-n 2",
+      "-f ${input:configFile}"
+    ],
+    "type": "shell",
+  
+    "problemMatcher": [
+      {
+        "pattern": [
+          {
+            "regexp": ".",
+            "file": 1,
+            "location": 2,
+            "message": 3
+          }
+        ],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": ".",
+        }
+      }
+    ]
+  },
+
+],
+
+"inputs": [
+  {
+    "id": "nProcs",
+    "description": "Please specify the number of processes to run/debug",
+    "default": "4",
+    "type": "promptString"
+  },
+  {
+    "id": "configFile",
+    "description": "Please enter config file you wish to debug with",
+    "default": "",
+    "type":"promptString" 
+  }
+]
+
+}
+
