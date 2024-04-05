@@ -1,25 +1,22 @@
 
-#include <cmath>
-#include <algorithm>
-#include <stdio.h>
-#include <cctype>
 #include "Particle.h"
-#include <moab/Core.hpp>
-#include "moab/Interface.hpp"
-#include <moab/OrientedBoxTreeTool.hpp>
 #include "SimpleLogger.h"
+#include "moab/Interface.hpp"
+#include <algorithm>
+#include <cctype>
+#include <cmath>
+#include <cstdio>
+#include <moab/Core.hpp>
+#include <moab/OrientedBoxTreeTool.hpp>
 
-
-ParticleBase::ParticleBase(coordinateSystem coordSys)
-{
-  coordSystem = coordSys;
-}
+ParticleBase::ParticleBase(coordinateSystem coordSys) { coordSystem = coordSys; }
 
 // set current particle posXYZition
-void ParticleBase::set_pos(std::vector<double> newPosition) 
+void
+ParticleBase::set_pos(std::vector<double> newPosition)
 {
-  if (posXYZ.empty()) 
-  { 
+  if (posXYZ.empty())
+  {
     launchPos = newPosition;
     posXYZ = launchPos;
     return;
@@ -29,10 +26,11 @@ void ParticleBase::set_pos(std::vector<double> newPosition)
 }
 
 // overload set_pos() for C-style array
-void ParticleBase::set_pos(double newPosition[]) 
+void
+ParticleBase::set_pos(double newPosition[])
 {
   std::vector<double> tempVector(3);
-  for (int i=0; i<3; i++)
+  for (int i = 0; i < 3; i++)
   {
     tempVector[i] = newPosition[i];
   }
@@ -40,27 +38,36 @@ void ParticleBase::set_pos(double newPosition[])
   if (posXYZ.empty())
   {
     launchPos = tempVector;
-  } 
-  posXYZ = tempVector; // set the new posXYZition  
+  }
+  posXYZ = tempVector; // set the new posXYZition
 }
 
 // Check if particle is currently in magnetic field
-void ParticleBase::check_if_in_bfield(const std::shared_ptr<EquilData>  &equilibrium)
+void
+ParticleBase::check_if_in_bfield(const std::shared_ptr<EquilData> & equilibrium)
 {
   std::vector<double> currentBfield = equilibrium->b_field(posXYZ, "cart");
-  if (currentBfield.empty()) {outOfBounds = true;}
-  else {outOfBounds = false;}
+  if (currentBfield.empty())
+  {
+    outOfBounds = true;
+  }
+  else
+  {
+    outOfBounds = false;
+  }
 }
 
 // return STL vector of current particle posXYZition
-std::vector<double> ParticleBase::get_pos() 
+std::vector<double>
+ParticleBase::get_pos()
 {
   std::vector<double> currentPosition = posXYZ;
   return currentPosition;
 }
 
 // return double of psi at current posXYZ
-double ParticleBase::get_psi(const std::shared_ptr<EquilData>  &equilibrium) 
+double
+ParticleBase::get_psi(const std::shared_ptr<EquilData> & equilibrium)
 {
   std::vector<double> currentPosition;
   double psi;
@@ -72,43 +79,48 @@ double ParticleBase::get_psi(const std::shared_ptr<EquilData>  &equilibrium)
 }
 
 // set unit drection vector and Bfield at current posXYZition
-void ParticleBase::set_dir(const std::shared_ptr<EquilData>  &equilibrium) 
+void
+ParticleBase::set_dir(const std::shared_ptr<EquilData> & equilibrium)
 {
   check_if_in_bfield(equilibrium);
-  if (outOfBounds) {return;} // exit function early if out of bounds
+  if (outOfBounds)
+  {
+    return;
+  } // exit function early if out of bounds
 
-  double norm; // normalisation constant for magnetic field
+  double norm = 0;              // normalisation constant for magnetic field
   std::vector<double> normB(3); // normalised magnetic field
-  std::vector<double> polarPos = CoordTransform::cart_to_polar(posXYZ, "forwards"); // polar posXYZition
-  std::vector<double> magn(3); 
+  std::vector<double> polarPos =
+      CoordTransform::cart_to_polar(posXYZ, "forwards"); // polar posXYZition
+  std::vector<double> magn(3);
   magn = equilibrium->b_field(posXYZ, "cart"); // magnetic field
 
   switch (coordSystem)
   {
-  case coordinateSystem::CARTESIAN:
-    magn = equilibrium->b_field_cart(magn, polarPos[2], 0);
-    Bfield = magn;
-    norm = sqrt(pow(magn[0],2) + pow(magn[1],2) + pow(magn[2],2));
-    break;
-  
-  case coordinateSystem::POLAR:
-    Bfield = magn;
-    norm = sqrt(pow(magn[0],2) + pow(magn[1],2) + pow(magn[2],2));
-    break;
-  
-  case coordinateSystem::FLUX:
-    break;
+    case coordinateSystem::CARTESIAN:
+      magn = equilibrium->b_field_cart(magn, polarPos[2], 0);
+      Bfield = magn;
+      norm = sqrt(pow(magn[0], 2) + pow(magn[1], 2) + pow(magn[2], 2));
+      break;
+
+    case coordinateSystem::POLAR:
+      Bfield = magn;
+      norm = sqrt(pow(magn[0], 2) + pow(magn[1], 2) + pow(magn[2], 2));
+      break;
+
+    case coordinateSystem::FLUX:
+      break;
   }
 
-  normB[0] = magn[0]/norm;
-  normB[1] = magn[1]/norm;
-  normB[2] = magn[2]/norm;
+  normB[0] = magn[0] / norm;
+  normB[1] = magn[1] / norm;
+  normB[2] = magn[2] / norm;
   dir = normB;
-
 }
 
 // get current particle direction (along magnetic field)
-std::vector<double> ParticleBase::get_dir()
+std::vector<double>
+ParticleBase::get_dir()
 {
   std::vector<double> currentDirection;
   currentDirection = dir;
@@ -116,7 +128,8 @@ std::vector<double> ParticleBase::get_dir()
 }
 
 // align particle direction along surface normal of facet particle launched from
-void ParticleBase::align_dir_to_surf(double Bn)
+void
+ParticleBase::align_dir_to_surf(double Bn)
 {
   if (Bn < 0)
   {
@@ -127,14 +140,15 @@ void ParticleBase::align_dir_to_surf(double Bn)
 }
 
 // update posXYZition vector of particle with set distance travelled
-void ParticleBase::update_vectors(double distanceTravelled)
+void
+ParticleBase::update_vectors(double distanceTravelled)
 {
-  // This will update the posXYZition 
+  // This will update the posXYZition
   std::vector<double> newPt(3);
 
-  double x2= pow((newPt[0]-posXYZ[0]), 2);
-  double y2= pow((newPt[1]-posXYZ[1]), 2);
-  double z2= pow((newPt[2]-posXYZ[2]), 2);
+  double x2 = pow((newPt[0] - posXYZ[0]), 2);
+  double y2 = pow((newPt[1] - posXYZ[1]), 2);
+  double z2 = pow((newPt[2] - posXYZ[2]), 2);
   double thresholdDistUpdate = sqrt(x2 + y2 + z2);
 
   euclidDistTravelled += thresholdDistUpdate;
@@ -146,10 +160,13 @@ void ParticleBase::update_vectors(double distanceTravelled)
   set_pos(newPt);
 }
 
-// update posXYZition vector of particle with set distance travelled and update the particle direction at new posXYZition
-void ParticleBase::update_vectors(double distanceTravelled, const std::shared_ptr<EquilData>  &equilibrium)
+// update posXYZition vector of particle with set distance travelled and update
+// the particle direction at new posXYZition
+void
+ParticleBase::update_vectors(double distanceTravelled,
+                             const std::shared_ptr<EquilData> & equilibrium)
 {
-  // This will update the posXYZition and direction vector of the particle 
+  // This will update the posXYZition and direction vector of the particle
   std::vector<double> newPt(3);
 
   newPt[0] = posXYZ[0] + dir[0] * distanceTravelled;
@@ -160,42 +177,57 @@ void ParticleBase::update_vectors(double distanceTravelled, const std::shared_pt
   set_dir(equilibrium);
 }
 
-// check if the particle has reached the outer-midplane of plasma (TerminationState = DEPOSITING)
-void ParticleBase::check_if_midplane_crossed(const std::array<double, 3> &midplaneParameters)
+// check if the particle has reached the outer-midplane of plasma
+// (TerminationState = DEPOSITING)
+void
+ParticleBase::check_if_midplane_crossed(const std::array<double, 3> & midplaneParameters)
 {
 
   double x = posXYZ[0];
   double y = posXYZ[1];
   double currentZ = posXYZ[2];
-  double r = sqrt(pow(x,2) + pow(y,2));
-  double startZ = launchPos[2];
-  double prevZ = previousPos[2]; 
+  double r = sqrt(pow(x, 2) + pow(y, 2));
+  double prevZ = previousPos[2];
   atMidplane = 0;
 
   double rInnerMidplane = midplaneParameters[0]; // R at inner midplane
   double rOuterMidplane = midplaneParameters[1]; // R at outer midplane
-  double zMidplane = midplaneParameters[2]; // Z at midplane
+  double zMidplane = midplaneParameters[2];      // Z at midplane
 
   if (prevZ > currentZ)
   {
     if (currentZ <= zMidplane)
     {
-      if (r <= rInnerMidplane) {atMidplane = 1;}
-      else if (r >= rOuterMidplane) {atMidplane = 2;}
+      if (r <= rInnerMidplane)
+      {
+        atMidplane = 1;
+      }
+      else if (r >= rOuterMidplane)
+      {
+        atMidplane = 2;
+      }
     }
   }
   else if (prevZ < currentZ)
   {
     if (currentZ >= zMidplane)
     {
-      if (r <= rInnerMidplane) {atMidplane = 1;}
-      else if (r >= rOuterMidplane) {atMidplane = 2;}
+      if (r <= rInnerMidplane)
+      {
+        atMidplane = 1;
+      }
+      else if (r >= rOuterMidplane)
+      {
+        atMidplane = 2;
+      }
     }
   }
 }
 
-// set distance threshold where if particle has travlled less, ray_fire() calls do not happen
-void ParticleBase::set_intersection_threshold(double distanceThreshold)
+// set distance threshold where if particle has travlled less, ray_fire() calls
+// do not happen
+void
+ParticleBase::set_intersection_threshold(double distanceThreshold)
 {
   thresholdDistanceThreshold = distanceThreshold;
   thresholdDistanceCrossed = false;
@@ -205,14 +237,15 @@ void ParticleBase::set_intersection_threshold(double distanceThreshold)
 // check if the distance threshold for ray_fire() calls has been called
 // if true returned ray_fire() should be called
 // if false returned then particle posXYZition should update without ray_fire()
-bool ParticleBase::check_if_threshold_crossed()
+bool
+ParticleBase::check_if_threshold_crossed()
 {
   if (euclidDistTravelled > thresholdDistanceThreshold)
-    {
-      thresholdDistanceThreshold = 0.0;
-      euclidDistTravelled = 0.0;
-      thresholdDistanceSet = false;
-      return true;
-    }
+  {
+    thresholdDistanceThreshold = 0.0;
+    euclidDistTravelled = 0.0;
+    thresholdDistanceSet = false;
+    return true;
+  }
   return false;
 }

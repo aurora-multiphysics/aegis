@@ -10,6 +10,14 @@
         "command": "cmake ../ -DDAGMC_DIR=/home/waqar/dagmc_bld/DAGMC"
     },
     {
+        "label": "clang-format-files",
+        "command": "format",
+        "options": {
+          "cwd": "${workspaceRoot}/scripts"
+        },
+        "isBackground": true,
+        },
+    {
       "label": "make",
       "type": "shell",
       "command": "make",
@@ -28,7 +36,8 @@
       "kind": "build",
       "isDefault": true
     },
-    "dependsOn": ["make"]
+    "dependsOrder": "sequence",
+    "dependsOn": ["clang-format-files", "make"]
   },
 
   {

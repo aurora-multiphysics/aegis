@@ -1,11 +1,12 @@
 #include "ParticleSimulation.h"
+#include <cstdio>
+#include <cstring>
 #include <mpi.h>
 #include <unistd.h>
-#include <string.h>
-#include <stdio.h>
 
-
-int main(int argc, char **argv) {
+int
+main(int argc, char ** argv)
+{
 
   int rank, nprocs;
   MPI_Init(&argc, &argv);
@@ -15,17 +16,22 @@ int main(int argc, char **argv) {
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
   std::string configFileName;
-  if (argc > 1) 
+  if (argc > 1)
   {
     configFileName = argv[1];
   }
-  else 
+  else
   {
-    if (rank == 0) {std::cout << "Error - No config file provided, defaulting to 'aegis_settings.json'" << std::endl;}
+    if (rank == 0)
+    {
+      std::cout << "Error - No config file provided, defaulting to "
+                   "'aegis_settings.json'"
+                << std::endl;
+    }
     configFileName = "aegis_settings.json";
   }
 
-  auto configFile = std::make_shared<InputJSON>(configFileName); 
+  auto configFile = std::make_shared<InputJSON>(configFileName);
 
   auto equilibrium = std::make_shared<EquilData>();
   equilibrium->setup(configFile);
@@ -38,20 +44,18 @@ int main(int argc, char **argv) {
   ParticleSimulation simulation(configFile, equilibrium);
   simulation.Execute();
 
-  for (int i=0; i<nprocs; ++i){
+  for (int i = 0; i < nprocs; ++i)
+  {
     if (rank == i)
     {
       double endTime = MPI_Wtime();
       double totalTime = endTime - startTime;
-      std::cout << "Elapsed wall Time on process " << i << " = " << totalTime << std::endl; 
-      std::cout << "----------------------------" << std::endl << std::endl;  
+      std::cout << "Elapsed wall Time on process " << i << " = " << totalTime << std::endl;
+      std::cout << "----------------------------" << std::endl << std::endl;
     }
   }
-
 
   MPI_Finalize();
 
   return 0;
 }
-
-
