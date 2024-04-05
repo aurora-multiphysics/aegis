@@ -1,5 +1,6 @@
+#include <cstdio>
+#include <cctype>
 #include "SimpleLogger.h"
-
 #include <boost/log/core/core.hpp>
 #include <boost/log/expressions/formatters/date_time.hpp>
 #include <boost/log/expressions.hpp>

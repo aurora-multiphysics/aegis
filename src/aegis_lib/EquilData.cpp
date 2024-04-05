@@ -1,16 +1,16 @@
-#include <stdio.h>
-#include <iostream>
-#include <iomanip>
-#include <assert.h>
+#include <cassert>
 #include <cmath>
-#include <time.h>
+#include <cstdio>
+#include <ctime>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <vector>
 
-#include "SimpleLogger.h"
-#include "EquilData.h"
 #include "CoordTransform.h"
+#include "EquilData.h"
+#include "SimpleLogger.h"
 #include <mpi.h>
 
 void
@@ -62,9 +62,9 @@ void
 EquilData::read_eqdsk(std::string filename)
 {
   eqdsk_file.open(filename);
-  std::stringstream header_ss;
+  std::stringstream headerSs;
   std::string temp;
-  std::vector<int> header_ints;
+  std::vector<int> headerInts;
 
   if (rank == 0)
   {
@@ -83,20 +83,20 @@ EquilData::read_eqdsk(std::string filename)
   // Extract header information
 
   std::getline(eqdsk_file, eqdsk.header);
-  header_ss << eqdsk.header;
-  int number_found;
+  headerSs << eqdsk.header;
+  int numberFound;
 
-  while (header_ss >> temp)
+  while (headerSs >> temp)
   {
-    if (std::stringstream(temp) >> number_found)
+    if (std::stringstream(temp) >> numberFound)
     {
-      header_ints.push_back(number_found);
+      headerInts.push_back(numberFound);
     }
   }
 
   // Store nw and nh from header information (last two numbers in header)
-  nw = header_ints[header_ints.size() - 2];
-  nh = header_ints[header_ints.size() - 1];
+  nw = headerInts[headerInts.size() - 2];
+  nh = headerInts[headerInts.size() - 1];
 
   // Read first four lines of data
   eqdsk_file >> eqdsk.rdim >> eqdsk.zdim >> eqdsk.rcentr >> eqdsk.rgrid >> eqdsk.zmid;
@@ -299,14 +299,14 @@ EquilData::read_2darray(int nx, int ny, std::string varName)
 void
 EquilData::write_eqdsk_out()
 {
-  std::ofstream eqdsk_out("eqdsk.out");
-  eqdsk_out << std::setprecision(9) << std::scientific;
-  eqdsk_out << std::setiosflags(std::ios::uppercase);
+  std::ofstream eqdskOut("eqdsk.out");
+  eqdskOut << std::setprecision(9) << std::scientific;
+  eqdskOut << std::setiosflags(std::ios::uppercase);
   double element;
   int counter = 0;
 
   // Write out header information
-  eqdsk_out << eqdsk.header << std::endl;
+  eqdskOut << eqdsk.header << std::endl;
 
   // Write out initial four lines of floats
   double parameters[20] = {eqdsk.rdim,     eqdsk.zdim,     eqdsk.rcentr, eqdsk.rgrid,
@@ -315,17 +315,19 @@ EquilData::write_eqdsk_out()
                            eqdsk.xdum,     eqdsk.rqcen,    eqdsk.xdum,   eqdsk.zqcen,
                            eqdsk.xdum,     eqdsk.psibdry2, eqdsk.xdum,   eqdsk.xdum};
 
-  for (int i = 0; i < 20; i++)
+  for (double parameter : parameters)
   {
-    element = parameters[i];
-    counter = eqdsk_line_out(eqdsk_out, element, counter);
+    element = parameter;
+    counter = eqdsk_line_out(eqdskOut, element, counter);
   }
 
   // Write out data
-  eqdsk_write_array(eqdsk_out, eqdsk.fpol, counter);    // write eqdsk.fpol array
-  eqdsk_write_array(eqdsk_out, eqdsk.pres, counter);    // write eqdsk.pres array
-  eqdsk_write_array(eqdsk_out, eqdsk.ffprime, counter); // write eqdsk.ffprime array
-  eqdsk_write_array(eqdsk_out, eqdsk.pprime, counter);  // write eqdsk.pprime array
+  eqdsk_write_array(eqdskOut, eqdsk.fpol, counter); // write eqdsk.fpol array
+  eqdsk_write_array(eqdskOut, eqdsk.pres, counter); // write eqdsk.pres array
+  eqdsk_write_array(eqdskOut, eqdsk.ffprime,
+                    counter); // write eqdsk.ffprime array
+  eqdsk_write_array(eqdskOut, eqdsk.pprime,
+                    counter); // write eqdsk.pprime array
 
   // Write out psi(R,Z)
   for (int i = 0; i < nw; i++)
@@ -333,48 +335,48 @@ EquilData::write_eqdsk_out()
     for (int j = 0; j < nh; j++)
     {
       element = eqdsk.psi[i][j];
-      counter = eqdsk_line_out(eqdsk_out, element, counter);
+      counter = eqdsk_line_out(eqdskOut, element, counter);
     }
   }
   if (counter < 5)
   {
     counter = 0;
-    eqdsk_out << std::endl;
+    eqdskOut << std::endl;
   }
 
-  eqdsk_write_array(eqdsk_out, eqdsk.qpsi, counter); // write eqdsk.qpsi array
-  eqdsk_out << std::endl
-            << "  " << eqdsk.nbdry << "   " << eqdsk.nlim
-            << std::endl; // write eqdsk.nbdry and eqdsk.nlim
+  eqdsk_write_array(eqdskOut, eqdsk.qpsi, counter); // write eqdsk.qpsi array
+  eqdskOut << std::endl
+           << "  " << eqdsk.nbdry << "   " << eqdsk.nlim
+           << std::endl; // write eqdsk.nbdry and eqdsk.nlim
 
   // write eqdsk.rbdry and eqdsk.zbdry
   for (int i = 0; i < eqdsk.nbdry; i++)
   {
     element = eqdsk.rbdry[i];
-    counter = eqdsk_line_out(eqdsk_out, element, counter);
+    counter = eqdsk_line_out(eqdskOut, element, counter);
     element = eqdsk.zbdry[i];
-    counter = eqdsk_line_out(eqdsk_out, element, counter);
+    counter = eqdsk_line_out(eqdskOut, element, counter);
     element = eqdsk.rbdry[i];
   }
   if (counter < 5)
   {
     counter = 0;
-    eqdsk_out << std::endl;
+    eqdskOut << std::endl;
   }
 
   // write eqdsk.rlim and eqdsk.zlim arrays
   for (int i = 0; i < eqdsk.nlim; i++)
   {
     element = eqdsk.rlim[i];
-    counter = eqdsk_line_out(eqdsk_out, element, counter);
+    counter = eqdsk_line_out(eqdskOut, element, counter);
     element = eqdsk.zlim[i];
-    counter = eqdsk_line_out(eqdsk_out, element, counter);
+    counter = eqdsk_line_out(eqdskOut, element, counter);
   }
 
   if (counter < 5)
   {
     counter = 0;
-    eqdsk_out << std::endl;
+    eqdskOut << std::endl;
   }
 }
 
@@ -416,53 +418,54 @@ EquilData::eqdsk_write_array(std::ofstream & file, std::vector<double> array, in
 void
 EquilData::init_interp_splines()
 {
-  std::vector<double> r_pts(nw);
-  std::vector<double> z_pts(nh);
-  r_pts[0] = rmin;
-  z_pts[0] = zmin;
+  std::vector<double> rPts(nw);
+  std::vector<double> zPts(nh);
+  rPts[0] = rmin;
+  zPts[0] = zmin;
 
   // set_rsig();
 
   // loop over Z creating spline knots
   for (int i = 1; i < nw; i++)
   {
-    r_pts[i] = r_pts[i - 1] + dr;
+    rPts[i] = rPts[i - 1] + dr;
   }
   // loop over Z creating spline knots
   for (int i = 1; i < nh; i++)
   {
-    z_pts[i] = z_pts[i - 1] + dz;
+    zPts[i] = zPts[i - 1] + dz;
   }
 
   // loop over (R,Z) creating for spline knots
-  std::vector<double> psi_pts(nw * nh);
+  std::vector<double> psiPts(nw * nh);
   int count = 0;
   for (int i = 0; i < nw; i++) // flatten Psi(R,Z) array into Psi(index)
   {
     for (int j = 0; j < nh; j++)
     {
-      psi_pts[count] = eqdsk.psi[i][j];
+      psiPts[count] = eqdsk.psi[i][j];
       count += 1;
     }
   }
 
-  std::vector<double> psi_1dpts;
-  psi_1dpts.reserve(nw);
+  std::vector<double> psi1dpts;
+  psi1dpts.reserve(nw);
 
   // loop over R to create 1d knots of psi
-  psi_1dpts.push_back(psiaxis);
+  psi1dpts.push_back(psiaxis);
 
-  dpsi = rsig * dpsi; // set correct sign of dpsi depending on if increase/decrease outwards
+  dpsi = rsig * dpsi; // set correct sign of dpsi depending on if
+                      // increase/decrease outwards
   for (int i = 1; i < nw; i++)
   {
-    psi_1dpts.push_back(psi_1dpts[i - 1] + dpsi);
+    psi1dpts.push_back(psi1dpts[i - 1] + dpsi);
   }
 
   // set 1d arrays for R grid, Z grid and Psi grids
-  r_grid.setcontent(nw, r_pts.data());
-  z_grid.setcontent(nh, z_pts.data());
-  psi_grid.setcontent(count, psi_pts.data());
-  psi_1dgrid.setcontent(nw, psi_1dpts.data());
+  r_grid.setcontent(nw, rPts.data());
+  z_grid.setcontent(nh, zPts.data());
+  psi_grid.setcontent(count, psiPts.data());
+  psi_1dgrid.setcontent(nw, psi1dpts.data());
   f_grid.setcontent(nw, eqdsk.fpol.data());
 
   //  for (int i=0 ; i<nh; i++)
@@ -473,11 +476,13 @@ EquilData::init_interp_splines()
   // Construct the spline interpolant for flux function psi(R,Z)
   alglib::spline2dbuildbicubicv(r_grid, nw, z_grid, nh, psi_grid, 1, psiSpline);
 
-  // Construct the spline interpolant for toroidal component flux function I(psi) aka f(psi)
+  // Construct the spline interpolant for toroidal component flux function
+  // I(psi) aka f(psi)
   alglib::spline1dbuildcubic(psi_1dgrid, f_grid, fSpline);
 
-  // Alglib::spline2ddiff function can return a value of spline at (R,Z) as well as derivatives.
-  // I.e no need to have a separate spline for each derivative dPsidR and dPsidZ
+  // Alglib::spline2ddiff function can return a value of spline at (R,Z) as well
+  // as derivatives. I.e no need to have a separate spline for each derivative
+  // dPsidR and dPsidZ
 
   // create 1d spline for f(psi) aka eqdsk.fpol
   // alglib::spline1dbuildlinear(f_grid,)
@@ -487,17 +492,17 @@ EquilData::init_interp_splines()
 void
 EquilData::gnuplot_out()
 {
-  std::ofstream psiRZ_out;
-  psiRZ_out.open("psi_RZ.gnu");
+  std::ofstream psiRzOut;
+  psiRzOut.open("psi_RZ.gnu");
 
   for (int j = 0; j < nh; j++)
   {
     for (int i = 0; i < nw; i++)
     {
-      psiRZ_out << i << " " << j << " " << r_grid[i] << " " << z_grid[j] << " "
-                << spline2dcalc(psiSpline, r_grid[i], z_grid[j]) << std::endl;
+      psiRzOut << i << " " << j << " " << r_grid[i] << " " << z_grid[j] << " "
+               << spline2dcalc(psiSpline, r_grid[i], z_grid[j]) << std::endl;
     }
-    psiRZ_out << std::endl;
+    psiRzOut << std::endl;
   }
 }
 
@@ -536,7 +541,8 @@ EquilData::centre(int cenopt)
   double zpp;     // current value of psi
   double zpg;     // value of psi at global extremum
 
-  // using central index as guess (See beq_centre for other cases for initial guess)
+  // using central index as guess (See beq_centre for other cases for initial
+  // guess)
   igr = (rmax - rmin) / (2 * dr);
   igz = (zmax - zmin) / (2 * dz);
 
@@ -762,7 +768,7 @@ EquilData::rz_splines()
   double zdsr;      // Delta r_i
   double zdpdsrl;   // {dspi/dr}_{i-1}
   double zpsi;      // psi
-  double zpsi_i;    // psi_i
+  double zpsiI;     // psi_i
 
   double ntmax = 33;
   double ntmin = 1;
@@ -794,7 +800,8 @@ EquilData::b_field(std::vector<double> position, std::string startingFrom)
   double zdpdz;                   // local dpsi/dz from spline calc
   double zf;                      // local f(psi) = RB_T toroidal component of B
   double null;                    // second derivative of psi not needed
-  // if position vector is already in polars skip coord transform and calculate B
+  // if position vector is already in polars skip coord transform and calculate
+  // B
 
   if (startingFrom == "polar")
   {
@@ -812,7 +819,7 @@ EquilData::b_field(std::vector<double> position, std::string startingFrom)
 
   if (zr < rmin || zr > rmax || zz < zmin || zz > zmax)
   {
-    return std::vector<double>();
+    return {};
   }
   else
   {
@@ -873,10 +880,10 @@ EquilData::write_bfield(int phiSamples)
 
   if (drawEquRZ) // write out polar toroidal P(r,z) and B(Br,Bz)
   {
-    std::ofstream BField_out_rz;
-    BField_out_rz.open("BField_rz.txt");
-    // BField_out_rz << "rPos" << " " << "zPos" << " " << "Br" << " " << "Bz" << std::endl;
-    // BField_out_rz << std::setprecision(6) << std::fixed;
+    std::ofstream bFieldOutRz;
+    bFieldOutRz.open("BField_rz.txt");
+    // BField_out_rz << "rPos" << " " << "zPos" << " " << "Br" << " " << "Bz" <<
+    // std::endl; BField_out_rz << std::setprecision(6) << std::fixed;
 
     for (int j = 0; j < nh; j++)
     {
@@ -885,45 +892,45 @@ EquilData::write_bfield(int phiSamples)
         polarPos[0] = r_grid[i];
         polarPos[1] = z_grid[j];
         polarB = b_field(polarPos, "polar");
-        BField_out_rz << polarPos[0] << " " << polarPos[1] << " " << polarB[0] << " " << polarB[1]
-                      << std::endl;
+        bFieldOutRz << polarPos[0] << " " << polarPos[1] << " " << polarB[0] << " " << polarB[1]
+                    << std::endl;
       }
-      BField_out_rz << std::endl;
+      bFieldOutRz << std::endl;
     }
   }
 
   if (drawEquXYZ) // write out cartesian P(x,y,z) and cartesian B(Bx,By,Bz)
   {
-    std::ofstream BField_out_xyz;
+    std::ofstream bFieldOutXyz;
     std::ofstream aegisB;
     aegisB.open("aegis_b.txt");
-    BField_out_xyz.open("BField_xyz.txt");
+    bFieldOutXyz.open("BField_xyz.txt");
     // BField_out_xyz << "xPos" << " " <<  "yPos" << " " << "zPos" << " "
     //               << "Bx" << " " << "By" << " " << "Bz" << std::endl;
-    BField_out_xyz << std::setprecision(8) << std::fixed;
+    bFieldOutXyz << std::setprecision(8) << std::fixed;
     aegisB << std::setprecision(8) << std::fixed;
 
     std::vector<double> cartPos(3); // polar toroidal position P(r,z,phi)
     std::vector<double> cartB(3);   // cartesian magnetic field B(Bx, By, Bz)
     double dphi = 2 * M_PI / phiSamples;
 
-    BField_out_xyz << "x"
-                   << " "
-                   << "y"
-                   << " "
-                   << "z"
-                   << " "
-                   << "Bx"
-                   << " "
-                   << "By"
-                   << " "
-                   << "Bz"
-                   << " "
-                   << "r"
-                   << " "
-                   << "z"
-                   << " "
-                   << "phi" << std::endl;
+    bFieldOutXyz << "x"
+                 << " "
+                 << "y"
+                 << " "
+                 << "z"
+                 << " "
+                 << "Bx"
+                 << " "
+                 << "By"
+                 << " "
+                 << "Bz"
+                 << " "
+                 << "r"
+                 << " "
+                 << "z"
+                 << " "
+                 << "phi" << std::endl;
 
     for (int k = 0; k <= phiSamples; k++) // loop through phi
     {
@@ -936,9 +943,8 @@ EquilData::write_bfield(int phiSamples)
           // test for negative Rs
           if (polarPos[0] < 0)
           {
-            log_string(
-                LogLevel::ERROR,
-                "Negative R Values when attempting plot magnetic field. Fixup eqdsk required");
+            log_string(LogLevel::ERROR, "Negative R Values when attempting plot magnetic field. "
+                                        "Fixup eqdsk required");
           }
           polarB = b_field(polarPos, "polar");          // calculate B(R,Z,phi)
           cartB = b_field_cart(polarB, polarPos[2], 0); // transform to B(x,y,z)
@@ -948,26 +954,27 @@ EquilData::write_bfield(int phiSamples)
           // write out magnetic field data for plotting
           if (cartPos[0] > 0)
           {
-            BField_out_xyz << " ";
+            bFieldOutXyz << " ";
           }
-          BField_out_xyz << cartPos[0] << " " << cartPos[1] << " " << cartPos[2] << " " << cartB[0]
-                         << " " << cartB[1] << " " << cartB[2] << " " << polarPos[0] << " "
-                         << polarPos[1] << " " << polarPos[2] << std::endl;
+          bFieldOutXyz << cartPos[0] << " " << cartPos[1] << " " << cartPos[2] << " " << cartB[0]
+                       << " " << cartB[1] << " " << cartB[2] << " " << polarPos[0] << " "
+                       << polarPos[1] << " " << polarPos[2] << std::endl;
 
           aegisB << polarB[0] << " " << polarB[1] << " " << polarB[2] << std::endl;
-          // polarPos[2] += dphi; // Incorrect place but much faster delaunay (leads to
-          // inconsistencies)
+          // polarPos[2] += dphi; // Incorrect place but much faster delaunay
+          // (leads to inconsistencies)
         }
       }
-      polarPos[2] +=
-          dphi; // Correct place for this to be. But significantly slower delaunay 3d in paraview
+      polarPos[2] += dphi; // Correct place for this to be. But significantly
+                           // slower delaunay 3d in paraview
       //  BField_out_xyz << std::endl;
     }
   }
 }
 
-// get toroidal ripple term in magnetic field from external file or otherwise. By default use MAST
-// term std::vector<double> EquilData::b_ripple(std::vector<double> pos, std::vector<double> bField)
+// get toroidal ripple term in magnetic field from external file or otherwise.
+// By default use MAST term std::vector<double>
+// EquilData::b_ripple(std::vector<double> pos, std::vector<double> bField)
 // {
 //   LOG_TRACE << "-----EquilData.b_ripple()-----";
 //   std::vector<double> bRipple(3); // toroidal ripple term
@@ -978,7 +985,8 @@ EquilData::write_bfield(int phiSamples)
 //   double zdhdr; // frac{partial H}{partial R}
 //   double zdhdz; // frac{partial H}{partial Z}
 
-//   // eventually can add in the ability to read in files but for now this will just define the MAST ripple
+//   // eventually can add in the ability to read in files but for now this will
+//   just define the MAST ripple
 
 // }
 
@@ -1241,7 +1249,7 @@ EquilData::omp_power_dep(double psi, double bn, std::string formula)
   double zrbfac;  // power normalisation factor
   double zrblfac; // power factor scaled by decay length
   double rblfac;
-  double power_split;
+  double powerSplit;
   double psign = -1.0;
 
   // zrm = 4.0422466206709089;
@@ -1250,7 +1258,7 @@ EquilData::omp_power_dep(double psi, double bn, std::string formula)
   zrbfac = 1 / (2 * M_PI * zrm * zbpm);
 
   zrblfac = zrbfac / lambdaQ;
-  power_split = 0.5;
+  powerSplit = 0.5;
 
   // std::cout << "RBDRY = " << rbdry << std::endl;
   // std::cout << "BPBDRY = " << bpbdry << std::endl;
@@ -1260,7 +1268,7 @@ EquilData::omp_power_dep(double psi, double bn, std::string formula)
 
   if (formula == "exp")
   {
-    fpfac = power_split * powerSOL * zrblfac;
+    fpfac = powerSplit * powerSOL * zrblfac;
     heatFlux = fpfac * bn * exp(rblfac * psi); // added bn into this formula because it was missing
   }
   // std::cout << "FPFAC = " << fpfac << std::endl;
@@ -1292,7 +1300,8 @@ EquilData::psi_limiter(std::vector<std::vector<double>> vertices)
     zr = polarPos[0];
     zz = polarPos[1];
 
-    zpsi = alglib::spline2dcalc(this->psiSpline, zr, zz); // spline interpolation of psi(R,Z)
+    zpsi = alglib::spline2dcalc(this->psiSpline, zr,
+                                zz); // spline interpolation of psi(R,Z)
 
     ztheta = atan2(zz - zcen, zr - rcen);
     if (ztheta < -M_PI_2)
@@ -1388,10 +1397,11 @@ EquilData::get_midplane_params()
 
 // void EquilData::set_omp()
 // {
-//   // Ensure EquilData::centre() has been called first so R,Z values of centre known
-//   if (rcen == 0 && zcen == 0)
+//   // Ensure EquilData::centre() has been called first so R,Z values of centre
+//   known if (rcen == 0 && zcen == 0)
 //   {
-//     LOG_ERROR << "Values RCEN and ZCEN are not set. Ensure these are set before attempting to
+//     LOG_ERROR << "Values RCEN and ZCEN are not set. Ensure these are set
+//     before attempting to
 //                   define outer-midplane";
 //   }
 

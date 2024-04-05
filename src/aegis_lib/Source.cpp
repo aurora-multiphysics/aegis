@@ -1,10 +1,10 @@
-#include <stdio.h>
-#include <iostream>
-#include <cctype>
-#include <random>
-#include <math.h>
 #include "Source.h"
 #include "CoordTransform.h"
+#include <cctype>
+#include <cmath>
+#include <cstdio>
+#include <iostream>
+#include <random>
 
 // define plane via cartesian plane equation ax + by + cz + d = 0
 TriangleSource::TriangleSource(std::vector<double> xyz1, std::vector<double> xyz2,

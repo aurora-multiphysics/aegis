@@ -1,14 +1,14 @@
-#include <stdio.h>
-#include <iostream>
-#include <assert.h>
-#include <math.h>
-#include <time.h>
-#include <fstream>
-#include <sstream>
 #include "Inputs.h"
+#include <cassert>
+#include <cmath>
+#include <cstdio>
+#include <ctime>
+#include <fstream>
+#include <iostream>
 #include <mpi.h>
+#include <sstream>
 
-InputJSON::InputJSON() {}
+InputJSON::InputJSON() = default;
 
 InputJSON::InputJSON(std::string filename)
 {
