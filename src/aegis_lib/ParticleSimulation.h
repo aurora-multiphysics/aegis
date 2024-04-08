@@ -59,18 +59,28 @@
 using namespace moab;
 
 
-enum class meshWriteOptions{
-FULL, // write out all mesh sets
-TARGET, // write out only the target mesh set
-BOTH, // write out target and full mesh to seperate files
-PARTIAL // write out multiple specified mesh sets to a single file
+enum class meshWriteOptions
+{
+  FULL, // write out all mesh sets
+  TARGET, // write out only the target mesh set
+  BOTH, // write out target and full mesh to seperate files
+  PARTIAL // write out multiple specified mesh sets to a single file
+};
+
+enum class ExecuteOptions
+{
+  SERIAL,
+  MPI,
+  MPI_PADDED,
+  MPI_DYNAMIC
 };
 
 class ParticleSimulation : public AegisBase
 {
   public:
-  ParticleSimulation(std::string filename);
-  void Execute(); // serial
+  ParticleSimulation(std::shared_ptr<InputJSON> configFile, std::shared_ptr<EquilData> equil);
+  void Execute(); // switch between runs
+  void Execute_serial(); // serial
   void Execute_mpi(); // MPI_Gatherv
   void Execute_dynamic_mpi(); // dynamic load balancing
   void Execute_padded_mpi(); // padded MPI_Gather
@@ -82,22 +92,37 @@ class ParticleSimulation : public AegisBase
   protected:
 
   private:
+  void worker();
+  void handler(std::vector<double> &handlerQVals);
   void dynamic_task_init();
   void implicit_complement_testing(); 
   moab::Range select_target_surface(); // get target surfaces of interest from aegis_settings.json
   std::vector<double> loop_over_facets(int startFacet, int endFacet); // loop over facets in target surfaces
-  terminationState loop_over_particle_track(const moab::EntityHandle &facet, ParticleBase &particle, DagMC::RayHistory &history); // loop over individual particle tracks
-  void terminate_particle(const moab::EntityHandle &facet, DagMC::RayHistory &history, terminationState termination); // end particle track
+  
+  void setup_sources();
+
+  void cartesian_track();
+  void polar_track();
+  void flux_track();
+  
+  terminationState loop_over_particle_track(TriangleSource&tri, ParticleBase &particle, DagMC::RayHistory &history); // loop over individual particle tracks
+  void terminate_particle(TriangleSource&facet, DagMC::RayHistory &history, terminationState termination); // end particle track
   void ray_hit_on_launch(ParticleBase &particle, DagMC::RayHistory &history); // particle hit on initial launch from surface
   void print_particle_stats(std::array<int, 5> particleStats); // print number of particles that reached each termination state
   void mpi_particle_stats(); // get inidividual particle stats for each process
   void read_params(const std::shared_ptr<InputJSON> &inputs); // read parameters from aegis_settings.json
   void attach_mesh_attribute(const std::string &tagName, moab::Range &entities, std::vector<double> &dataToAttach);
-  void write_out_mesh(meshWriteOptions option, moab::Range rangeOfEntities = {});
-
+  void attach_mesh_attribute(const std::string &tagName, moab::Range &entities, std::vector<std::vector<double>> &dataToAttach);
   
+  void write_out_mesh(meshWriteOptions option, moab::Range rangeOfEntities = {});
+  void mesh_coord_transform(coordinateSystem coordSys);
+  void select_coordinate_system();
+  
+  std::string exeType;
   int nFacets;
   
+  std::vector<TriangleSource> listOfTriangles;
+
   std::string settingsFileName;
   std::shared_ptr<InputJSON> JSONsettings; 
   std::string dagmcInputFile;
@@ -111,6 +136,9 @@ class ParticleSimulation : public AegisBase
   double userROutrBdry;
   std::string drawParticleTracks;
   int dynamicTaskSize;
+  std::string coordInputStr;
+  coordinateSystem coordSys = coordinateSystem::CARTESIAN; // default cartesian 
+
   double rmove = 0.0;
   double zmove = 0.0;
   double fscale = 1.0;
@@ -123,10 +151,14 @@ class ParticleSimulation : public AegisBase
 
   std::unique_ptr<moab::DagMC> DAG;
   std::unique_ptr<moab::DagMC> polarDAG;
-  moab::Range surfsList;
-  moab::Range volsList;
-  moab::Range facetsList;
-  moab::Range targetFacets;
+  std::unique_ptr<moab::DagMC> fluxDAG;
+  moab::Range surfsList; // list of moab::EntityHandle of surfaces in mesh
+  moab::Range volsList; // list of moab::EntityHandle of volumes in mesh
+  moab::Range facetsList; // list of moab::EntityHandle of facets in mesh
+  moab::Range targetFacets; // list of moab::EntityHandle of facets in target mesh
+  std::vector<EntityHandle> nodesList; // list of moab::EntityHandle of nodes in mesh
+  std::vector<double> nodeCoords; // 1D flattended list of node XYZ coordinates 
+  std::vector<double> nodeCoordsPol; // 1D flattended list of node polar coordinates
   int numFacets = 0;
   int numNodes = 0;
   moab::EntityHandle prevSurf;
@@ -144,16 +176,11 @@ class ParticleSimulation : public AegisBase
   double endTime;
   double facetsLoopTime;
 
-  EquilData equilibrium;
+  std::shared_ptr<EquilData> equilibrium;
   bool plotBFieldRZ = false;
   bool plotBFieldXYZ = false;
   
   std::unique_ptr<SurfaceIntegrator> integrator;
-  double BdotN = 0.0; // dot product of magnetic field and triangle surface normal
-  double Q = 0.0; // heatflux incident on surface triangle
-  double psi = 0.0; // value of psi at current position
-  double psid = 0.0; // psi - psi_m
-  double psiOnSurface = 0.0;
 
   std::unique_ptr<VtkInterface> vtkInterface;
   const std::string branchShadowedPart = "Shadowed Particles";

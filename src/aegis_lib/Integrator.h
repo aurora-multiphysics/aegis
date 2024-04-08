@@ -14,6 +14,7 @@
 #include <moab/OrientedBoxTreeTool.hpp>
 #include "EquilData.h"
 #include "AegisBase.h"
+#include "Source.h"
 
 
 
@@ -54,6 +55,10 @@ class SurfaceIntegrator : public AegisBase
   public:
   SurfaceIntegrator(moab::Range const &Facets); // constructor (with moab::Range)
   SurfaceIntegrator(std::vector<EntityHandle> const &Facets); // constructor (with std::vector<EntityHandle>)
+  
+//   void q_values(); // return list of qvalues for each triangle
+//   void psi_values(); // return list of psi values for each triangle
+  
   void count_hit(EntityHandle facet_hit); // count hits belonging to each facet
   void count_lost_ray();
   void store_heat_flux(EntityHandle facet, double heatflux); // store the power associated with a particular facet
@@ -74,7 +79,11 @@ class SurfaceIntegrator : public AegisBase
   void set_launch_position(const moab::EntityHandle &facet, const std::vector<double> &position);
   std::array<int, 5> particle_stats(); // return array of integers corresponding to particle stats
   void clear_stats();
+
+
   private:
+  std::vector<TriangleSource> listOfElements; // list of all elements in aegis run
+
   int nParticlesTotal=0; // Total number of rays fired into geometry
   int nParticlesShadowed=0; // Number of particles shadowed
   int nParticlesLost=0; // number of particles lost from magnetic domain

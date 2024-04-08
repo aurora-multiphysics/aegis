@@ -53,6 +53,8 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
 
  TEST_F(aegisRegressionTests, inres1)
  {
+  MPI_Init(NULL, NULL);
+
   std::string smarddaFile = "smardda_inres1_no_shadowQ.txt";
   double qvalue;
   std::vector<std::pair<double,double>> smardda_qValues;
@@ -76,19 +78,27 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
     FAIL() << "Cannot find '" << smarddaFile << "'";
   }
 //-------------- RUN AEGIS -------------
-  std::string aegisConfig = "aegis_settings.json";
-  ParticleSimulation aegis(aegisConfig);
+  std::string configFilename = "aegis_settings.json";
+  auto configFile = std::make_shared<InputJSON>(configFilename);
 
-  if (std::filesystem::exists(aegisConfig)){
-    MPI_Init(NULL, NULL);
-    aegis.Execute();
-    MPI_Finalize();
+  auto equilibrium = std::make_shared<EquilData>();
+  equilibrium->setup(configFile);
+  equilibrium->move();
+  equilibrium->psiref_override();
+  equilibrium->init_interp_splines();
+  equilibrium->centre(1);
+  equilibrium->write_bfield();
+
+  ParticleSimulation aegis(configFile, equilibrium);
+
+  if (std::filesystem::exists(configFilename)){
+    aegis.Execute_serial();
   }
 
   else {
-    FAIL() << "Cannot find '" << aegisConfig << "'";
+    FAIL() << "Cannot find '" << configFilename << "'";
   }
-//-------------- RUN AEGIS -------------
+//-------------- COMPARE AEGIS AGAINST SMARDDA -------------
 
   std::sort(aegis.psiQ_values.begin(), aegis.psiQ_values.end());
   std::sort(smardda_qValues.begin(), smardda_qValues.end());
@@ -130,6 +140,7 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
   
   EXPECT_LT(MAX_REL_ERROR, percentTol);
   ASSERT_LT(L2_NORM_ERROR, percentTol);
+  MPI_Finalize();
 
  }
 

@@ -1,0 +1,149 @@
+{
+  "version": "2.0.0",
+  "compounds": [
+    {
+      "name": "Parallel GDB np = 4",
+      "preLaunchTask": "Launch 4 GDB servers",
+      "configurations": [
+        "Rank0",
+        "Rank1",
+        "Rank2",
+        "Rank3"
+      ],
+      "stopAll": false,
+    },
+    {
+      "name": "Parallel GDB np = 2",
+      "preLaunchTask": "Launch 2 GDB servers",
+      "configurations": [
+        "Rank0",
+        "Rank1"
+      ],
+      "stopAll": false,
+    }
+
+
+  ],
+  "configurations": [    
+    {      
+      "name": "Rank0",
+      "type": "cppdbg",
+      "request": "launch",
+      "cwd": "${workspaceRoot}/inres1",
+      "program": "${workspaceRoot}/bin/aegis",
+      "miDebuggerServerAddress": "localhost:20000",
+      "MIMode": "gdb",
+      "symbolLoadInfo": {
+        "loadAll": true,
+        "exceptionList": ""
+      },
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Set Disassembly Flavor to Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        }
+      ],
+      "presentation": { "hidden": true }
+    },
+    {
+      "name": "Rank1",
+      "type": "cppdbg",
+      "request": "launch",
+      "cwd": "${workspaceRoot}/inres1",
+      "program": "${workspaceRoot}/bin/aegis",
+      "miDebuggerServerAddress": "localhost:20001",
+      "MIMode": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Set Disassembly Flavor to Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        }
+      ],
+      "presentation": { "hidden": true }
+    },
+
+    {
+      "name": "Rank2",
+      "type": "cppdbg",
+      "request": "launch",
+      "cwd": "${workspaceRoot}/inres1",
+      "program": "${workspaceRoot}/bin/aegis",
+      "miDebuggerServerAddress": "localhost:20002",
+      "MIMode": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Set Disassembly Flavor to Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        }
+      ],
+      "presentation": { "hidden": true }
+    },
+
+    {
+      "name": "Rank3",
+      "type": "cppdbg",
+      "request": "launch",
+      "cwd": "${workspaceRoot}/inres1",
+      "program": "${workspaceRoot}/bin/aegis",
+      "miDebuggerServerAddress": "localhost:20003",
+      "MIMode": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Set Disassembly Flavor to Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        }
+      ],
+      "presentation": { "hidden": true }
+    },
+
+    {
+      "name": "AEGIS-Serial-dbg",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceRoot}/bin/aegis",
+      "args": ["aegis_settings.json"],
+      "stopAtEntry": false,
+      "cwd": "${workspaceRoot}/inres1",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Set Disassembly Flavor to Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        }
+      ]
+    },
+
+  ],
+}

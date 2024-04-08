@@ -43,6 +43,7 @@ class VtkInterface : public AegisBase
   vtkSmartPointer<vtkMultiBlockDataSet> multiBlockBranch;
   std::map<std::string, int> multiBlockCounters; // map of various counters for each branch
   vtkSmartPointer<vtkPoints> particleTrackPoints;
+  std::vector<std::array<double,3>> points;
   bool drawParticleTracks = false;
 
 };

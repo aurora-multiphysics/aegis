@@ -1,0 +1,33 @@
+#!/bin/bash
+set -eEu
+
+num_procs=4
+config_file=""
+
+while getopts 'n:f:' FLAG 
+do 
+    case "$FLAG" in 
+        n) 
+          num_procs=${OPTARG}
+          ;;
+	      f)
+	        config_file=${OPTARG}
+	        ;;
+    esac
+done
+
+if [[ "${OPTIND}" -eq 1 ]]; then
+  echo "Number of gdbservers to launch not provided. Defaulting to 4..."
+  num_procs=4
+fi 
+
+echo "Launching $num_procs gdbservers with AEGIS config file '$config_file'"
+
+for ((i=0; i<$num_procs; i=i+1))
+do 
+    port=$((20000+$i))
+    launchServers+=" -n 1 gdbserver :$port ../bin/aegis $config_file :"
+done
+
+mpiexec $launchServers
+
