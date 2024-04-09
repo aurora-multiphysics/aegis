@@ -105,9 +105,9 @@ class ParticleSimulation : public AegisBase
   void polar_track();
   void flux_track();
   
-  terminationState loop_over_particle_track(TriangleSource&tri, ParticleBase &particle, DagMC::RayHistory &history); // loop over individual particle tracks
+  terminationState loop_over_particle_track(TriangleSource&tri, std::unique_ptr<ParticleBase> &particle, DagMC::RayHistory &history); // loop over individual particle tracks
   void terminate_particle(TriangleSource&facet, DagMC::RayHistory &history, terminationState termination); // end particle track
-  void ray_hit_on_launch(ParticleBase &particle, DagMC::RayHistory &history); // particle hit on initial launch from surface
+  void ray_hit_on_launch(std::unique_ptr<ParticleBase> &particle, DagMC::RayHistory &history); // particle hit on initial launch from surface
   void print_particle_stats(std::array<int, 5> particleStats); // print number of particles that reached each termination state
   void mpi_particle_stats(); // get inidividual particle stats for each process
   void read_params(const std::shared_ptr<InputJSON> &inputs); // read parameters from aegis_settings.json
