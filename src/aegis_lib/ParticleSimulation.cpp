@@ -79,6 +79,7 @@ ParticleSimulation::Execute_dynamic_mpi()
 
   std::vector<double> handlerQVals(num_facets());
   // int counter = 0;
+  setup_sources();
 
   if (rank == 0)
   { // handler process...
@@ -432,8 +433,6 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
   std::vector<double> triCoords(9);
   std::vector<double> triA(3), triB(3), triC(3);
 
-  setup_sources();
-
   for (int i = startFacet; i < endFacet; ++i)
   { // loop over all facets
     auto tri = listOfTriangles[i];
@@ -445,13 +444,13 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
       continue;
     }
 
-    ParticleBase particle(coordSys);
-    particle.set_pos(tri.launch_pos());
+    auto particle = std::make_unique<ParticleBase>(coordSys);
+    particle->set_pos(tri.launch_pos());
 
     integrator->set_launch_position(tri.entity_handle(), tri.launch_pos());
 
-    particle.check_if_in_bfield(equilibrium); // if out of bounds skip to next triangle
-    if (particle.outOfBounds)
+    particle->check_if_in_bfield(equilibrium); // if out of bounds skip to next triangle
+    if (particle->outOfBounds)
     {
       log_string(LogLevel::INFO, "Particle start is out of magnetic field bounds. Skipping to "
                                  "next triangle. Check "
@@ -460,19 +459,19 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
     }
 
     vtkInterface->init_new_vtkPoints();
-    vtkInterface->insert_next_point_in_track(particle.launchPos);
+    vtkInterface->insert_next_point_in_track(particle->launchPos);
 
-    particle.set_dir(equilibrium);
+    particle->set_dir(equilibrium);
 
-    particle.align_dir_to_surf(tri.BdotN());
+    particle->align_dir_to_surf(tri.BdotN());
 
     // Start ray tracing
     DagMC::RayHistory history;
     trackLength = trackStepSize;
 
-    particle.update_vectors(trackStepSize, equilibrium);
+    particle->update_vectors(trackStepSize, equilibrium);
 
-    vtkInterface->insert_next_point_in_track(particle.posXYZ);
+    vtkInterface->insert_next_point_in_track(particle->posXYZ);
 
     terminationState particleState = loop_over_particle_track(tri, particle, history);
 
@@ -486,7 +485,7 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
   }
 
   double endTime = MPI_Wtime();
-  bool profileDiagnostics = false;
+  bool profileDiagnostics = true;
   if (profileDiagnostics)
   {
     printf("Loop over facets [%d:%d] from rank[%d] time taken = %fs \n", startFacet, endFacet, rank,
@@ -523,7 +522,8 @@ ParticleSimulation::setup_sources()
 
 // loop over single particle track from launch to termination
 terminationState
-ParticleSimulation::loop_over_particle_track(TriangleSource & tri, ParticleBase & particle,
+ParticleSimulation::loop_over_particle_track(TriangleSource & tri,
+                                             std::unique_ptr<ParticleBase> & particle,
                                              DagMC::RayHistory & history)
 {
   double euclidDistToNextSurf = 0.0;
@@ -534,24 +534,24 @@ ParticleSimulation::loop_over_particle_track(TriangleSource & tri, ParticleBase 
     trackLength += trackStepSize;
     iterationCounter++;
 
-    DAG->ray_fire(implComplementVol, particle.posXYZ.data(), particle.dir.data(), nextSurf,
+    DAG->ray_fire(implComplementVol, particle->posXYZ.data(), particle->dir.data(), nextSurf,
                   nextSurfDist, &history, trackStepSize, rayOrientation);
     numberOfRayFireCalls++;
 
     if (nextSurf != 0)
     {
-      particle.update_vectors(nextSurfDist); // update position to surface intersection point
+      particle->update_vectors(nextSurfDist); // update position to surface intersection point
       terminate_particle(tri, history, terminationState::SHADOWED);
       return terminationState::SHADOWED;
     }
     else
     {
-      particle.update_vectors(trackStepSize); // update position by stepsize
+      particle->update_vectors(trackStepSize); // update position by stepsize
     }
 
-    vtkInterface->insert_next_point_in_track(particle.posXYZ);
-    particle.check_if_in_bfield(equilibrium);
-    if (particle.outOfBounds)
+    vtkInterface->insert_next_point_in_track(particle->posXYZ);
+    particle->check_if_in_bfield(equilibrium);
+    if (particle->outOfBounds)
     {
       terminate_particle(tri, history, terminationState::LOST);
       return terminationState::LOST;
@@ -559,12 +559,12 @@ ParticleSimulation::loop_over_particle_track(TriangleSource & tri, ParticleBase 
 
     else
     {
-      particle.set_dir(equilibrium);
-      particle.align_dir_to_surf(tri.BdotN());
+      particle->set_dir(equilibrium);
+      particle->align_dir_to_surf(tri.BdotN());
     }
-    particle.check_if_midplane_crossed(equilibrium->get_midplane_params());
+    particle->check_if_midplane_crossed(equilibrium->get_midplane_params());
 
-    if (particle.atMidplane != 0 && !noMidplaneTermination)
+    if (particle->atMidplane != 0 && !noMidplaneTermination)
     {
       terminate_particle(tri, history, terminationState::DEPOSITING);
       return terminationState::DEPOSITING;
@@ -628,9 +628,10 @@ ParticleSimulation::terminate_particle(TriangleSource & tri, DagMC::RayHistory &
 }
 
 void
-ParticleSimulation::ray_hit_on_launch(ParticleBase & particle, DagMC::RayHistory & history)
+ParticleSimulation::ray_hit_on_launch(std::unique_ptr<ParticleBase> & particle,
+                                      DagMC::RayHistory & history)
 {
-  DAG->ray_fire(implComplementVol, particle.launchPos.data(), particle.dir.data(), nextSurf,
+  DAG->ray_fire(implComplementVol, particle->launchPos.data(), particle->dir.data(), nextSurf,
                 nextSurfDist, &history, trackStepSize, rayOrientation);
   if (nextSurf != 0)
   {
@@ -793,7 +794,7 @@ ParticleSimulation::Execute_serial()
   int end = targetFacets.size();
 
   std::vector<double> qvalues;
-
+  setup_sources();
   qvalues = loop_over_facets(start, end);
   if (qvalues.empty())
   {
@@ -853,6 +854,7 @@ ParticleSimulation::Execute_padded_mpi()
 
   std::vector<double> qvalues;                  // qvalues buffer local to each processor
   std::vector<double> rootQvalues(totalFacets); // total qvalues buffer on root process for IO
+  setup_sources();
 
   qvalues = loop_over_facets(startFacet, endFacet); // perform main loop
 
@@ -939,6 +941,8 @@ ParticleSimulation::Execute_mpi()
   int endFacet = startFacet + recieveCounts[rank];
 
   startTime = MPI_Wtime();
+  setup_sources();
+
   qvalues = loop_over_facets(startFacet, endFacet); // perform main loop
   endTime = MPI_Wtime();
 
