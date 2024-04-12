@@ -27,7 +27,7 @@ AegisBase::print_mpi(std::string inString)
   }
 }
 
-// wrapper for boost LOG macros to test for MPI rank
+// wrapper for boost LOG macros that only prints on rank 0
 void
 AegisBase::log_string(LogLevel level, std::string inString)
 {
@@ -59,6 +59,10 @@ AegisBase::log_string(LogLevel level, std::string inString)
       default:
         LOG_WARNING << inString;
     }
+  }
+  else
+  {
+    return;
   }
 }
 

@@ -137,6 +137,7 @@ class ParticleSimulation : public AegisBase
   std::string drawParticleTracks;
   int dynamicTaskSize;
   std::string coordInputStr;
+  bool workerProfiling = false;
   coordinateSystem coordSys = coordinateSystem::CARTESIAN; // default cartesian 
 
   double rmove = 0.0;

@@ -71,7 +71,6 @@ ParticleSimulation::Execute_dynamic_mpi()
 
   MPI_Status mpiStatus;
 
-  vtkInterface->init();
   targetFacets = select_target_surface();
   integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
 
@@ -304,24 +303,29 @@ void
 ParticleSimulation::read_params(const std::shared_ptr<InputJSON> & inputs)
 {
 
-  json aegisNamelist;
   if (inputs->data.contains("aegis_params"))
   {
-    aegisNamelist = inputs->data["aegis_params"];
-    dagmcInputFile = aegisNamelist["DAGMC"];
-    trackStepSize = aegisNamelist["step_size"];
-    maxTrackSteps = aegisNamelist["max_steps"];
-    particleLaunchPos = aegisNamelist["launch_pos"];
-    noMidplaneTermination = aegisNamelist["force_no_deposition"];
-    coordInputStr = aegisNamelist["coordinate_system"];
-    exeType = aegisNamelist["execution_type"];
-    dynamicTaskSize = aegisNamelist["dynamic_task_size"];
+    json aegisParams = inputs->data["aegis_params"];
+
+    dagmcInputFile = aegisParams["DAGMC"];
+    trackStepSize = aegisParams["step_size"];
+    maxTrackSteps = aegisParams["max_steps"];
+    particleLaunchPos = aegisParams["launch_pos"];
+    noMidplaneTermination = aegisParams["force_no_deposition"];
+    coordInputStr = aegisParams["coordinate_system"];
+    exeType = aegisParams["execution_type"];
+
+    if (aegisParams.contains("task_farm_params"))
+    {
+      dynamicTaskSize = aegisParams["task_farm_params"]["dynamic_task_size"];
+      workerProfiling = aegisParams["task_farm_params"]["worker_profiling_enabled"];
+    }
 
     select_coordinate_system();
 
-    if (aegisNamelist.contains("target_surfs"))
+    if (aegisParams.contains("target_surfs"))
     {
-      for (auto i : aegisNamelist["target_surfs"])
+      for (auto i : aegisParams["target_surfs"])
       {
         vectorOfTargetSurfs.push_back(i);
       }
@@ -449,15 +453,6 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
 
     integrator->set_launch_position(tri.entity_handle(), tri.launch_pos());
 
-    particle->check_if_in_bfield(equilibrium); // if out of bounds skip to next triangle
-    if (particle->outOfBounds)
-    {
-      log_string(LogLevel::INFO, "Particle start is out of magnetic field bounds. Skipping to "
-                                 "next triangle. Check "
-                                 "correct eqdsk is being used for the given geometry");
-      continue;
-    }
-
     vtkInterface->init_new_vtkPoints();
     vtkInterface->insert_next_point_in_track(particle->launchPos);
 
@@ -485,8 +480,7 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
   }
 
   double endTime = MPI_Wtime();
-  bool profileDiagnostics = true;
-  if (profileDiagnostics)
+  if (workerProfiling)
   {
     printf("Loop over facets [%d:%d] from rank[%d] time taken = %fs \n", startFacet, endFacet, rank,
            endTime - startTime);
@@ -515,7 +509,17 @@ ParticleSimulation::setup_sources()
     }
 
     TriangleSource tri(triA, triB, triC, facet, particleLaunchPos);
-    tri.set_heatflux_params(equilibrium, "exp");
+
+    try
+    {
+      equilibrium->check_if_in_bfield(tri.launch_pos());
+      tri.set_heatflux_params(equilibrium, "exp");
+    }
+    catch (std::runtime_error & e)
+    {
+      log_string(LogLevel::INFO,
+                 "Triangle start outside of magnetic field. Skipping to next triangle...");
+    }
     listOfTriangles.push_back(tri);
   }
 }
@@ -550,7 +554,7 @@ ParticleSimulation::loop_over_particle_track(TriangleSource & tri,
     }
 
     vtkInterface->insert_next_point_in_track(particle->posXYZ);
-    particle->check_if_in_bfield(equilibrium);
+    equilibrium->check_if_in_bfield(particle->posXYZ);
     if (particle->outOfBounds)
     {
       terminate_particle(tri, history, terminationState::LOST);
@@ -816,7 +820,7 @@ ParticleSimulation::Execute_serial()
   attach_mesh_attribute("Heatflux", targetFacets, qvalues);
   attach_mesh_attribute("Psi Start", targetFacets, psiStart);
   attach_mesh_attribute("BdotN", targetFacets, bnList);
-  // attach_mesh_attribute("Normal", targetFacets, normalList);
+  attach_mesh_attribute("Normal", targetFacets, normalList);
   write_out_mesh(meshWriteOptions::BOTH);
 
   // write out data and print final
@@ -1054,6 +1058,7 @@ ParticleSimulation::attach_mesh_attribute(const std::string & tagName, moab::Ran
   DAG->moab_instance()->tag_set_data(tag, entities, &dataToAttach[0]);
 }
 
+// overload for attaching vectors to mesh entitities
 void
 ParticleSimulation::attach_mesh_attribute(const std::string & tagName, moab::Range & entities,
                                           std::vector<std::vector<double>> & dataToAttach)
@@ -1061,9 +1066,10 @@ ParticleSimulation::attach_mesh_attribute(const std::string & tagName, moab::Ran
   moab::Tag tag;
   double tagValue;
 
-  DAG->moab_instance()->tag_get_handle(tagName.c_str(), 1, MB_TYPE_OPAQUE, tag,
+  DAG->moab_instance()->tag_get_handle(tagName.c_str(), 3, MB_TYPE_DOUBLE, tag,
                                        MB_TAG_CREAT | MB_TAG_DENSE, &tagValue);
-  DAG->moab_instance()->tag_set_data(tag, entities, &dataToAttach[0]);
+
+  DAG->moab_instance()->tag_set_data(tag, entities, &dataToAttach[0][0]);
 }
 // write out the mesh and target mesh with attributed data
 // meshWriteOptions::FULL -- Write out the entire mesh

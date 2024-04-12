@@ -7,9 +7,12 @@
       "launch_pos": "fixed",
       "target_surfs": [1,2,3,4,5,6],
       "force_no_deposition": false,
-      "dynamic_task_size": 25,
       "coordinate_system": "flux",
-      "execution_type": "dynamic"
+      "execution_type": "dynamic",
+      "task_farm_params":{
+          "dynamic_task_size": 50,
+          "worker_profiling_enabled": false        
+      } 
   },
   "equil_params":{
       "eqdsk": "EQ3.eqdsk",
@@ -24,7 +27,6 @@
       "print_debug_info": true
   },
   "vtk_params":{
-      "VTK": "target_facets.stl",
-      "draw_particle_tracks": true
+      "draw_particle_tracks": false
   }
  }
