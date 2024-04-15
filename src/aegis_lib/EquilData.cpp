@@ -1393,23 +1393,6 @@ EquilData::get_midplane_params()
   return midplaneParams;
 }
 
-// void EquilData::set_omp()
-// {
-//   // Ensure EquilData::centre() has been called first so R,Z values of centre
-//   known if (rcen == 0 && zcen == 0)
-//   {
-//     LOG_ERROR << "Values RCEN and ZCEN are not set. Ensure these are set
-//     before attempting to
-//                   define outer-midplane";
-//   }
-
-//   else
-//   {
-//     std::vector
-//   }
-
-// }
-
 // check if in b_field from polar coords (R,Z)
 void
 EquilData::check_if_in_bfield(std::vector<double> xyzPos)

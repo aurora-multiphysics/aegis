@@ -379,10 +379,8 @@ ParticleSimulation::init_geometry()
   nodeCoords.resize(nodesList.size() * 3);
   DAG->moab_instance()->get_coords(&nodesList[0], nodesList.size(), nodeCoords.data());
 
-  if (rank == 0)
-  {
-    std::cout << "Number of Triangles in Geometry " << facetsList.size() << std::endl;
-  }
+  totalNumberOfFacets = facetsList.size();
+
   implComplementVol = DAG->entity_by_index(3, volsList.size());
 
   if (!DAG->is_implicit_complement(implComplementVol))
@@ -448,7 +446,20 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
       continue;
     }
 
+    DagMC::RayHistory history;
     auto particle = std::make_unique<ParticleBase>(coordSys);
+
+    try
+    {
+      equilibrium->check_if_in_bfield(tri.launch_pos());
+    }
+    catch (std::runtime_error & e)
+    {
+      log_string(LogLevel::INFO, "Particle start out of bounds. Skipping to next triangle...");
+      terminate_particle_lost(tri);
+      continue;
+    }
+
     particle->set_pos(tri.launch_pos());
 
     integrator->set_launch_position(tri.entity_handle(), tri.launch_pos());
@@ -461,7 +472,6 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
     particle->align_dir_to_surf(tri.BdotN());
 
     // Start ray tracing
-    DagMC::RayHistory history;
     trackLength = trackStepSize;
 
     particle->update_vectors(trackStepSize, equilibrium);
@@ -545,7 +555,7 @@ ParticleSimulation::loop_over_particle_track(TriangleSource & tri,
     if (nextSurf != 0)
     {
       particle->update_vectors(nextSurfDist); // update position to surface intersection point
-      terminate_particle(tri, history, terminationState::SHADOWED);
+      terminate_particle_shadow(tri, history);
       return terminationState::SHADOWED;
     }
     else
@@ -554,29 +564,30 @@ ParticleSimulation::loop_over_particle_track(TriangleSource & tri,
     }
 
     vtkInterface->insert_next_point_in_track(particle->posXYZ);
-    equilibrium->check_if_in_bfield(particle->posXYZ);
-    if (particle->outOfBounds)
-    {
-      terminate_particle(tri, history, terminationState::LOST);
-      return terminationState::LOST;
-    }
 
-    else
+    try
     {
+      equilibrium->check_if_in_bfield(particle->posXYZ);
       particle->set_dir(equilibrium);
       particle->align_dir_to_surf(tri.BdotN());
     }
+    catch (std::runtime_error & e)
+    {
+      terminate_particle_lost(tri);
+      return terminationState::LOST;
+    }
+
     particle->check_if_midplane_crossed(equilibrium->get_midplane_params());
 
     if (particle->atMidplane != 0 && !noMidplaneTermination)
     {
-      terminate_particle(tri, history, terminationState::DEPOSITING);
+      terminate_particle_depositing(tri);
       return terminationState::DEPOSITING;
     }
 
     if (step == (maxTrackSteps - 1))
     {
-      terminate_particle(tri, history, terminationState::MAXLENGTH);
+      terminate_particle_maxlength(tri);
       return terminationState::MAXLENGTH;
     }
   }
@@ -584,51 +595,54 @@ ParticleSimulation::loop_over_particle_track(TriangleSource & tri,
   return terminationState::LOST; // default return lost particle
 }
 
-// terminate particle depending on 1 of 4 termination states:
-//
-// DEPOSITING - Particle reaches outer midplane and deposits power on facet.
-// Heatflux = Q SHADOWED - Particle hits another piece of geometry. Heatflux = 0
-// LOST - Particle leaves magnetic field so trace stops. Heatflux = 0
-// MAX LENGTH - Particle reaches maximum user set length before anything else.
-// Heatflux = 0
+// terminate particle after reaching midplane
 void
-ParticleSimulation::terminate_particle(TriangleSource & tri, DagMC::RayHistory & history,
-                                       terminationState termination)
+ParticleSimulation::terminate_particle_depositing(TriangleSource & tri)
 {
-  double heatflux;
-  std::stringstream ss;
+  std::stringstream terminationLogString;
+  double heatflux = tri.heatflux();
+  vtkInterface->write_particle_track(branchDepositingPart, heatflux);
+  integrator->count_particle(tri.entity_handle(), terminationState::DEPOSITING, heatflux);
+  terminationLogString << "Midplane reached. Depositing power after travelling " << trackLength
+                       << " units";
+  log_string(LogLevel::INFO, terminationLogString.str());
+}
 
-  switch (termination)
-  {
-    case terminationState::DEPOSITING:
-      heatflux = tri.heatflux();
-      vtkInterface->write_particle_track(branchDepositingPart, heatflux);
-      integrator->count_particle(tri.entity_handle(), termination, heatflux);
-      log_string(LogLevel::INFO, "Midplane reached. Depositing power");
-      break;
+// terminate particle after hitting shadowing geometry
+void
+ParticleSimulation::terminate_particle_shadow(TriangleSource & tri, DagMC::RayHistory & history)
+{
+  std::stringstream terminationLogString;
+  double heatflux = 0.0;
+  vtkInterface->write_particle_track(branchShadowedPart, heatflux);
+  integrator->count_particle(tri.entity_handle(), terminationState::SHADOWED, heatflux);
+  terminationLogString << "Surface " << nextSurf << " hit after travelling " << trackLength
+                       << " units";
+  log_string(LogLevel::INFO, terminationLogString.str());
+}
 
-    case terminationState::SHADOWED:
-      heatflux = 0.0;
-      history.get_last_intersection(intersectedFacet);
-      vtkInterface->write_particle_track(branchShadowedPart, heatflux);
-      integrator->count_particle(tri.entity_handle(), termination, heatflux);
-      ss << "Surface " << nextSurf << " hit after travelling " << trackLength << " units";
-      log_string(LogLevel::INFO, ss.str());
-      break;
+// terminate particle after leaving magnetic field
+void
+ParticleSimulation::terminate_particle_lost(TriangleSource & tri)
+{
+  std::stringstream terminationLogString;
+  double heatflux = 0.0;
+  vtkInterface->write_particle_track(branchLostPart, heatflux);
+  integrator->count_particle(tri.entity_handle(), terminationState::LOST, heatflux);
+  terminationLogString << "Particle leaving magnetic field after travelling " << trackLength
+                       << " units";
+  log_string(LogLevel::INFO, terminationLogString.str());
+}
 
-    case terminationState::LOST:
-      heatflux = 0.0;
-      vtkInterface->write_particle_track(branchLostPart, heatflux);
-      integrator->count_particle(tri.entity_handle(), termination, heatflux);
-      log_string(LogLevel::INFO, "TRACE STOPPED BECAUSE LEAVING MAGNETIC FIELD");
-      break;
-
-    case terminationState::MAXLENGTH:
-      heatflux = 0.0;
-      vtkInterface->write_particle_track(branchMaxLengthPart, heatflux);
-      integrator->count_particle(tri.entity_handle(), termination, heatflux);
-      log_string(LogLevel::INFO, "Fieldline trace reached maximum length before intersection");
-  }
+// terminate particle after travelling user specified max distance
+void
+ParticleSimulation::terminate_particle_maxlength(TriangleSource & tri)
+{
+  std::stringstream terminationLogString;
+  double heatflux = 0.0;
+  vtkInterface->write_particle_track(branchMaxLengthPart, heatflux);
+  integrator->count_particle(tri.entity_handle(), terminationState::MAXLENGTH, heatflux);
+  terminationLogString << "Fieldline trace reached maximum length before intersection";
 }
 
 void
@@ -738,17 +752,16 @@ ParticleSimulation::print_particle_stats(std::array<int, 5> particleStats)
 
   if (rank == 0)
   {
-    LOG_WARNING << "Number of particles launched = " << particlesCounted << std::endl;
-    LOG_WARNING << "Number of particles depositing power from omp = " << particleStats[0]
-                << std::endl;
-    LOG_WARNING << "Number of shadowed particle intersections = " << particleStats[1] << std::endl;
-    LOG_WARNING << "Number of particles lost from magnetic domain = " << particleStats[2]
-                << std::endl;
+    LOG_WARNING << "Total number of triangles in geometry (Shadow + Target) = "
+                << totalNumberOfFacets;
+    LOG_WARNING << "Number of particles launched = " << particlesCounted;
+    LOG_WARNING << "Number of particles depositing power from omp = " << particleStats[0];
+    LOG_WARNING << "Number of shadowed particle intersections = " << particleStats[1];
+    LOG_WARNING << "Number of particles lost from magnetic domain = " << particleStats[2];
     LOG_WARNING << "Number of particles terminated upon reaching max tracking length = "
-                << particleStats[3] << std::endl;
-    LOG_WARNING << "Number of padded null particles = " << particleStats[4] << std::endl;
-    LOG_WARNING << "Number of particles not accounted for = " << (num_facets() - particlesCounted)
-                << std::endl;
+                << particleStats[3];
+    LOG_WARNING << "Number of padded null particles = " << particleStats[4];
+    LOG_WARNING << "Number of particles not accounted for = " << (num_facets() - particlesCounted);
   }
   // std::cout << "Number of Ray fire calls = " << numberOfRayFireCalls <<
   // std::endl;
@@ -1080,24 +1093,33 @@ ParticleSimulation::attach_mesh_attribute(const std::string & tagName, moab::Ran
 void
 ParticleSimulation::write_out_mesh(meshWriteOptions option, moab::Range rangeofEntities)
 {
+  // get target meshset for aegis_target outputs
   DAG->remove_graveyard();
   EntityHandle targetMeshset;
   DAG->moab_instance()->create_meshset(MESHSET_SET, targetMeshset);
   DAG->moab_instance()->add_entities(targetMeshset, targetFacets);
 
+  // remove file extension from input file string
+  std::string aegisOut = dagmcInputFile;
+  aegisOut = aegisOut.substr(0, aegisOut.find_last_of("."));
+  aegisOut = aegisOut.substr(aegisOut.find_last_of("/") + 1, aegisOut.length());
+  std::string aegisOutFull = aegisOut + "_aegis_full.vtk";
+  std::string aegisOutTarget = aegisOut + "_aegis_target.vtk";
+  std::string aegisOutPartial = aegisOut + "_aegis_partial.vtk";
+
   switch (option)
   {
     case meshWriteOptions::FULL:
-      DAG->write_mesh("aegis_full.vtk", 1);
+      DAG->write_mesh(aegisOutFull.c_str(), 1);
       break;
 
     case meshWriteOptions::TARGET:
-      DAG->moab_instance()->write_mesh("aegis_target.vtk", &targetMeshset, 1);
+      DAG->moab_instance()->write_mesh(aegisOutTarget.c_str(), &targetMeshset, 1);
       break;
 
     case meshWriteOptions::BOTH:
-      DAG->moab_instance()->write_mesh("aegis_target.vtk", &targetMeshset, 1);
-      DAG->write_mesh("aegis_full.vtk", 1);
+      DAG->moab_instance()->write_mesh(aegisOutTarget.c_str(), &targetMeshset, 1);
+      DAG->write_mesh(aegisOut.c_str(), 1);
       break;
 
     case meshWriteOptions::PARTIAL:
@@ -1106,7 +1128,7 @@ ParticleSimulation::write_out_mesh(meshWriteOptions option, moab::Range rangeofE
         EntityHandle meshset;
         DAG->moab_instance()->create_meshset(MESHSET_SET, meshset);
         DAG->moab_instance()->add_entities(meshset, rangeofEntities);
-        DAG->moab_instance()->write_mesh("aegis_partial.vtk", &meshset, 1);
+        DAG->moab_instance()->write_mesh(aegisOutPartial.c_str(), &meshset, 1);
       }
       else
       {
