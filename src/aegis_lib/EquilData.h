@@ -131,6 +131,8 @@ class EquilData : public AegisBase
 
   void psiref_override();
 
+  void check_if_in_bfield(std::vector<double> xyzPos);
+
   std::array<double, 3> get_midplane_params(); // return rInnerMidplane, rOuterMidplane, zMidplane
 
   // override for ITER corrections to eqdsk

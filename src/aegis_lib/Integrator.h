@@ -38,7 +38,13 @@ struct comp
 typedef std::set<std::pair<EntityHandle, int>, comp> int_sorted_map;
 typedef std::set<std::pair<EntityHandle, double>, comp> dbl_sorted_map;
 
-
+// terminate particle depending on 1 of 4 termination states:
+//
+// DEPOSITING - Particle reaches outer midplane and deposits power on facet.
+// Heatflux = Q SHADOWED - Particle hits another piece of geometry. Heatflux = 0
+// LOST - Particle leaves magnetic field so trace stops. Heatflux = 0
+// MAX LENGTH - Particle reaches maximum user set length before anything else.
+// Heatflux = 0
 enum class terminationState{
 DEPOSITING, // midplane reached 
 SHADOWED, // shadow geometry hit

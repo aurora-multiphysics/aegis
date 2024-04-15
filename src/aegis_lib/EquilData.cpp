@@ -821,19 +821,17 @@ EquilData::b_field(std::vector<double> position, std::string startingFrom)
   {
     return {};
   }
-  else
-  {
-    // evaluate psi and psi derivs at given (R,Z) coords
-    alglib::spline2ddiff(psiSpline, zr, zz, zpsi, zdpdr, zdpdz, null);
 
-    // evaluate I aka f at psi (I aka f is the flux function)
-    zf = alglib::spline1dcalc(fSpline, zpsi);
+  // evaluate psi and psi derivs at given (R,Z) coords
+  alglib::spline2ddiff(psiSpline, zr, zz, zpsi, zdpdr, zdpdz, null);
 
-    // calculate B in cylindrical toroidal polars
-    bVector[0] = -zdpdz / zr; // B_R
-    bVector[1] = zdpdr / zr;  // B_Z
-    bVector[2] = zf / zr;     // B_T - toroidal component of field directed along phi
-  }
+  // evaluate I aka f at psi (I aka f is the flux function)
+  zf = alglib::spline1dcalc(fSpline, zpsi);
+
+  // calculate B in cylindrical toroidal polars
+  bVector[0] = -zdpdz / zr; // B_R
+  bVector[1] = zdpdr / zr;  // B_Z
+  bVector[2] = zf / zr;     // B_T - toroidal component of field directed along phi
 
   // return the calculated B vector
   return bVector;
@@ -1339,7 +1337,7 @@ EquilData::psi_limiter(std::vector<std::vector<double>> vertices)
   bpbdry = zbpbdry;
   btotbdry = zbtotbdry;
 
-  if (rank == 0)
+  if (rank == 0 && debug)
   {
     std::cout << "PSI_LIMITER() RBDRY = " << rbdry << std::endl;
     std::cout << "PSI_LIMITER() BPBDRY = " << bpbdry << std::endl;
@@ -1395,19 +1393,15 @@ EquilData::get_midplane_params()
   return midplaneParams;
 }
 
-// void EquilData::set_omp()
-// {
-//   // Ensure EquilData::centre() has been called first so R,Z values of centre
-//   known if (rcen == 0 && zcen == 0)
-//   {
-//     LOG_ERROR << "Values RCEN and ZCEN are not set. Ensure these are set
-//     before attempting to
-//                   define outer-midplane";
-//   }
-
-//   else
-//   {
-//     std::vector
-//   }
-
-// }
+// check if in b_field from polar coords (R,Z)
+void
+EquilData::check_if_in_bfield(std::vector<double> xyzPos)
+{
+  std::vector<double> polarPos = CoordTransform::cart_to_polar(xyzPos, "forwards");
+  double r = polarPos[0];
+  double z = polarPos[1];
+  if (r < rmin || r > rmax || z < zmin || z > zmax)
+  {
+    throw std::runtime_error("Position outside magnetic field");
+  }
+}

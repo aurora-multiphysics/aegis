@@ -10,6 +10,13 @@ VtkInterface::VtkInterface(const std::shared_ptr<InputJSON> & inputs)
     vtkNamelist = inputs->data["vtk_params"];
     drawParticleTracks = vtkNamelist["draw_particle_tracks"];
   }
+
+  if (drawParticleTracks)
+  {
+    init_Ptrack_root();
+
+    // log_string(LogLevel::WARNING, "vtkMultiBlockDataSet initialised for particle tracks");
+  }
 }
 
 void
@@ -43,16 +50,6 @@ VtkInterface::init_Ptrack_branch(std::string branchName)
 void
 VtkInterface::init()
 {
-
-  if (drawParticleTracks)
-  {
-    init_Ptrack_root();
-  }
-
-  if (drawParticleTracks && rank == 0)
-  {
-    std::cout << "vtkMultiBlockDataSet initialised for particle tracks" << std::endl;
-  }
 }
 
 vtkNew<vtkPolyData>
