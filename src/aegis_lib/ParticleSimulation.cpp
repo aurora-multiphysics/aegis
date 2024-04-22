@@ -321,8 +321,6 @@ ParticleSimulation::read_params(const std::shared_ptr<InputJSON> & inputs)
       workerProfiling = aegisParams["task_farm_params"]["worker_profiling_enabled"];
     }
 
-    select_coordinate_system();
-
     if (aegisParams.contains("target_surfs"))
     {
       for (auto i : aegisParams["target_surfs"])
@@ -408,6 +406,7 @@ ParticleSimulation::init_geometry()
   }
 
   equilibrium->psi_limiter(vertexList);
+  select_coordinate_system();
 
   // if flux selected default to cartesian
   if (coordSys == coordinateSystem::FLUX)
@@ -416,18 +415,18 @@ ParticleSimulation::init_geometry()
     log_string(LogLevel::WARNING, "Flux coords tracking not currently "
                                   "implemented. Defaulting to CARTESIAN...");
   }
-}
-
-// loop over facets in target surfaces
-std::vector<double>
-ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
-{
 
   // transform coordinate system of mesh
   if (coordSys != coordinateSystem::CARTESIAN)
   {
     mesh_coord_transform(coordSys);
   }
+}
+
+// loop over facets in target surfaces
+std::vector<double>
+ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
+{
 
   double startTime = MPI_Wtime();
   std::vector<double> heatfluxVals;
@@ -446,7 +445,7 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
       continue;
     }
 
-    DagMC::RayHistory history;
+    // DagMC::RayHistory history;
     auto particle = std::make_unique<ParticleBase>(coordSys);
 
     try
@@ -459,26 +458,10 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
       terminate_particle_lost(tri);
       continue;
     }
-
-    particle->set_pos(tri.launch_pos());
-
     integrator->set_launch_position(tri.entity_handle(), tri.launch_pos());
-
-    vtkInterface->init_new_vtkPoints();
-    vtkInterface->insert_next_point_in_track(particle->launchPos);
-
-    particle->set_dir(equilibrium);
-
-    particle->align_dir_to_surf(tri.BdotN());
-
-    // Start ray tracing
     trackLength = trackStepSize;
 
-    particle->update_vectors(trackStepSize, equilibrium);
-
-    vtkInterface->insert_next_point_in_track(particle->posXYZ);
-
-    terminationState particleState = loop_over_particle_track(tri, particle, history);
+    terminationState particleState = loop_over_particle_track(tri, particle);
 
     // if particle not depositing set heatflux to 0.0
     if (particleState != terminationState::DEPOSITING)
@@ -537,12 +520,19 @@ ParticleSimulation::setup_sources()
 // loop over single particle track from launch to termination
 terminationState
 ParticleSimulation::loop_over_particle_track(TriangleSource & tri,
-                                             std::unique_ptr<ParticleBase> & particle,
-                                             DagMC::RayHistory & history)
+                                             std::unique_ptr<ParticleBase> & particle)
 {
   double euclidDistToNextSurf = 0.0;
   nextSurf = 0;
+  particle->set_pos(tri.launch_pos());
+  particle->set_dir(equilibrium);
+  particle->align_dir_to_surf(tri.BdotN());
+  trackLength = trackStepSize;
+  particle->update_vectors(trackStepSize, equilibrium);
 
+  vtkInterface->init_new_vtkPoints();
+  vtkInterface->insert_next_point_in_track(particle->launchPos);
+  moab::DagMC::RayHistory history;
   for (int step = 0; step < maxTrackSteps; ++step)
   {
     trackLength += trackStepSize;
@@ -555,7 +545,7 @@ ParticleSimulation::loop_over_particle_track(TriangleSource & tri,
     if (nextSurf != 0)
     {
       particle->update_vectors(nextSurfDist); // update position to surface intersection point
-      terminate_particle_shadow(tri, history);
+      terminate_particle_shadow(tri);
       return terminationState::SHADOWED;
     }
     else
@@ -568,8 +558,6 @@ ParticleSimulation::loop_over_particle_track(TriangleSource & tri,
     try
     {
       equilibrium->check_if_in_bfield(particle->posXYZ);
-      particle->set_dir(equilibrium);
-      particle->align_dir_to_surf(tri.BdotN());
     }
     catch (std::runtime_error & e)
     {
@@ -577,6 +565,8 @@ ParticleSimulation::loop_over_particle_track(TriangleSource & tri,
       return terminationState::LOST;
     }
 
+    particle->set_dir(equilibrium);
+    particle->align_dir_to_surf(tri.BdotN());
     particle->check_if_midplane_crossed(equilibrium->get_midplane_params());
 
     if (particle->atMidplane != 0 && !noMidplaneTermination)
@@ -592,6 +582,7 @@ ParticleSimulation::loop_over_particle_track(TriangleSource & tri,
     }
   }
 
+  particle->set_facet_history(history);
   return terminationState::LOST; // default return lost particle
 }
 
@@ -610,7 +601,7 @@ ParticleSimulation::terminate_particle_depositing(TriangleSource & tri)
 
 // terminate particle after hitting shadowing geometry
 void
-ParticleSimulation::terminate_particle_shadow(TriangleSource & tri, DagMC::RayHistory & history)
+ParticleSimulation::terminate_particle_shadow(TriangleSource & tri)
 {
   std::stringstream terminationLogString;
   double heatflux = 0.0;
@@ -645,23 +636,22 @@ ParticleSimulation::terminate_particle_maxlength(TriangleSource & tri)
   terminationLogString << "Fieldline trace reached maximum length before intersection";
 }
 
-void
-ParticleSimulation::ray_hit_on_launch(std::unique_ptr<ParticleBase> & particle,
-                                      DagMC::RayHistory & history)
-{
-  DAG->ray_fire(implComplementVol, particle->launchPos.data(), particle->dir.data(), nextSurf,
-                nextSurfDist, &history, trackStepSize, rayOrientation);
-  if (nextSurf != 0)
-  {
-    history.get_last_intersection(intersectedFacet);
-    EntityHandle nextVolEH;
-    DAG->next_vol(nextSurf, implComplementVol, nextVolEH);
-    if (rank == 0)
-    {
-      LOG_INFO << "---- RAY HIT ON LAUNCH [" << facetCounter << "] ----";
-    }
-  }
-}
+// void
+// ParticleSimulation::ray_hit_on_launch(std::unique_ptr<ParticleBase> & particle)
+// {
+//   DAG->ray_fire(implComplementVol, particle->launchPos.data(), particle->dir.data(), nextSurf,
+//                 nextSurfDist, particle->facet_history(), trackStepSize, rayOrientation);
+//   if (nextSurf != 0)
+//   {
+//     particle->history.get_last_intersection(intersectedFacet);
+//     EntityHandle nextVolEH;
+//     DAG->next_vol(nextSurf, implComplementVol, nextVolEH);
+//     if (rank == 0)
+//     {
+//       LOG_INFO << "---- RAY HIT ON LAUNCH [" << facetCounter << "] ----";
+//     }
+//   }
+// }
 
 // Get triangles from the surface(s) of interest
 moab::Range
@@ -1099,13 +1089,14 @@ ParticleSimulation::write_out_mesh(meshWriteOptions option, moab::Range rangeofE
   DAG->moab_instance()->create_meshset(MESHSET_SET, targetMeshset);
   DAG->moab_instance()->add_entities(targetMeshset, targetFacets);
 
-  // remove file extension from input file string
+  // remove file extension and path from output file string
   std::string aegisOut = dagmcInputFile;
   aegisOut = aegisOut.substr(0, aegisOut.find_last_of("."));
   aegisOut = aegisOut.substr(aegisOut.find_last_of("/") + 1, aegisOut.length());
-  std::string aegisOutFull = aegisOut + "_aegis_full.vtk";
-  std::string aegisOutTarget = aegisOut + "_aegis_target.vtk";
-  std::string aegisOutPartial = aegisOut + "_aegis_partial.vtk";
+
+  std::string aegisOutFull = "aegis_full_" + aegisOut + ".vtk";
+  std::string aegisOutTarget = "aegis_target_" + aegisOut + ".vtk";
+  std::string aegisOutPartial = "aegis_partial_" + aegisOut + ".vtk";
 
   switch (option)
   {

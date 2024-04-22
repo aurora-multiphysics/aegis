@@ -29,6 +29,8 @@ class ParticleBase : public AegisBase
   double thresholdDistanceThreshold = 0.0;
   double euclidDistTravelled = 0.0;
   bool thresholdDistanceCrossed = false;
+  moab::DagMC::RayHistory facetHistory;
+  
   coordinateSystem coordSystem = coordinateSystem::CARTESIAN;
   //DagMC::RayHistory history; // stores entity handles of surfaces crossed and facets hit
 
@@ -46,13 +48,12 @@ class ParticleBase : public AegisBase
 
 
 
-  ParticleBase(coordinateSystem coordSys);
+
+  ParticleBase(coordinateSystem coordSys);  
+  void set_facet_history(moab::DagMC::RayHistory history);
 
   // set new particle position
   void set_pos(std::vector<double> newPosition); 
-  
-  // overload for C-style array
-  void set_pos(double newPosition[]); 
 
   // return STL vector of the current position
   std::vector<double> get_pos();
@@ -65,7 +66,6 @@ class ParticleBase : public AegisBase
 
   // return STL vector of unit direction
   std::vector<double> get_dir(); 
-  void check_if_in_bfield(const std::shared_ptr<EquilData> &Equdata); // check if in magnetic field
   void align_dir_to_surf(double Bn); // align particle dir to surface normal
   void update_vectors(double distanceTravelled); // update position  
   void update_vectors(double distanceTravelled, const std::shared_ptr<EquilData> &EquData); // overload to update dir as well

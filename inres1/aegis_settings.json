@@ -1,7 +1,7 @@
 {
   "description": "inres1 test case to compare against SMARDDA",
   "aegis_params":{
-      "DAGMC": "weak_scaling/inres1_start_scaling.h5m",
+      "DAGMC": "inres1_shad.h5m",
       "step_size": 0.005,
       "max_steps": 100000,
       "launch_pos": "fixed",
@@ -27,6 +27,6 @@
       "print_debug_info": false
   },
   "vtk_params":{
-      "draw_particle_tracks": true
+      "draw_particle_tracks": false
   }
  }

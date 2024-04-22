@@ -11,6 +11,11 @@
 
 ParticleBase::ParticleBase(coordinateSystem coordSys) { coordSystem = coordSys; }
 
+void
+ParticleBase::set_facet_history(moab::DagMC::RayHistory history)
+{
+  facetHistory = history;
+}
 // set current particle posXYZition
 void
 ParticleBase::set_pos(std::vector<double> newPosition)
@@ -23,38 +28,6 @@ ParticleBase::set_pos(std::vector<double> newPosition)
   }
   previousPos = posXYZ;
   posXYZ = newPosition; // set the new posXYZition
-}
-
-// overload set_pos() for C-style array
-void
-ParticleBase::set_pos(double newPosition[])
-{
-  std::vector<double> tempVector(3);
-  for (int i = 0; i < 3; i++)
-  {
-    tempVector[i] = newPosition[i];
-  }
-
-  if (posXYZ.empty())
-  {
-    launchPos = tempVector;
-  }
-  posXYZ = tempVector; // set the new posXYZition
-}
-
-// Check if particle is currently in magnetic field
-void
-ParticleBase::check_if_in_bfield(const std::shared_ptr<EquilData> & equilibrium)
-{
-  std::vector<double> currentBfield = equilibrium->b_field(posXYZ, "cart");
-  if (currentBfield.empty())
-  {
-    outOfBounds = true;
-  }
-  else
-  {
-    outOfBounds = false;
-  }
 }
 
 // return STL vector of current particle posXYZition
@@ -82,12 +55,6 @@ ParticleBase::get_psi(const std::shared_ptr<EquilData> & equilibrium)
 void
 ParticleBase::set_dir(const std::shared_ptr<EquilData> & equilibrium)
 {
-  check_if_in_bfield(equilibrium);
-  if (outOfBounds)
-  {
-    return;
-  } // exit function early if out of bounds
-
   double norm = 0;              // normalisation constant for magnetic field
   std::vector<double> normB(3); // normalised magnetic field
   std::vector<double> polarPos =
