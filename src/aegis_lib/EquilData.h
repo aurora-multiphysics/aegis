@@ -81,7 +81,7 @@ class EquilData : public AegisBase
 
   public:
 
-  void setup(const std::shared_ptr<InputJSON> &inputs);
+  void setup(const std::shared_ptr<JsonHandler> &inputs);
 
   
   // Return eqdsk struct

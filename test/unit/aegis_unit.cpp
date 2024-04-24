@@ -335,13 +335,12 @@ TEST_F(aegisUnitTest, eqdsk_read) {
 }
 
 
-TEST_F(aegisUnitTest, cart_polar_coord_transform){
+TEST_F(aegisUnitTest, cart_to_polar_transform){
   std::vector<double> input = {2.4, 5.3, -2.0};
   std::vector<double> output;
-  std::string direction;
   output.reserve(3);
 
-  output = CoordTransform::cart_to_polar(input, direction);
+  output = CoordTransform::cart_to_polar(input);
 
   EXPECT_FLOAT_EQ(output[0], 5.8180752);
   EXPECT_FLOAT_EQ(output[1], -2);
@@ -349,7 +348,20 @@ TEST_F(aegisUnitTest, cart_polar_coord_transform){
 
 }
 
-TEST_F(aegisUnitTest, polar_flux_coord_transform){
+TEST_F(aegisUnitTest, polar_to_cart_transform){
+  std::vector<double> input = {5.8180752, -2.0, -1.1455913};
+  std::vector<double> output;
+  output.reserve(3);
+
+  output = CoordTransform::polar_to_cart(input);
+
+  EXPECT_FLOAT_EQ(output[0], 2.4);
+  EXPECT_FLOAT_EQ(output[1], 5.3);
+  EXPECT_FLOAT_EQ(output[2], -2.0);
+
+}
+
+TEST_F(aegisUnitTest, polar_to_flux_transform){
 
   auto equilibrium = std::make_shared<EquilData>();
   equilibrium->read_eqdsk("test.eqdsk");
@@ -361,7 +373,7 @@ TEST_F(aegisUnitTest, polar_flux_coord_transform){
   std::string direction;
   output.reserve(3);
 
-  output = CoordTransform::polar_to_flux(input, direction, equilibrium);
+  output = CoordTransform::polar_to_flux(input, equilibrium);
 
   EXPECT_FLOAT_EQ(output[0], -2.5001357);
   EXPECT_FLOAT_EQ(output[1], 2.1932724);

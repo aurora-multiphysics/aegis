@@ -14,16 +14,16 @@
 #include <mpi.h>
 
 void
-EquilData::setup(const std::shared_ptr<InputJSON> & inputs)
+EquilData::setup(const std::shared_ptr<JsonHandler> & inputs)
 {
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
   json equilNamelist;
-  if (inputs->data.contains("equil_params"))
+  if (inputs->data().contains("equil_params"))
   {
-    equilNamelist = inputs->data["equil_params"];
+    equilNamelist = inputs->data()["equil_params"];
     eqdskFilepath = equilNamelist["eqdsk"];
     cenopt = equilNamelist["cenopt"];
     powerSOL = equilNamelist["P_sol"];
@@ -812,7 +812,7 @@ EquilData::b_field(std::vector<double> position, std::string startingFrom)
   else
   {
     std::vector<double> polarPosition;
-    polarPosition = CoordTransform::cart_to_polar(position, "forwards");
+    polarPosition = CoordTransform::cart_to_polar(position);
     zr = polarPosition[0];
     zz = polarPosition[1];
   }
@@ -944,10 +944,9 @@ EquilData::write_bfield(int phiSamples)
             log_string(LogLevel::ERROR, "Negative R Values when attempting plot magnetic field. "
                                         "Fixup eqdsk required");
           }
-          polarB = b_field(polarPos, "polar");          // calculate B(R,Z,phi)
-          cartB = b_field_cart(polarB, polarPos[2], 0); // transform to B(x,y,z)
-          cartPos = CoordTransform::cart_to_polar(polarPos,
-                                                  "backwards"); // transform position to cartesian
+          polarB = b_field(polarPos, "polar");               // calculate B(R,Z,phi)
+          cartB = b_field_cart(polarB, polarPos[2], 0);      // transform to B(x,y,z)
+          cartPos = CoordTransform::polar_to_cart(polarPos); // transform position to cartesian
 
           // write out magnetic field data for plotting
           if (cartPos[0] > 0)
@@ -1293,7 +1292,7 @@ EquilData::psi_limiter(std::vector<std::vector<double>> vertices)
   for (auto & i : vertices)
   {
     std::vector<double> cartPos = i;
-    std::vector<double> polarPos = CoordTransform::cart_to_polar(i, "forwards");
+    std::vector<double> polarPos = CoordTransform::cart_to_polar(i);
 
     zr = polarPos[0];
     zz = polarPos[1];
@@ -1397,7 +1396,7 @@ EquilData::get_midplane_params()
 void
 EquilData::check_if_in_bfield(std::vector<double> xyzPos)
 {
-  std::vector<double> polarPos = CoordTransform::cart_to_polar(xyzPos, "forwards");
+  std::vector<double> polarPos = CoordTransform::cart_to_polar(xyzPos);
   double r = polarPos[0];
   double z = polarPos[1];
   if (r < rmin || r > rmax || z < zmin || z > zmax)

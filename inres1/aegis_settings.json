@@ -2,16 +2,16 @@
   "description": "inres1 test case to compare against SMARDDA",
   "aegis_params":{
       "DAGMC": "inres1_shad.h5m",
-      "step_size": 0.005,
-      "max_steps": 100000,
+      "step_size": 0.01,
+      "max_steps": 10000,
       "launch_pos": "fixed",
       "target_surfs": [1,2,3,4,5,6],
       "force_no_deposition": false,
       "coordinate_system": "flux",
       "execution_type": "dynamic",
-      "task_farm_params":{
-          "dynamic_task_size": 16,
-          "worker_profiling_enabled": false        
+      "dynamic_batch_params":{
+          "batch_size":16,
+          "worker_profiling": false        
       } 
   },
   "equil_params":{

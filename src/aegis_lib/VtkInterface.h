@@ -25,7 +25,7 @@
 class VtkInterface : public AegisBase
 {
   public:
-  VtkInterface(const std::shared_ptr<InputJSON> &JSONsettings);
+  VtkInterface(const std::shared_ptr<JsonHandler> &JSONsettings);
   void init_Ptrack_root();
   void init_Ptrack_branch(std::string branchName);
   void init(); // initialise unstructured grid and particle tracks multiblock

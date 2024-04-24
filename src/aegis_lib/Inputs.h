@@ -10,6 +10,7 @@
 #include <sstream>
 #include <any>
 #include <nlohmann/json.hpp>
+#include <variant>
 
 /**
  * Class for storing input settings from JSON file
@@ -18,16 +19,31 @@
 
 using json = nlohmann::json;
 
-class InputJSON
+class JsonHandler
 {
   public:
-  InputJSON();
-  InputJSON(std::string filename);
-  json read_json();
-  json data;
+  JsonHandler();
+  JsonHandler(std::string filename);
+  JsonHandler(json existingJSON);
+  json data();
+  void read_json();
+
+  template <class T> std::optional<T> get(std::string parameter)
+  {
+    if (jsonData.contains(parameter))
+    {
+      return (jsonData[parameter]);
+    }
+    else 
+    {
+      return std::nullopt;
+    }
+  }
+  
 
   private:
   std::string filepath; 
+  json jsonData;
 
 };
 

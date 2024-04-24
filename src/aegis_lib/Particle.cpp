@@ -9,76 +9,103 @@
 #include <moab/Core.hpp>
 #include <moab/OrientedBoxTreeTool.hpp>
 
-ParticleBase::ParticleBase(coordinateSystem coordSys) { coordSystem = coordSys; }
+ParticleBase::ParticleBase(coordinateSystem coordSys, std::vector<double> startingPosition)
+{
+  coordSystem = coordSys;
+  pos = startingPosition;
+}
 
 void
 ParticleBase::set_facet_history(moab::DagMC::RayHistory history)
 {
   facetHistory = history;
 }
-// set current particle posXYZition
+// set current particle position
 void
 ParticleBase::set_pos(std::vector<double> newPosition)
 {
-  if (posXYZ.empty())
+  if (pos.empty())
   {
     launchPos = newPosition;
-    posXYZ = launchPos;
+    pos = launchPos;
     return;
   }
-  previousPos = posXYZ;
-  posXYZ = newPosition; // set the new posXYZition
+  previousPos = pos;
+  pos = newPosition; // set the new position
 }
 
-// return STL vector of current particle posXYZition
+// return STL vector of current particle position
 std::vector<double>
 ParticleBase::get_pos()
 {
-  std::vector<double> currentPosition = posXYZ;
+  std::vector<double> currentPosition = pos;
   return currentPosition;
 }
 
-// return double of psi at current posXYZ
+std::vector<double>
+ParticleBase::get_xyz_pos()
+{
+  switch (coordSystem)
+  {
+    case coordinateSystem::CARTESIAN:
+      return pos;
+
+    case coordinateSystem::POLAR:
+      std::vector<double> cartPos = CoordTransform::polar_to_cart(pos);
+      return cartPos;
+  }
+  return pos;
+}
+
+// return double of psi at current pos
 double
 ParticleBase::get_psi(const std::shared_ptr<EquilData> & equilibrium)
 {
-  std::vector<double> currentPosition;
+  std::vector<double> fluxPos;
+  std::vector<double> polarPos;
   double psi;
-  currentPosition = CoordTransform::cart_to_polar(posXYZ, "forwards");
-  currentPosition = CoordTransform::polar_to_flux(currentPosition, "forwards", equilibrium);
-  psi = currentPosition[0];
+  switch (coordSystem)
+  {
+    case coordinateSystem::CARTESIAN:
+      polarPos = CoordTransform::cart_to_polar(pos);
+      fluxPos = CoordTransform::polar_to_flux(polarPos, equilibrium);
+      psi = fluxPos[0];
+      break;
+    case coordinateSystem::POLAR:
+      fluxPos = CoordTransform::polar_to_flux(polarPos, equilibrium);
+      psi = fluxPos[0];
+  }
 
   return psi;
 }
 
-// set unit drection vector and Bfield at current posXYZition
+// set unit drection vector and Bfield at current position
 void
 ParticleBase::set_dir(const std::shared_ptr<EquilData> & equilibrium)
 {
   double norm = 0;              // normalisation constant for magnetic field
   std::vector<double> normB(3); // normalised magnetic field
-  std::vector<double> polarPos =
-      CoordTransform::cart_to_polar(posXYZ, "forwards"); // polar posXYZition
+  std::vector<double> polarPos; // polar position
   std::vector<double> magn(3);
-  magn = equilibrium->b_field(posXYZ, "cart"); // magnetic field
 
   switch (coordSystem)
   {
     case coordinateSystem::CARTESIAN:
+      polarPos = CoordTransform::cart_to_polar(pos);
+      magn = equilibrium->b_field(pos, "cart"); // magnetic field
       magn = equilibrium->b_field_cart(magn, polarPos[2], 0);
-      Bfield = magn;
-      norm = sqrt(pow(magn[0], 2) + pow(magn[1], 2) + pow(magn[2], 2));
       break;
 
     case coordinateSystem::POLAR:
-      Bfield = magn;
-      norm = sqrt(pow(magn[0], 2) + pow(magn[1], 2) + pow(magn[2], 2));
+      magn = equilibrium->b_field(pos, "polar"); // magnetic field
       break;
 
     case coordinateSystem::FLUX:
       break;
   }
 
+  norm = sqrt(pow(magn[0], 2) + pow(magn[1], 2) + pow(magn[2], 2));
+  Bfield = magn;
   normB[0] = magn[0] / norm;
   normB[1] = magn[1] / norm;
   normB[2] = magn[2] / norm;
@@ -106,39 +133,39 @@ ParticleBase::align_dir_to_surf(double Bn)
   }
 }
 
-// update posXYZition vector of particle with set distance travelled
+// update position vector of particle with set distance travelled
 void
 ParticleBase::update_vectors(double distanceTravelled)
 {
-  // This will update the posXYZition
+  // This will update the position
   std::vector<double> newPt(3);
 
-  double x2 = pow((newPt[0] - posXYZ[0]), 2);
-  double y2 = pow((newPt[1] - posXYZ[1]), 2);
-  double z2 = pow((newPt[2] - posXYZ[2]), 2);
+  double x2 = pow((newPt[0] - pos[0]), 2);
+  double y2 = pow((newPt[1] - pos[1]), 2);
+  double z2 = pow((newPt[2] - pos[2]), 2);
   double thresholdDistUpdate = sqrt(x2 + y2 + z2);
 
   euclidDistTravelled += thresholdDistUpdate;
 
-  newPt[0] = posXYZ[0] + dir[0] * distanceTravelled;
-  newPt[1] = posXYZ[1] + dir[1] * distanceTravelled;
-  newPt[2] = posXYZ[2] + dir[2] * distanceTravelled;
+  newPt[0] = pos[0] + dir[0] * distanceTravelled;
+  newPt[1] = pos[1] + dir[1] * distanceTravelled;
+  newPt[2] = pos[2] + dir[2] * distanceTravelled;
 
   set_pos(newPt);
 }
 
-// update posXYZition vector of particle with set distance travelled and update
-// the particle direction at new posXYZition
+// update position vector of particle with set distance travelled and update
+// the particle direction at new position
 void
 ParticleBase::update_vectors(double distanceTravelled,
                              const std::shared_ptr<EquilData> & equilibrium)
 {
-  // This will update the posXYZition and direction vector of the particle
+  // This will update the position and direction vector of the particle
   std::vector<double> newPt(3);
 
-  newPt[0] = posXYZ[0] + dir[0] * distanceTravelled;
-  newPt[1] = posXYZ[1] + dir[1] * distanceTravelled;
-  newPt[2] = posXYZ[2] + dir[2] * distanceTravelled;
+  newPt[0] = pos[0] + dir[0] * distanceTravelled;
+  newPt[1] = pos[1] + dir[1] * distanceTravelled;
+  newPt[2] = pos[2] + dir[2] * distanceTravelled;
 
   set_pos(newPt);
   set_dir(equilibrium);
@@ -150,11 +177,24 @@ void
 ParticleBase::check_if_midplane_crossed(const std::array<double, 3> & midplaneParameters)
 {
 
-  double x = posXYZ[0];
-  double y = posXYZ[1];
-  double currentZ = posXYZ[2];
-  double r = sqrt(pow(x, 2) + pow(y, 2));
-  double prevZ = previousPos[2];
+  double x, y, r;
+  double currentZ, prevZ;
+
+  switch (coordSystem)
+  {
+    case coordinateSystem::CARTESIAN:
+      x = pos[0];
+      y = pos[1];
+      r = sqrt(pow(x, 2) + pow(y, 2));
+      currentZ = pos[2];
+      prevZ = previousPos[2];
+      break;
+    case coordinateSystem::POLAR:
+      r = pos[0];
+      currentZ = pos[1];
+      prevZ = previousPos[1];
+  }
+
   atMidplane = 0;
 
   double rInnerMidplane = midplaneParameters[0]; // R at inner midplane
@@ -203,7 +243,7 @@ ParticleBase::set_intersection_threshold(double distanceThreshold)
 
 // check if the distance threshold for ray_fire() calls has been called
 // if true returned ray_fire() should be called
-// if false returned then particle posXYZition should update without ray_fire()
+// if false returned then particle position should update without ray_fire()
 bool
 ParticleBase::check_if_threshold_crossed()
 {
@@ -214,5 +254,8 @@ ParticleBase::check_if_threshold_crossed()
     thresholdDistanceSet = false;
     return true;
   }
-  return false;
+  else
+  {
+    return false;
+  }
 }
