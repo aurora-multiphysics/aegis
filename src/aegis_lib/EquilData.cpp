@@ -17,6 +17,7 @@ EquilData::EquilData(const std::shared_ptr<JsonHandler> & configFile)
 {
   if (configFile->data().contains("equil_params"))
   {
+    set_mpi_params();
     auto equilParamsData = configFile->data()["equil_params"];
     JsonHandler equilParams(equilParamsData);
     read_required_params(equilParamsData);
@@ -31,7 +32,7 @@ EquilData::EquilData(const std::shared_ptr<JsonHandler> & configFile)
   }
 }
 
-EquilData::EquilData() {}
+EquilData::EquilData() { set_mpi_params(); }
 
 void
 EquilData::read_optional_params(JsonHandler & equilParams)

@@ -205,7 +205,6 @@ class EquilData : public AegisBase
   alglib::spline1dinterpolant fSpline; // 1d spline interpolant for f(psi) or I(psi) toroidal component
 
   private:
-  int rank, nprocs;
 
   bool debug = false;
   bool drawEquRZ = false;
