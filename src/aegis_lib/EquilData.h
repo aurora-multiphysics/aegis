@@ -80,8 +80,14 @@ class EquilData : public AegisBase
 
 
   public:
+  EquilData(const std::shared_ptr<JsonHandler> &configFile);
+  EquilData();
 
-  void setup(const std::shared_ptr<JsonHandler> &inputs);
+  // read required parameters from config file
+  void read_required_params(json &EquilDataParams);
+  
+  // read optional parameters from config file
+  void read_optional_params(JsonHandler &EquilParams);
 
   
   // Return eqdsk struct

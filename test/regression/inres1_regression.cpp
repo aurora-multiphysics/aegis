@@ -81,9 +81,8 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
   std::string configFilename = "aegis_settings.json";
   auto configFile = std::make_shared<JsonHandler>(configFilename);
 
-  auto equilibrium = std::make_shared<EquilData>();
-  equilibrium->setup(configFile);
-  equilibrium->move();
+  auto equilibrium = std::make_shared<EquilData>(configFile);
+   equilibrium->move();
   equilibrium->psiref_override();
   equilibrium->init_interp_splines();
   equilibrium->centre(1);

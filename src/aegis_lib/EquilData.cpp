@@ -13,35 +13,87 @@
 #include "SimpleLogger.h"
 #include <mpi.h>
 
-void
-EquilData::setup(const std::shared_ptr<JsonHandler> & inputs)
+EquilData::EquilData(const std::shared_ptr<JsonHandler> & configFile)
 {
-
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-
-  json equilNamelist;
-  if (inputs->data().contains("equil_params"))
+  if (configFile->data().contains("equil_params"))
   {
-    equilNamelist = inputs->data()["equil_params"];
-    eqdskFilepath = equilNamelist["eqdsk"];
-    cenopt = equilNamelist["cenopt"];
-    powerSOL = equilNamelist["P_sol"];
-    lambdaQ = equilNamelist["lambda_q"];
-    psiref = equilNamelist["psiref"];
-    rOutrBdry = equilNamelist["r_outrbdry"];
-    rmove = equilNamelist["rmove"];
-    drawEquRZ = equilNamelist["draw_equil_rz"];
-    drawEquXYZ = equilNamelist["draw_equil_xyz"];
-    debug = equilNamelist["print_debug_info"];
+    auto equilParamsData = configFile->data()["equil_params"];
+    JsonHandler equilParams(equilParamsData);
+    read_required_params(equilParamsData);
+    read_optional_params(equilParams);
+    read_eqdsk(eqdskFilepath);
+  }
+  else
+  {
+    std::cerr << "Check config file. Expecting block 'equil_params' containing vital equilibrium "
+                 "parameters \n";
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+}
+
+EquilData::EquilData() {}
+
+void
+EquilData::read_optional_params(JsonHandler & equilParams)
+{
+  cenopt = equilParams.get_optional<int>("cenopt").value_or(cenopt);
+  psiref = equilParams.get_optional<double>("psiref").value_or(psiref);
+  rmove = equilParams.get_optional<double>("rmove").value_or(rmove);
+  drawEquRZ = equilParams.get_optional<bool>("draw_equil_rz").value_or(drawEquRZ);
+  drawEquXYZ = equilParams.get_optional<bool>("draw_equil_xyz").value_or(drawEquXYZ);
+  debug = equilParams.get_optional<bool>("debug").value_or(debug);
+}
+
+void
+EquilData::read_required_params(json & equilParamsData)
+{
+  try
+  {
+    eqdskFilepath = equilParamsData["eqdsk"];
+  }
+  catch (const std::exception & e)
+  {
+    std::cerr << e.what() << '\n';
+    std::cerr << "Check config file. Missing required parameter: 'eqdsk' \n \n";
+    std::cerr << "Terminating program... \n";
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
 
-  if (rank == 0)
+  try
   {
-    std::cout << "eqdskFilePath = " << eqdskFilepath << std::endl;
+    powerSOL = equilParamsData["power_sol"];
+  }
+  catch (const std::exception & e)
+  {
+    std::cerr << e.what() << '\n';
+    std::cerr << "Check config file. Missing required parameter: 'power_sol' \n \n";
+    std::cerr << "Terminating program... \n";
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
 
-  read_eqdsk(eqdskFilepath);
+  try
+  {
+    lambdaQ = equilParamsData["lambda_q"];
+  }
+  catch (const std::exception & e)
+  {
+    std::cerr << e.what() << '\n';
+    std::cerr << "Check config file. Missing required parameter: 'lambda_q' \n \n";
+    std::cerr << "Terminating program... \n";
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+
+  try
+  {
+    rOutrBdry = equilParamsData["r_outrbdry"];
+  }
+  catch (const std::exception & e)
+  {
+    std::cerr << e.what() << '\n';
+    std::cerr << "Check config file. Missing required parameter: 'r_outrbdry' \n \n";
+    std::cerr << "Terminating program... \n";
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
 }
 
 void
@@ -65,7 +117,6 @@ EquilData::read_eqdsk(std::string filename)
   std::stringstream headerSs;
   std::string temp;
   std::vector<int> headerInts;
-
   if (rank == 0)
   {
     std::cout << "------------------------------------------------------" << std::endl;

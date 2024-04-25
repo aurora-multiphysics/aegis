@@ -355,32 +355,53 @@ ParticleSimulation::read_params(const std::shared_ptr<JsonHandler> & configFile)
 
   if (configFile->data().contains("aegis_params"))
   {
-    json aegisParams = configFile->data()["aegis_params"];
+    auto aegisParamsData = configFile->data()["aegis_params"];
+    JsonHandler aegisParams(aegisParamsData);
 
-    dagmcInputFile = aegisParams["DAGMC"];
-    trackStepSize = aegisParams["step_size"];
-    maxTrackSteps = aegisParams["max_steps"];
-    particleLaunchPos = aegisParams["launch_pos"];
-
-    noMidplaneTermination = aegisParams["force_no_deposition"];
-
-    coordinateConfig = aegisParams["coordinate_system"];
-    exeType = aegisParams["execution_type"];
-
-    if (aegisParams.contains("dynamic_batch_params"))
+    try
     {
-      JsonHandler dynamicBatchParams(configFile->data()["aegis_params"]["dynamic_batch_params"]);
-      dynamicBatchSize = aegisParams["dynamic_batch_params"]["batch_size"];
-      workerProfiling = aegisParams["dynamic_batch_params"]["worker_profiling"];
-      // dynamicBatchSize = dynamicBatchParams.get<int>("batch_size").value_or(dynamicBatchSize);
-      // workerProfiling =
-      // dynamicBatchParams.get<bool>("worker_profiling").value_or(workerProfiling); workerDebug =
-      // dynamicBatchParams["worker_debug"];
+      dagmcInputFile = aegisParamsData["DAGMC"];
+    }
+    catch (const std::exception & e)
+    {
+      std::cerr << e.what() << '\n';
+      std::cerr << "Check config file. Missing required parameter: 'eqdsk' \n \n";
+      std::cerr << "Terminating program... \n";
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
-    if (aegisParams.contains("target_surfs"))
+    trackStepSize = aegisParams.get_optional<double>("step_size").value_or(trackStepSize);
+
+    maxTrackSteps = aegisParams.get_optional<int>("max_steps").value_or(maxTrackSteps);
+
+    particleLaunchPos =
+        aegisParams.get_optional<std::string>("launch_pos").value_or(particleLaunchPos);
+
+    noMidplaneTermination =
+        aegisParams.get_optional<bool>("force_no_deposition").value_or(noMidplaneTermination);
+
+    coordinateConfig =
+        aegisParams.get_optional<std::string>("coordinate_system").value_or(coordinateConfig);
+
+    exeType = aegisParams.get_optional<std::string>("execution_type").value_or(exeType);
+
+    if (aegisParamsData.contains("dynamic_batch_params"))
     {
-      for (auto i : aegisParams["target_surfs"])
+      auto dynamicBatchParamsData = configFile->data()["aegis_params"]["dynamic_batch_params"];
+      JsonHandler dynamicBatchParams(dynamicBatchParamsData);
+
+      dynamicBatchSize =
+          dynamicBatchParams.get_optional<int>("batch_size").value_or(dynamicBatchSize);
+
+      workerProfiling =
+          dynamicBatchParams.get_optional<bool>("worker_profiling").value_or(workerProfiling);
+
+      workerDebug = dynamicBatchParams.get_optional<bool>("worker_debug").value_or(workerDebug);
+    }
+
+    if (aegisParamsData.contains("target_surfs"))
+    {
+      for (auto i : aegisParamsData["target_surfs"])
       {
         vectorOfTargetSurfs.push_back(i);
       }

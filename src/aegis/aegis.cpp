@@ -34,8 +34,7 @@ main(int argc, char ** argv)
 
   auto configFile = std::make_shared<JsonHandler>(configFileName);
 
-  auto equilibrium = std::make_shared<EquilData>();
-  equilibrium->setup(configFile);
+  auto equilibrium = std::make_shared<EquilData>(configFile);
   equilibrium->move();
   equilibrium->psiref_override();
   equilibrium->init_interp_splines();

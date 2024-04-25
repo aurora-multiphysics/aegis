@@ -11,6 +11,7 @@
 #include <any>
 #include <nlohmann/json.hpp>
 #include <variant>
+#include <AegisBase.h>
 
 /**
  * Class for storing input settings from JSON file
@@ -19,29 +20,32 @@
 
 using json = nlohmann::json;
 
-class JsonHandler
+class JsonHandler : public AegisBase
 {
-  public:
+public:
+
   JsonHandler();
   JsonHandler(std::string filename);
   JsonHandler(json existingJSON);
   json data();
   void read_json();
 
-  template <class T> std::optional<T> get(std::string parameter)
+  template <class T> std::optional<T> get_optional(std::string paramName)  
   {
-    if (jsonData.contains(parameter))
+    if (jsonData.contains(paramName))
     {
-      return (jsonData[parameter]);
+      return (jsonData[paramName]);
     }
     else 
     {
+      std::stringstream ss;
+      ss << "Default value used for parameter " << paramName;
+      log_string(LogLevel::INFO, ss.str());
       return std::nullopt;
-    }
+    }  
   }
   
-
-  private:
+private:
   std::string filepath; 
   json jsonData;
 
