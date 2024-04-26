@@ -358,17 +358,7 @@ ParticleSimulation::read_params(const std::shared_ptr<JsonHandler> & configFile)
     auto aegisParamsData = configFile->data()["aegis_params"];
     JsonHandler aegisParams(aegisParamsData);
 
-    try
-    {
-      dagmcInputFile = aegisParamsData["DAGMC"];
-    }
-    catch (const std::exception & e)
-    {
-      std::cerr << e.what() << '\n';
-      std::cerr << "Check config file. Missing required parameter: 'eqdsk' \n \n";
-      std::cerr << "Terminating program... \n";
-      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-    }
+    dagmcInputFile = aegisParams.get_required<std::string>("DAGMC");
 
     trackStepSize = aegisParams.get_optional<double>("step_size").value_or(trackStepSize);
 

@@ -30,19 +30,26 @@ public:
   json data();
   void read_json();
 
-  template <class T> std::optional<T> get_optional(std::string paramName)  
+  template <class T> [[nodiscard]] T get_required(std::string paramName)  
+  { 
+    if(!jsonData.contains(paramName)) 
+      {
+        std::cerr << "Check config file - missing required parameter: {" << paramName << "} \n \n";
+        error_abort_mpi();
+      }
+    return jsonData[paramName];
+  }
+
+  template <class T> [[nodiscard]] std::optional<T> get_optional(std::string paramName)  
   {
-    if (jsonData.contains(paramName))
-    {
-      return (jsonData[paramName]);
-    }
-    else 
+    if (!jsonData.contains(paramName))
     {
       std::stringstream ss;
       ss << "Default value used for parameter " << paramName;
       log_string(LogLevel::INFO, ss.str());
       return std::nullopt;
-    }  
+    }
+    return (jsonData[paramName]);
   }
   
 private:

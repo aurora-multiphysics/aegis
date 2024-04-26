@@ -1,18 +1,20 @@
 #include "AegisBase.h"
 #include <mpi.h>
 
-// print error message and MPI_Finalize() exit out of code
+// print error message and MPI_Abort() exit out of code
 void
-AegisBase::error_exit_mpi(std::string inString, std::string file, std::string func, int line,
-                          int rank)
+AegisBase::error_abort_mpi()
 {
-  std::cout << file << ":" << func << ":" << line << ":RANK[" << rank << "] --- " << inString
+  std::cerr << "Terminating program... \n";
+  MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+}
+
+void
+AegisBase::debug_error_exit(std::string errorString, char * file, char * func, int line, int rank)
+{
+  std::cout << file << ":" << func << ":" << line << ":RANK[" << rank << "] --- " << errorString
             << std::endl;
-  if (MPI_Finalize() != MPI_SUCCESS)
-  {
-    std::cout << "ERROR: MPI_Finalize != MPI_SUCCESS" << std::endl;
-  }
-  std::exit(1);
+  MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 }
 
 // cout for strings only on rank 0

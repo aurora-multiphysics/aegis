@@ -18,10 +18,7 @@ EquilData::EquilData(const std::shared_ptr<JsonHandler> & configFile)
   if (configFile->data().contains("equil_params"))
   {
     set_mpi_params();
-    auto equilParamsData = configFile->data()["equil_params"];
-    JsonHandler equilParams(equilParamsData);
-    read_required_params(equilParamsData);
-    read_optional_params(equilParams);
+    read_params(configFile);
     read_eqdsk(eqdskFilepath);
   }
   else
@@ -35,65 +32,29 @@ EquilData::EquilData(const std::shared_ptr<JsonHandler> & configFile)
 EquilData::EquilData() { set_mpi_params(); }
 
 void
-EquilData::read_optional_params(JsonHandler & equilParams)
+EquilData::read_params(const std::shared_ptr<JsonHandler> & configFile)
 {
-  cenopt = equilParams.get_optional<int>("cenopt").value_or(cenopt);
-  psiref = equilParams.get_optional<double>("psiref").value_or(psiref);
-  rmove = equilParams.get_optional<double>("rmove").value_or(rmove);
-  drawEquRZ = equilParams.get_optional<bool>("draw_equil_rz").value_or(drawEquRZ);
-  drawEquXYZ = equilParams.get_optional<bool>("draw_equil_xyz").value_or(drawEquXYZ);
-  debug = equilParams.get_optional<bool>("debug").value_or(debug);
-}
+  if (configFile->data().contains("equil_params"))
+  {
+    auto equilParamsData = configFile->data()["equil_params"];
+    JsonHandler equilParams(equilParamsData);
+    // get required parameters
+    eqdskFilepath = equilParams.get_required<std::string>("eqdsk");
+    powerSOL = equilParams.get_required<double>("power_sol");
+    lambdaQ = equilParams.get_required<double>("lambda_q");
+    rOutrBdry = equilParams.get_required<double>("r_outrbdry");
 
-void
-EquilData::read_required_params(json & equilParamsData)
-{
-  try
-  {
-    eqdskFilepath = equilParamsData["eqdsk"];
+    // get optional parameters
+    cenopt = equilParams.get_optional<int>("cenopt").value_or(cenopt);
+    psiref = equilParams.get_optional<double>("psiref").value_or(psiref);
+    rmove = equilParams.get_optional<double>("rmove").value_or(rmove);
+    drawEquRZ = equilParams.get_optional<bool>("draw_equil_rz").value_or(drawEquRZ);
+    drawEquXYZ = equilParams.get_optional<bool>("draw_equil_xyz").value_or(drawEquXYZ);
+    debug = equilParams.get_optional<bool>("debug").value_or(debug);
   }
-  catch (const std::exception & e)
+  else
   {
-    std::cerr << e.what() << '\n';
-    std::cerr << "Check config file. Missing required parameter: 'eqdsk' \n \n";
-    std::cerr << "Terminating program... \n";
-    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-  }
-
-  try
-  {
-    powerSOL = equilParamsData["power_sol"];
-  }
-  catch (const std::exception & e)
-  {
-    std::cerr << e.what() << '\n';
-    std::cerr << "Check config file. Missing required parameter: 'power_sol' \n \n";
-    std::cerr << "Terminating program... \n";
-    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-  }
-
-  try
-  {
-    lambdaQ = equilParamsData["lambda_q"];
-  }
-  catch (const std::exception & e)
-  {
-    std::cerr << e.what() << '\n';
-    std::cerr << "Check config file. Missing required parameter: 'lambda_q' \n \n";
-    std::cerr << "Terminating program... \n";
-    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-  }
-
-  try
-  {
-    rOutrBdry = equilParamsData["r_outrbdry"];
-  }
-  catch (const std::exception & e)
-  {
-    std::cerr << e.what() << '\n';
-    std::cerr << "Check config file. Missing required parameter: 'r_outrbdry' \n \n";
-    std::cerr << "Terminating program... \n";
-    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    std::cerr << "JSON file missing equil_params block";
   }
 }
 
