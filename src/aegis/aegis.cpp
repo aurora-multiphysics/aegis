@@ -44,7 +44,8 @@ main(int argc, char ** argv)
   ParticleSimulation simulation(configFile, equilibrium);
   simulation.Execute();
 
-  auto mpiTimings = configFile->data()["global_params"]["mpi_timings"];
+  JsonHandler globalParams(configFile->data()["global_params"]);
+  bool mpiTimings = globalParams.get_optional<bool>("mpi_timings").value_or(false);
 
   if (mpiTimings) // print individual timings for each MPI rank
   {
