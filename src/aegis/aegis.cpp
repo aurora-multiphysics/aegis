@@ -44,15 +44,29 @@ main(int argc, char ** argv)
   ParticleSimulation simulation(configFile, equilibrium);
   simulation.Execute();
 
-  for (int i = 0; i < nprocs; ++i)
+  auto mpiTimings = configFile->data()["global_params"]["mpi_timings"];
+
+  if (mpiTimings) // print individual timings for each MPI rank
   {
-    if (rank == i)
+    for (int i = 1; i < nprocs; ++i)
     {
-      double endTime = MPI_Wtime();
-      double totalTime = endTime - startTime;
-      std::cout << "Elapsed wall Time on process " << i << " = " << totalTime << std::endl;
-      std::cout << "----------------------------" << std::endl << std::endl;
+      if (rank == i)
+      {
+        double endTime = MPI_Wtime();
+        double totalTime = endTime - startTime;
+        std::cout << "Elapsed wall Time on process " << i << " = " << totalTime << "\n";
+        std::cout << "---------------------------- \n \n";
+      }
     }
+  }
+
+  if (rank == 0) // print final wall time once rank 0 is complete
+  {
+    double endTime = MPI_Wtime();
+    double totalTime = endTime - startTime;
+    std::cout << "\n---------------------------- \n";
+    std::cout << "Total elapsed wall Time = " << totalTime << "\n";
+    std::cout << "---------------------------- \n" << std::endl;
   }
 
   MPI_Finalize();

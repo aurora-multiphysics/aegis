@@ -66,36 +66,38 @@ ParticleSimulation::test_cyl_ray_fire(std::unique_ptr<ParticleBase> & particle)
 void
 ParticleSimulation::Execute()
 {
-  string_to_lowercase(exeType);
+  string_to_lowercase(executionType);
 
-  if (exeType == "serial" || nprocs == 1)
+  if (executionType == "serial" || nprocs == 1)
   {
     log_string(LogLevel::WARNING, "Executing in serial mode...");
     if (nprocs > 1)
     {
       log_string(LogLevel::ERROR, "Aegis was invoked with mpirun but config suggests serial run. "
                                   "Defaulting to MPI with no load balancing...");
+      executionType = "mpi";
       Execute_mpi();
     }
     else
     {
+      executionType = "serial";
       Execute_serial();
     }
   }
 
-  else if (exeType == "mpi")
+  else if (executionType == "mpi")
   {
     log_string(LogLevel::WARNING, "Executing MPI with no load balancing...");
     Execute_mpi();
   }
 
-  else if (exeType == "mpi_padded" || exeType == "padded")
+  else if (executionType == "mpi_padded" || executionType == "padded")
   {
     log_string(LogLevel::WARNING, "Executing padded MPI with no load balancing...");
     Execute_padded_mpi();
   }
 
-  else if (exeType == "mpi_dynamic" || exeType == "dynamic")
+  else if (executionType == "mpi_dynamic" || executionType == "dynamic")
   {
     log_string(LogLevel::WARNING, "Executing dynamic MPI load balancing...");
     Execute_dynamic_mpi();
@@ -178,8 +180,10 @@ ParticleSimulation::Execute_dynamic_mpi()
     write_out_mesh(meshWriteOptions::BOTH, targetFacets);
   }
 
-  mpi_particle_stats();
-
+  if (printMpiParticleStats)
+  {
+    mpi_particle_stats();
+  }
   print_particle_stats(totalParticleStats);
 }
 
@@ -225,24 +229,11 @@ ParticleSimulation::handler(std::vector<double> & handlerQVals)
       MPI_Recv(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, MPI_ANY_SOURCE, mpiDataTag,
                MPI_COMM_WORLD, &status);
       MPI_Recv(&workerStartIndex, 1, MPI_INT, MPI_ANY_SOURCE, mpiIndexTag, MPI_COMM_WORLD, &status);
-      // printf("Time taken to recieve next data = %f \n", MPI_Wtime());
 
       particlesHandled += dynamicBatchSize;
       batchesComplete += 1;
-      // progress indicator
 
-      if (batchesComplete == totalBatches / 4)
-      {
-        std::cout << "25% ... " << std::flush;
-      }
-      else if (batchesComplete == totalBatches / 2)
-      {
-        std::cout << "50% ... " << std::flush;
-      }
-      else if (batchesComplete == 3 * totalBatches / 4)
-      {
-        std::cout << "75% ... " << std::flush;
-      }
+      update_progress_indicator(batchesComplete, totalBatches);
 
       counter += workerQVals.size();
       double * ptr = handlerQVals.data() + workerStartIndex;
@@ -373,7 +364,10 @@ ParticleSimulation::read_params(const std::shared_ptr<JsonHandler> & configFile)
     coordinateConfig =
         aegisParams.get_optional<std::string>("coordinate_system").value_or(coordinateConfig);
 
-    exeType = aegisParams.get_optional<std::string>("execution_type").value_or(exeType);
+    executionType = aegisParams.get_optional<std::string>("execution_type").value_or(executionType);
+
+    printMpiParticleStats =
+        aegisParams.get_optional<bool>("print_mpi_particle_stats").value_or(printMpiParticleStats);
 
     if (aegisParamsData.contains("dynamic_batch_params"))
     {
@@ -536,6 +530,10 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
     }
 
     heatfluxVals.push_back(tri.heatflux());
+    if (executionType == "serial")
+    {
+      update_progress_indicator(i, endFacet);
+    }
   }
 
   double endTime = MPI_Wtime();
@@ -829,19 +827,21 @@ ParticleSimulation::mpi_particle_stats()
   {
     if (rank == i)
     {
-      std::cout << std::endl
-                << "process " << i << " has the following particle stats:" << std::endl;
+      std::cout << "\n"
+                << "process " << i << " has the following particle stats:"
+                << "\n";
       std::array localRankParticleStats = integrator->particle_stats();
 
-      std::cout << "DEPOSITING - " << localRankParticleStats[0] << std::endl;
-      std::cout << "SHADOWED - " << localRankParticleStats[1] << std::endl;
-      std::cout << "LOST - " << localRankParticleStats[2] << std::endl;
-      std::cout << "MAX LENGTH - " << localRankParticleStats[3] << std::endl;
+      std::cout << "DEPOSITING - " << localRankParticleStats[0] << "\n";
+      std::cout << "SHADOWED - " << localRankParticleStats[1] << "\n";
+      std::cout << "LOST - " << localRankParticleStats[2] << "\n";
+      std::cout << "MAX LENGTH - " << localRankParticleStats[3] << "\n";
 
       int totalParticlesHandled = localRankParticleStats[0] + localRankParticleStats[1] +
                                   localRankParticleStats[2] + localRankParticleStats[3];
 
-      std::cout << "TOTAL - " << totalParticlesHandled << std::endl;
+      std::cout << "TOTAL - " << totalParticlesHandled << "\n";
+      std::cout << std::endl;
     }
   }
 }
@@ -960,7 +960,10 @@ ParticleSimulation::Execute_padded_mpi()
     write_out_mesh(meshWriteOptions::BOTH, targetFacets);
   }
 
-  mpi_particle_stats();
+  if (printMpiParticleStats)
+  {
+    mpi_particle_stats();
+  }
   print_particle_stats(totalParticleStats);
 }
 
@@ -1048,7 +1051,10 @@ ParticleSimulation::Execute_mpi()
     write_out_mesh(meshWriteOptions::BOTH, targetFacets);
   }
 
-  mpi_particle_stats();
+  if (printMpiParticleStats)
+  {
+    mpi_particle_stats();
+  }
   print_particle_stats(totalParticleStats);
 
   endTime = MPI_Wtime();
@@ -1147,6 +1153,8 @@ ParticleSimulation::write_out_mesh(meshWriteOptions option, moab::Range rangeofE
 {
   // mesh_coord_transform(coordinateSystem::CARTESIAN);
   // get target meshset for aegis_target outputs
+  std::cout << std::endl;
+
   DAG->remove_graveyard();
   EntityHandle targetMeshset;
   DAG->moab_instance()->create_meshset(MESHSET_SET, targetMeshset);
@@ -1240,5 +1248,18 @@ ParticleSimulation::mesh_coord_transform(coordinateSystem coordSys)
     default:
       std::cout << "No coordinate system provided for mesh coordinate transform" << std::endl;
       break;
+  }
+}
+
+// progress indicator
+void
+ParticleSimulation::update_progress_indicator(int batchesComplete, int totalBatches)
+{
+  for (int i = 1; i <= 10; ++i)
+  {
+    if (batchesComplete == (i * totalBatches / 10))
+    {
+      std::cout << "| " << i * 10 << "% " << std::flush;
+    }
   }
 }

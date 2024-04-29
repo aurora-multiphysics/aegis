@@ -122,11 +122,11 @@ class ParticleSimulation : public AegisBase
   void write_out_mesh(meshWriteOptions option, moab::Range rangeOfEntities = {});
   void mesh_coord_transform(coordinateSystem coordSys);
   void select_coordinate_system();
-  
+  void update_progress_indicator(int batchesComplete, int totalBatches);
+
   // Simulation config parameters
-  std::string exeType = "dynamic";
-  std::string dagmcInputFile; // no defaults because 
-  std::string eqdskInputFile;
+  std::string executionType = "dynamic";
+  std::string dagmcInputFile; // parameter required to be specified by user
   double powerSOL = 0.0;
   double lambdaQ = 0.0; 
   double trackStepSize = 0.001;
@@ -139,6 +139,7 @@ class ParticleSimulation : public AegisBase
   bool workerDebug = false;
   coordinateSystem coordSys = coordinateSystem::CARTESIAN; // default cartesian 
   bool noMidplaneTermination = false;
+  bool printMpiParticleStats = false;
 
   std::vector<TriangleSource> listOfTriangles;
   int totalNumberOfFacets = 0;

@@ -1,5 +1,6 @@
 {
   "description": "inres1 test case to compare against SMARDDA",
+  "global_params": {"mpi_timings": false},
   "aegis_params":{
       "DAGMC": "inres1_shad.h5m",
       "step_size": 0.01,
@@ -9,10 +10,11 @@
       "force_no_deposition": false,
       "coordinate_system": "flux",
       "execution_type": "dynamic",
+      "print_mpi_particle_stats":false,
       "dynamic_batch_params":{
           "batch_size":16,
           "worker_profiling": false,
-	      "worker_debug":false
+          "worker_debug":false
       } 
   },
   "equil_params":{
