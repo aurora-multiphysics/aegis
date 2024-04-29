@@ -100,8 +100,8 @@ Sources::set_heatflux_params(const std::shared_ptr<EquilData> & equilibrium,
   std::vector<double> bField;
   std::vector<double> bFieldXYZ;
 
-  polarPos = CoordTransform::cart_to_polar(launchPos, "forwards");
-  fluxPos = CoordTransform::polar_to_flux(polarPos, "forwards", equilibrium);
+  polarPos = CoordTransform::cart_to_polar(launchPos);
+  fluxPos = CoordTransform::polar_to_flux(polarPos, equilibrium);
 
   bField = equilibrium->b_field(polarPos, "forwards");
 

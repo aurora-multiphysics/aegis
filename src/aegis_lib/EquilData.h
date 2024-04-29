@@ -80,8 +80,12 @@ class EquilData : public AegisBase
 
 
   public:
+  EquilData(const std::shared_ptr<JsonHandler> &configFile);
+  EquilData();
 
-  void setup(const std::shared_ptr<InputJSON> &inputs);
+  
+  // read parameters from json file
+  void read_params(const std::shared_ptr<JsonHandler> & configFile);
 
   
   // Return eqdsk struct
@@ -199,7 +203,6 @@ class EquilData : public AegisBase
   alglib::spline1dinterpolant fSpline; // 1d spline interpolant for f(psi) or I(psi) toroidal component
 
   private:
-  int rank, nprocs;
 
   bool debug = false;
   bool drawEquRZ = false;

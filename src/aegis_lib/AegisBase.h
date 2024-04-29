@@ -36,7 +36,9 @@ class AegisBase
   public:
 
   protected:
-  void error_exit_mpi(std::string inString, std::string file, std::string func, int line, int rank);
+  void error_abort_mpi();
+  void debug_error_exit(std::string errorString, char *file, char *func, int line,
+                          int rank);
   void print_mpi(std::string inString);
   void log_string(LogLevel level, std::string inString);
   void set_mpi_params();

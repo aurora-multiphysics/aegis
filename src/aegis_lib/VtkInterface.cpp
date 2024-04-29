@@ -1,13 +1,13 @@
 #include "VtkInterface.h"
 #include "SimpleLogger.h"
 
-VtkInterface::VtkInterface(const std::shared_ptr<InputJSON> & inputs)
+VtkInterface::VtkInterface(const std::shared_ptr<JsonHandler> & inputs)
 {
   json vtkNamelist;
 
-  if (inputs->data.contains("vtk_params"))
+  if (inputs->data().contains("vtk_params"))
   {
-    vtkNamelist = inputs->data["vtk_params"];
+    vtkNamelist = inputs->data()["vtk_params"];
     drawParticleTracks = vtkNamelist["draw_particle_tracks"];
   }
 

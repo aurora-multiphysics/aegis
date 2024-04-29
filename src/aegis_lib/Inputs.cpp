@@ -8,17 +8,25 @@
 #include <mpi.h>
 #include <sstream>
 
-InputJSON::InputJSON() = default;
+JsonHandler::JsonHandler() = default;
 
-InputJSON::InputJSON(std::string filename)
+JsonHandler::JsonHandler(std::string filename)
 {
   filepath = filename;
 
-  data = read_json();
+  read_json();
 }
 
+JsonHandler::JsonHandler(json existingJSON) { jsonData = existingJSON; }
+
 json
-InputJSON::read_json()
+JsonHandler::data()
+{
+  return jsonData;
+}
+
+void
+JsonHandler::read_json()
 {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -29,8 +37,8 @@ InputJSON::read_json()
     {
       std::cout << "Settings found in JSON file '" << filepath << "'" << std::endl;
     }
-    json data = json::parse(file);
-    return data;
+    jsonData = json::parse(file);
+    return;
   }
   else
   {

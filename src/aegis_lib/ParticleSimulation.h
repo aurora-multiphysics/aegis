@@ -78,16 +78,15 @@ enum class ExecuteOptions
 class ParticleSimulation : public AegisBase
 {
   public:
-  ParticleSimulation(std::shared_ptr<InputJSON> configFile, std::shared_ptr<EquilData> equil);
+  ParticleSimulation(std::shared_ptr<JsonHandler> configFile, std::shared_ptr<EquilData> equil);
   void Execute(); // switch between runs
   void Execute_serial(); // serial
   void Execute_mpi(); // MPI_Gatherv
   void Execute_dynamic_mpi(); // dynamic load balancing
   void Execute_padded_mpi(); // padded MPI_Gather
   void init_geometry();
-  int num_facets();
   std::vector<std::pair<double,double>> psiQ_values; // for l2 norm test
-
+  int target_num_facets();
 
   protected:
 
@@ -105,18 +104,18 @@ class ParticleSimulation : public AegisBase
   void polar_track();
   void flux_track();
   
-  terminationState loop_over_particle_track(TriangleSource&tri, std::unique_ptr<ParticleBase> &particle, DagMC::RayHistory &history); // loop over individual particle tracks
+  terminationState loop_over_particle_track(TriangleSource&tri, std::unique_ptr<ParticleBase> &particle); // loop over individual particle tracks
   void terminate_particle_depositing(TriangleSource&tri); // end particle track
-  void terminate_particle_shadow(TriangleSource&tri, DagMC::RayHistory &history); // end particle track
+  void terminate_particle_shadow(TriangleSource&tri); // end particle track
   void terminate_particle_lost(TriangleSource&tri); // end particle track
   void terminate_particle_maxlength(TriangleSource&tri); // end particle track
+  void test_cyl_ray_fire(std::unique_ptr<ParticleBase> &particle);  
   
   
-  
-  void ray_hit_on_launch(std::unique_ptr<ParticleBase> &particle, DagMC::RayHistory &history); // particle hit on initial launch from surface
+  void ray_hit_on_launch(std::unique_ptr<ParticleBase> &particle); // particle hit on initial launch from surface
   void print_particle_stats(std::array<int, 5> particleStats); // print number of particles that reached each termination state
   void mpi_particle_stats(); // get inidividual particle stats for each process
-  void read_params(const std::shared_ptr<InputJSON> &inputs); // read parameters from aegis_settings.json
+  void read_params(const std::shared_ptr<JsonHandler> &inputs); // read parameters from aegis_settings.json
   void attach_mesh_attribute(const std::string &tagName, moab::Range &entities, std::vector<double> &dataToAttach);
   void attach_mesh_attribute(const std::string &tagName, moab::Range &entities, std::vector<std::vector<double>> &dataToAttach);
   
@@ -124,42 +123,34 @@ class ParticleSimulation : public AegisBase
   void mesh_coord_transform(coordinateSystem coordSys);
   void select_coordinate_system();
   
-  std::string exeType;
-  int nFacets;
-  
-  std::vector<TriangleSource> listOfTriangles;
-  unsigned int totalNumberOfFacets = 0;
-
-  std::string settingsFileName;
-  std::shared_ptr<InputJSON> JSONsettings; 
-  std::string dagmcInputFile;
-  std::string vtkInputFile;
+  // Simulation config parameters
+  std::string exeType = "dynamic";
+  std::string dagmcInputFile; // no defaults because 
   std::string eqdskInputFile;
   double powerSOL = 0.0;
   double lambdaQ = 0.0; 
-  double trackStepSize;
+  double trackStepSize = 0.001;
   int maxTrackSteps = 0;
-  std::string particleLaunchPos;
-  double userROutrBdry;
-  std::string drawParticleTracks;
-  int dynamicTaskSize;
-  std::string coordInputStr;
+  std::string particleLaunchPos = "fixed";
+  double userROutrBdry = 0.0;
+  int dynamicBatchSize = 16;
+  std::string coordinateConfig = "cart";
   bool workerProfiling = false;
+  bool workerDebug = false;
   coordinateSystem coordSys = coordinateSystem::CARTESIAN; // default cartesian 
-
-  double rmove = 0.0;
-  double zmove = 0.0;
-  double fscale = 1.0;
-  double psiref = 0.0;
   bool noMidplaneTermination = false;
+
+  std::vector<TriangleSource> listOfTriangles;
+  int totalNumberOfFacets = 0;
+
   std::vector<int> vectorOfTargetSurfs;
   unsigned int numberOfRayFireCalls = 0;
   unsigned int numberOfClosestLocCalls = 0;
   unsigned int iterationCounter=0;
 
+
+  // DAGMC variables
   std::unique_ptr<moab::DagMC> DAG;
-  std::unique_ptr<moab::DagMC> polarDAG;
-  std::unique_ptr<moab::DagMC> fluxDAG;
   moab::Range surfsList; // list of moab::EntityHandle of surfaces in mesh
   moab::Range volsList; // list of moab::EntityHandle of volumes in mesh
   moab::Range facetsList; // list of moab::EntityHandle of facets in mesh
@@ -167,7 +158,7 @@ class ParticleSimulation : public AegisBase
   std::vector<EntityHandle> nodesList; // list of moab::EntityHandle of nodes in mesh
   std::vector<double> nodeCoords; // 1D flattended list of node XYZ coordinates 
   std::vector<double> nodeCoordsPol; // 1D flattended list of node polar coordinates
-  int numFacets = 0;
+  int targetNumFacets = 0;
   int numNodes = 0;
   moab::EntityHandle prevSurf;
   moab::EntityHandle nextSurf;
@@ -176,17 +167,11 @@ class ParticleSimulation : public AegisBase
   moab::EntityHandle intersectedFacet;
   int rayOrientation = 1; // rays are fired along surface normals
   double trackLength = 0.0;
-  int facetCounter = 0;
 
-  std::vector<double> qValues;
-  std::vector<double> psiValues;
   double startTime;
-  double endTime;
   double facetsLoopTime;
 
   std::shared_ptr<EquilData> equilibrium;
-  bool plotBFieldRZ = false;
-  bool plotBFieldXYZ = false;
   
   std::unique_ptr<SurfaceIntegrator> integrator;
 

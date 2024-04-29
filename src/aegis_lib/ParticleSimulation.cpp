@@ -2,19 +2,64 @@
 #include <mpi.h>
 
 // setup AEGIS simulation
-ParticleSimulation::ParticleSimulation(std::shared_ptr<InputJSON> configFile,
+ParticleSimulation::ParticleSimulation(std::shared_ptr<JsonHandler> configFile,
                                        std::shared_ptr<EquilData> equil)
 {
   set_mpi_params();
 
-  JSONsettings = configFile;
-
-  read_params(JSONsettings);
+  read_params(configFile);
   equilibrium = equil;
   DAG = std::make_unique<moab::DagMC>();
-  vtkInterface = std::make_unique<VtkInterface>(JSONsettings);
+  vtkInterface = std::make_unique<VtkInterface>(configFile);
 
   init_geometry();
+}
+
+void
+ParticleSimulation::test_cyl_ray_fire(std::unique_ptr<ParticleBase> & particle)
+{
+
+  std::ofstream coordinateTest("coords.txt");
+  std::ofstream coordinateTest2("coords2.txt");
+  std::vector<double> cartPos = particle->pos;
+  std::vector<double> bfieldXYZ = particle->dir;
+  std::vector<double> polPos = CoordTransform::cart_to_polar(cartPos);
+  std::vector<double> bFieldRZ = equilibrium->b_field(cartPos, "");
+
+  std::vector<double> outputPosition1(3), outputPosition2(3);
+  ParticleBase cartParticle(coordinateSystem::CARTESIAN, cartPos);
+  cartParticle.set_pos(cartPos);
+  cartParticle.set_dir(equilibrium);
+
+  ParticleBase polarParticle(coordinateSystem::POLAR, polPos);
+  polarParticle.set_pos(polPos);
+  polarParticle.set_dir(equilibrium);
+
+  double cartStepSize = 0.01;
+  double polarStepSize = 0.1;
+  double distanceToSurf;
+  moab::EntityHandle eh;
+  moab::DagMC::RayHistory history;
+
+  for (int i = 0; i < 1000; ++i)
+  {
+    DAG->ray_fire(implComplementVol, cartParticle.pos.data(), cartParticle.dir.data(), eh,
+                  distanceToSurf, &history, cartStepSize, 1);
+    cartParticle.update_vectors(cartStepSize);
+    cartParticle.set_dir(equilibrium);
+    coordinateTest << cartParticle.pos[0] << " " << cartParticle.pos[1] << " "
+                   << cartParticle.pos[2] << std::endl;
+  }
+
+  for (int i = 0; i < 100; ++i)
+  {
+    DAG->ray_fire(implComplementVol, polarParticle.pos.data(), polarParticle.dir.data(), eh,
+                  distanceToSurf, &history, cartStepSize, 1);
+    polarParticle.update_vectors(polarStepSize);
+    polarParticle.set_dir(equilibrium);
+    cartPos = CoordTransform::polar_to_cart(polarParticle.pos);
+    coordinateTest2 << cartPos[0] << " " << cartPos[1] << " " << cartPos[2] << std::endl;
+  }
 }
 
 // Call different execute functions depending on which execute type selected
@@ -60,6 +105,7 @@ ParticleSimulation::Execute()
   {
     log_string(LogLevel::FATAL, "No suitable execution type ('serial', 'mpi', 'mpi_padded', "
                                 "'mpi_dynamic') provided exiting...");
+    MPI_Abort(MPI_COMM_WORLD, 1);
     std::exit(1);
   }
 }
@@ -76,7 +122,7 @@ ParticleSimulation::Execute_dynamic_mpi()
 
   const int noMoreWork = -1;
 
-  std::vector<double> handlerQVals(num_facets());
+  std::vector<double> handlerQVals(target_num_facets());
   // int counter = 0;
   setup_sources();
 
@@ -148,17 +194,17 @@ ParticleSimulation::handler(std::vector<double> & handlerQVals)
   int noMoreWork = -1;
   int counter = 0;
 
-  std::vector<double> workerQVals(dynamicTaskSize);
+  std::vector<double> workerQVals(dynamicBatchSize);
   std::cout << "Dynamic task scheduling with " << (nprocs - 1) << " processes, each handling "
-            << dynamicTaskSize << " facets" << std::endl;
+            << dynamicBatchSize << " facets" << std::endl;
   int particlesHandled = 0;
   int batchesComplete = 0;
-  int totalBatches = num_facets() / dynamicTaskSize;
+  int totalBatches = target_num_facets() / dynamicBatchSize;
 
   for (int procID = 1; procID < nprocs; procID++)
   { // Send the initial indexes for each process statically
     MPI_Send(&particlesHandled, 1, MPI_INT, procID, procID, MPI_COMM_WORLD);
-    particlesHandled += dynamicTaskSize;
+    particlesHandled += dynamicBatchSize;
     batchesComplete += 1;
   }
 
@@ -181,7 +227,7 @@ ParticleSimulation::handler(std::vector<double> & handlerQVals)
       MPI_Recv(&workerStartIndex, 1, MPI_INT, MPI_ANY_SOURCE, mpiIndexTag, MPI_COMM_WORLD, &status);
       // printf("Time taken to recieve next data = %f \n", MPI_Wtime());
 
-      particlesHandled += dynamicTaskSize;
+      particlesHandled += dynamicBatchSize;
       batchesComplete += 1;
       // progress indicator
 
@@ -236,17 +282,21 @@ ParticleSimulation::worker()
   int counterDeposit = 0;
   int index = 0;
 
-  // std::ofstream file;
-  // std::stringstream fileName;
-  // fileName << "rank" << rank << ".txt";
-  // file.open(fileName.str());
+  if (workerDebug)
+  {
+    // std::ofstream workerOutputFile;
+    // std::stringstream fileName;
+    // fileName << "rank" << rank << ".txt";
+    // workerOutputFile.open(fileName.str());
+    printf("Testing");
+  }
 
   std::vector<double> workerQVals;
   int startIndex = 0;
   MPI_Recv(&startIndex, 1, MPI_INT, 0, rank, MPI_COMM_WORLD, &status);
 
   int start = startIndex;
-  int end = start + dynamicTaskSize;
+  int end = start + dynamicBatchSize;
 
   workerQVals = loop_over_facets(start, end); // process initial facets
   // file << "Loop over [" << start << ":" << end << "] facets: \n";
@@ -266,13 +316,13 @@ ParticleSimulation::worker()
     MPI_Send(&rank, 1, MPI_INT, 0, 1, MPI_COMM_WORLD);
     MPI_Recv(&startIndex, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
 
-    if (startIndex + dynamicTaskSize > num_facets())
+    if (startIndex + dynamicBatchSize > target_num_facets())
     {
-      dynamicTaskSize = num_facets() - startIndex;
+      dynamicBatchSize = target_num_facets() - startIndex;
     }
 
     start = startIndex;
-    end = start + dynamicTaskSize;
+    end = start + dynamicBatchSize;
 
     if (startIndex != noMoreWork)
     { // processing the next set of available work
@@ -300,32 +350,48 @@ ParticleSimulation::worker()
 
 // Read parameters from aegis_settings.json config file
 void
-ParticleSimulation::read_params(const std::shared_ptr<InputJSON> & inputs)
+ParticleSimulation::read_params(const std::shared_ptr<JsonHandler> & configFile)
 {
 
-  if (inputs->data.contains("aegis_params"))
+  if (configFile->data().contains("aegis_params"))
   {
-    json aegisParams = inputs->data["aegis_params"];
+    auto aegisParamsData = configFile->data()["aegis_params"];
+    JsonHandler aegisParams(aegisParamsData);
 
-    dagmcInputFile = aegisParams["DAGMC"];
-    trackStepSize = aegisParams["step_size"];
-    maxTrackSteps = aegisParams["max_steps"];
-    particleLaunchPos = aegisParams["launch_pos"];
-    noMidplaneTermination = aegisParams["force_no_deposition"];
-    coordInputStr = aegisParams["coordinate_system"];
-    exeType = aegisParams["execution_type"];
+    dagmcInputFile = aegisParams.get_required<std::string>("DAGMC");
 
-    if (aegisParams.contains("task_farm_params"))
+    trackStepSize = aegisParams.get_optional<double>("step_size").value_or(trackStepSize);
+
+    maxTrackSteps = aegisParams.get_optional<int>("max_steps").value_or(maxTrackSteps);
+
+    particleLaunchPos =
+        aegisParams.get_optional<std::string>("launch_pos").value_or(particleLaunchPos);
+
+    noMidplaneTermination =
+        aegisParams.get_optional<bool>("force_no_deposition").value_or(noMidplaneTermination);
+
+    coordinateConfig =
+        aegisParams.get_optional<std::string>("coordinate_system").value_or(coordinateConfig);
+
+    exeType = aegisParams.get_optional<std::string>("execution_type").value_or(exeType);
+
+    if (aegisParamsData.contains("dynamic_batch_params"))
     {
-      dynamicTaskSize = aegisParams["task_farm_params"]["dynamic_task_size"];
-      workerProfiling = aegisParams["task_farm_params"]["worker_profiling_enabled"];
+      auto dynamicBatchParamsData = configFile->data()["aegis_params"]["dynamic_batch_params"];
+      JsonHandler dynamicBatchParams(dynamicBatchParamsData);
+
+      dynamicBatchSize =
+          dynamicBatchParams.get_optional<int>("batch_size").value_or(dynamicBatchSize);
+
+      workerProfiling =
+          dynamicBatchParams.get_optional<bool>("worker_profiling").value_or(workerProfiling);
+
+      workerDebug = dynamicBatchParams.get_optional<bool>("worker_debug").value_or(workerDebug);
     }
 
-    select_coordinate_system();
-
-    if (aegisParams.contains("target_surfs"))
+    if (aegisParamsData.contains("target_surfs"))
     {
-      for (auto i : aegisParams["target_surfs"])
+      for (auto i : aegisParamsData["target_surfs"])
       {
         vectorOfTargetSurfs.push_back(i);
       }
@@ -341,18 +407,18 @@ ParticleSimulation::read_params(const std::shared_ptr<InputJSON> & inputs)
 void
 ParticleSimulation::select_coordinate_system()
 {
-  string_to_lowercase(coordInputStr);
-  if (coordInputStr == "cart" || coordInputStr == "cartesian" || coordInputStr == "xyz")
+  string_to_lowercase(coordinateConfig);
+  if (coordinateConfig == "cart" || coordinateConfig == "cartesian" || coordinateConfig == "xyz")
   {
     coordSys = coordinateSystem::CARTESIAN;
     log_string(LogLevel::WARNING, "Tracking in CARTESIAN coordinates...");
   }
-  else if (coordInputStr == "pol" || coordInputStr == "polar" || coordInputStr == "rz")
+  else if (coordinateConfig == "pol" || coordinateConfig == "polar" || coordinateConfig == "rz")
   {
     coordSys = coordinateSystem::POLAR;
     log_string(LogLevel::WARNING, "Tracking in POLAR coordinates...");
   }
-  else if (coordInputStr == "flux" || coordInputStr == "psi")
+  else if (coordinateConfig == "flux" || coordinateConfig == "psi")
   {
     coordSys = coordinateSystem::FLUX;
     log_string(LogLevel::WARNING, "Tracking in FLUX coordinates...");
@@ -408,6 +474,7 @@ ParticleSimulation::init_geometry()
   }
 
   equilibrium->psi_limiter(vertexList);
+  select_coordinate_system();
 
   // if flux selected default to cartesian
   if (coordSys == coordinateSystem::FLUX)
@@ -416,18 +483,18 @@ ParticleSimulation::init_geometry()
     log_string(LogLevel::WARNING, "Flux coords tracking not currently "
                                   "implemented. Defaulting to CARTESIAN...");
   }
-}
-
-// loop over facets in target surfaces
-std::vector<double>
-ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
-{
 
   // transform coordinate system of mesh
   if (coordSys != coordinateSystem::CARTESIAN)
   {
     mesh_coord_transform(coordSys);
   }
+}
+
+// loop over facets in target surfaces
+std::vector<double>
+ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
+{
 
   double startTime = MPI_Wtime();
   std::vector<double> heatfluxVals;
@@ -446,8 +513,8 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
       continue;
     }
 
-    DagMC::RayHistory history;
-    auto particle = std::make_unique<ParticleBase>(coordSys);
+    // DagMC::RayHistory history;
+    auto particle = std::make_unique<ParticleBase>(coordSys, tri.launch_pos());
 
     try
     {
@@ -459,26 +526,8 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
       terminate_particle_lost(tri);
       continue;
     }
-
-    particle->set_pos(tri.launch_pos());
-
     integrator->set_launch_position(tri.entity_handle(), tri.launch_pos());
-
-    vtkInterface->init_new_vtkPoints();
-    vtkInterface->insert_next_point_in_track(particle->launchPos);
-
-    particle->set_dir(equilibrium);
-
-    particle->align_dir_to_surf(tri.BdotN());
-
-    // Start ray tracing
-    trackLength = trackStepSize;
-
-    particle->update_vectors(trackStepSize, equilibrium);
-
-    vtkInterface->insert_next_point_in_track(particle->posXYZ);
-
-    terminationState particleState = loop_over_particle_track(tri, particle, history);
+    terminationState particleState = loop_over_particle_track(tri, particle);
 
     // if particle not depositing set heatflux to 0.0
     if (particleState != terminationState::DEPOSITING)
@@ -537,25 +586,32 @@ ParticleSimulation::setup_sources()
 // loop over single particle track from launch to termination
 terminationState
 ParticleSimulation::loop_over_particle_track(TriangleSource & tri,
-                                             std::unique_ptr<ParticleBase> & particle,
-                                             DagMC::RayHistory & history)
+                                             std::unique_ptr<ParticleBase> & particle)
 {
   double euclidDistToNextSurf = 0.0;
   nextSurf = 0;
+  particle->set_pos(tri.launch_pos());
+  particle->set_dir(equilibrium);
+  particle->align_dir_to_surf(tri.BdotN());
+  // test_cyl_ray_fire(particle);
+
+  vtkInterface->init_new_vtkPoints();
+  vtkInterface->insert_next_point_in_track(particle->get_xyz_pos());
+  moab::DagMC::RayHistory history;
 
   for (int step = 0; step < maxTrackSteps; ++step)
   {
     trackLength += trackStepSize;
     iterationCounter++;
 
-    DAG->ray_fire(implComplementVol, particle->posXYZ.data(), particle->dir.data(), nextSurf,
+    DAG->ray_fire(implComplementVol, particle->pos.data(), particle->dir.data(), nextSurf,
                   nextSurfDist, &history, trackStepSize, rayOrientation);
     numberOfRayFireCalls++;
 
     if (nextSurf != 0)
     {
       particle->update_vectors(nextSurfDist); // update position to surface intersection point
-      terminate_particle_shadow(tri, history);
+      terminate_particle_shadow(tri);
       return terminationState::SHADOWED;
     }
     else
@@ -563,13 +619,11 @@ ParticleSimulation::loop_over_particle_track(TriangleSource & tri,
       particle->update_vectors(trackStepSize); // update position by stepsize
     }
 
-    vtkInterface->insert_next_point_in_track(particle->posXYZ);
+    vtkInterface->insert_next_point_in_track(particle->get_xyz_pos());
 
     try
     {
-      equilibrium->check_if_in_bfield(particle->posXYZ);
-      particle->set_dir(equilibrium);
-      particle->align_dir_to_surf(tri.BdotN());
+      equilibrium->check_if_in_bfield(particle->pos);
     }
     catch (std::runtime_error & e)
     {
@@ -577,6 +631,8 @@ ParticleSimulation::loop_over_particle_track(TriangleSource & tri,
       return terminationState::LOST;
     }
 
+    particle->set_dir(equilibrium);
+    particle->align_dir_to_surf(tri.BdotN());
     particle->check_if_midplane_crossed(equilibrium->get_midplane_params());
 
     if (particle->atMidplane != 0 && !noMidplaneTermination)
@@ -584,15 +640,12 @@ ParticleSimulation::loop_over_particle_track(TriangleSource & tri,
       terminate_particle_depositing(tri);
       return terminationState::DEPOSITING;
     }
-
-    if (step == (maxTrackSteps - 1))
-    {
-      terminate_particle_maxlength(tri);
-      return terminationState::MAXLENGTH;
-    }
   }
 
-  return terminationState::LOST; // default return lost particle
+  particle->set_facet_history(history);
+  // max length of particle track reached
+  terminate_particle_maxlength(tri);
+  return terminationState::MAXLENGTH;
 }
 
 // terminate particle after reaching midplane
@@ -610,7 +663,7 @@ ParticleSimulation::terminate_particle_depositing(TriangleSource & tri)
 
 // terminate particle after hitting shadowing geometry
 void
-ParticleSimulation::terminate_particle_shadow(TriangleSource & tri, DagMC::RayHistory & history)
+ParticleSimulation::terminate_particle_shadow(TriangleSource & tri)
 {
   std::stringstream terminationLogString;
   double heatflux = 0.0;
@@ -645,23 +698,22 @@ ParticleSimulation::terminate_particle_maxlength(TriangleSource & tri)
   terminationLogString << "Fieldline trace reached maximum length before intersection";
 }
 
-void
-ParticleSimulation::ray_hit_on_launch(std::unique_ptr<ParticleBase> & particle,
-                                      DagMC::RayHistory & history)
-{
-  DAG->ray_fire(implComplementVol, particle->launchPos.data(), particle->dir.data(), nextSurf,
-                nextSurfDist, &history, trackStepSize, rayOrientation);
-  if (nextSurf != 0)
-  {
-    history.get_last_intersection(intersectedFacet);
-    EntityHandle nextVolEH;
-    DAG->next_vol(nextSurf, implComplementVol, nextVolEH);
-    if (rank == 0)
-    {
-      LOG_INFO << "---- RAY HIT ON LAUNCH [" << facetCounter << "] ----";
-    }
-  }
-}
+// void
+// ParticleSimulation::ray_hit_on_launch(std::unique_ptr<ParticleBase> & particle)
+// {
+//   DAG->ray_fire(implComplementVol, particle->launchPos.data(), particle->dir.data(), nextSurf,
+//                 nextSurfDist, particle->facet_history(), trackStepSize, rayOrientation);
+//   if (nextSurf != 0)
+//   {
+//     particle->history.get_last_intersection(intersectedFacet);
+//     EntityHandle nextVolEH;
+//     DAG->next_vol(nextSurf, implComplementVol, nextVolEH);
+//     if (rank == 0)
+//     {
+//       LOG_INFO << "---- RAY HIT ON LAUNCH [" << facetCounter << "] ----";
+//     }
+//   }
+// }
 
 // Get triangles from the surface(s) of interest
 moab::Range
@@ -726,15 +778,15 @@ ParticleSimulation::select_target_surface()
     LOG_WARNING << "Total Number of Triangles rays launched from = " << numTargetFacets;
   }
 
-  numFacets = targetFacets.size();
+  targetNumFacets = targetFacets.size();
   return targetFacets;
 }
 
 // return total number of facets in target surface(s) of interest
 int
-ParticleSimulation::num_facets()
+ParticleSimulation::target_num_facets()
 {
-  return numFacets;
+  return targetNumFacets;
 }
 
 // print stats for the entire run
@@ -761,7 +813,8 @@ ParticleSimulation::print_particle_stats(std::array<int, 5> particleStats)
     LOG_WARNING << "Number of particles terminated upon reaching max tracking length = "
                 << particleStats[3];
     LOG_WARNING << "Number of padded null particles = " << particleStats[4];
-    LOG_WARNING << "Number of particles not accounted for = " << (num_facets() - particlesCounted);
+    LOG_WARNING << "Number of particles not accounted for = "
+                << (target_num_facets() - particlesCounted);
   }
   // std::cout << "Number of Ray fire calls = " << numberOfRayFireCalls <<
   // std::endl;
@@ -820,9 +873,9 @@ ParticleSimulation::Execute_serial()
     std::exit(EXIT_FAILURE);
   }
 
-  std::vector<double> psiStart(num_facets());
-  std::vector<double> bnList(num_facets());
-  std::vector<std::vector<double>> normalList(num_facets());
+  std::vector<double> psiStart(target_num_facets());
+  std::vector<double> bnList(target_num_facets());
+  std::vector<std::vector<double>> normalList(target_num_facets());
   for (int i = 0; i < listOfTriangles.size(); ++i)
   {
     psiStart[i] = listOfTriangles[i].get_psi();
@@ -855,12 +908,12 @@ ParticleSimulation::Execute_padded_mpi()
   targetFacets = select_target_surface();
   integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
 
-  int totalFacets = num_facets();
+  int totalFacets = target_num_facets();
   int remainder = totalFacets % nprocs;
   int nPadded = 0;
   if (remainder != 0)
   {
-    int paddedTotalFacets = num_facets() + (nprocs - remainder);
+    int paddedTotalFacets = target_num_facets() + (nprocs - remainder);
     nPadded = paddedTotalFacets - totalFacets;
     totalFacets = paddedTotalFacets;
   }
@@ -889,7 +942,7 @@ ParticleSimulation::Execute_padded_mpi()
     totalParticleStats = integrator->particle_stats();
     MPI_Gather(qvalues.data(), qvalues.size(), MPI_DOUBLE, rootQvalues.data(), qvalues.size(),
                MPI_DOUBLE, rootRank, MPI_COMM_WORLD);
-    if (rootQvalues.size() > num_facets())
+    if (rootQvalues.size() > target_num_facets())
     {
       rootQvalues.resize(rootQvalues.size() - nPadded);
     }
@@ -921,7 +974,7 @@ ParticleSimulation::Execute_mpi()
   targetFacets = select_target_surface();
   integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
 
-  int totalFacets = num_facets();
+  int totalFacets = target_num_facets();
   int nFacetsPerProc = totalFacets / nprocs;
   int remainder = totalFacets % nprocs;
 
@@ -961,7 +1014,7 @@ ParticleSimulation::Execute_mpi()
   setup_sources();
 
   qvalues = loop_over_facets(startFacet, endFacet); // perform main loop
-  endTime = MPI_Wtime();
+  double endTime = MPI_Wtime();
 
   std::array<int, 5> particleStats = integrator->particle_stats();
   std::array<int, 5> totalParticleStats;
@@ -1001,7 +1054,6 @@ ParticleSimulation::Execute_mpi()
   endTime = MPI_Wtime();
 }
 
-// get surfaces attributed to the aegis_target group set in cubit
 void
 ParticleSimulation::implicit_complement_testing()
 {
@@ -1031,9 +1083,9 @@ ParticleSimulation::implicit_complement_testing()
   {
     implicitComplCoordsxyz << vertexCoords[i] << " " << vertexCoords[i + 1] << " "
                            << vertexCoords[i + 2] << std::endl;
-    temp1 = CoordTransform::cart_to_polar(vertexCoords[i], vertexCoords[i + 1], vertexCoords[i + 2],
-                                          "forwards");
-    temp2 = CoordTransform::polar_to_flux(temp1, "forwards", equilibrium);
+    temp1 =
+        CoordTransform::cart_to_polar(vertexCoords[i], vertexCoords[i + 1], vertexCoords[i + 2]);
+    temp2 = CoordTransform::polar_to_flux(temp1, equilibrium);
     vertexCoordsFlux[i] = temp2[0];
     vertexCoordsFlux[i + 1] = temp2[1];
     vertexCoordsFlux[i + 2] = temp2[2];
@@ -1093,19 +1145,21 @@ ParticleSimulation::attach_mesh_attribute(const std::string & tagName, moab::Ran
 void
 ParticleSimulation::write_out_mesh(meshWriteOptions option, moab::Range rangeofEntities)
 {
+  // mesh_coord_transform(coordinateSystem::CARTESIAN);
   // get target meshset for aegis_target outputs
   DAG->remove_graveyard();
   EntityHandle targetMeshset;
   DAG->moab_instance()->create_meshset(MESHSET_SET, targetMeshset);
   DAG->moab_instance()->add_entities(targetMeshset, targetFacets);
 
-  // remove file extension from input file string
+  // remove file extension and path from output file string
   std::string aegisOut = dagmcInputFile;
   aegisOut = aegisOut.substr(0, aegisOut.find_last_of("."));
   aegisOut = aegisOut.substr(aegisOut.find_last_of("/") + 1, aegisOut.length());
-  std::string aegisOutFull = aegisOut + "_aegis_full.vtk";
-  std::string aegisOutTarget = aegisOut + "_aegis_target.vtk";
-  std::string aegisOutPartial = aegisOut + "_aegis_partial.vtk";
+
+  std::string aegisOutFull = "aegis_full_" + aegisOut + ".vtk";
+  std::string aegisOutTarget = "aegis_target_" + aegisOut + ".vtk";
+  std::string aegisOutPartial = "aegis_partial_" + aegisOut + ".vtk";
 
   switch (option)
   {
@@ -1156,7 +1210,7 @@ ParticleSimulation::mesh_coord_transform(coordinateSystem coordSys)
       for (int i = 0; i < nodeCoords.size(); i += 3)
       {
         temp = {nodeCoords[i], nodeCoords[i + 1], nodeCoords[i + 2]};
-        temp = CoordTransform::cart_to_polar(temp, "backwards");
+        temp = CoordTransform::polar_to_cart(temp);
         DAG->moab_instance()->set_coords(&nodesList[counter], 1, temp.data());
         counter += 1;
       }
@@ -1166,7 +1220,7 @@ ParticleSimulation::mesh_coord_transform(coordinateSystem coordSys)
       for (int i = 0; i < nodeCoords.size(); i += 3)
       {
         temp = {nodeCoords[i], nodeCoords[i + 1], nodeCoords[i + 2]};
-        temp = CoordTransform::cart_to_polar(temp, "forwards");
+        temp = CoordTransform::cart_to_polar(temp);
         DAG->moab_instance()->set_coords(&nodesList[counter], 1, temp.data());
         counter += 1;
       }
@@ -1176,8 +1230,8 @@ ParticleSimulation::mesh_coord_transform(coordinateSystem coordSys)
       // for (int i=0; i<nodeCoords.size(); i+=3)
       // {
       //   temp = {nodeCoords[i], nodeCoords[i+1], nodeCoords[i+2]};
-      //   temp = CoordTransform::cart_to_polar(temp, "forwards");
-      //   temp = CoordTransform::polar_to_flux(temp, "forwards", equilibrium);
+      //   temp = CoordTransform::cart_to_polar(temp);
+      //   temp = CoordTransform::polar_to_flux(temp, equilibrium);
       //   DAG->moab_instance()->set_coords(&nodesList[counter], 1, temp.data());
       //   counter +=1;
       // }

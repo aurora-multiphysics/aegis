@@ -79,11 +79,10 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
   }
 //-------------- RUN AEGIS -------------
   std::string configFilename = "aegis_settings.json";
-  auto configFile = std::make_shared<InputJSON>(configFilename);
+  auto configFile = std::make_shared<JsonHandler>(configFilename);
 
-  auto equilibrium = std::make_shared<EquilData>();
-  equilibrium->setup(configFile);
-  equilibrium->move();
+  auto equilibrium = std::make_shared<EquilData>(configFile);
+   equilibrium->move();
   equilibrium->psiref_override();
   equilibrium->init_interp_splines();
   equilibrium->centre(1);
@@ -114,14 +113,14 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
 
   double Q_rel_sum = 0.0;
 
-  std::cout << aegis.num_facets();
+  std::cout << aegis.target_num_facets();
 
-  for (int i=0; i<aegis.num_facets(); i++){
+  for (int i=0; i<aegis.target_num_facets(); i++){
     Q_rel_sum += std::pow((aegis.psiQ_values[i].second - smardda_qValues[i].second), 2);
   }
 
 
-  double L2_NORM = std::sqrt( (1.0/aegis.num_facets())*Q_rel_sum );
+  double L2_NORM = std::sqrt( (1.0/aegis.target_num_facets())*Q_rel_sum );
   const double EXPECTED_L2_NORM = 349791;
 
   const auto AEGIS_MAX = *std::max_element(aegis.psiQ_values.begin(),aegis.psiQ_values.end(),[](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });

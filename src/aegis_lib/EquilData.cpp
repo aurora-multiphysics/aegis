@@ -13,35 +13,49 @@
 #include "SimpleLogger.h"
 #include <mpi.h>
 
-void
-EquilData::setup(const std::shared_ptr<InputJSON> & inputs)
+EquilData::EquilData(const std::shared_ptr<JsonHandler> & configFile)
 {
-
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-
-  json equilNamelist;
-  if (inputs->data.contains("equil_params"))
+  if (configFile->data().contains("equil_params"))
   {
-    equilNamelist = inputs->data["equil_params"];
-    eqdskFilepath = equilNamelist["eqdsk"];
-    cenopt = equilNamelist["cenopt"];
-    powerSOL = equilNamelist["P_sol"];
-    lambdaQ = equilNamelist["lambda_q"];
-    psiref = equilNamelist["psiref"];
-    rOutrBdry = equilNamelist["r_outrbdry"];
-    rmove = equilNamelist["rmove"];
-    drawEquRZ = equilNamelist["draw_equil_rz"];
-    drawEquXYZ = equilNamelist["draw_equil_xyz"];
-    debug = equilNamelist["print_debug_info"];
+    set_mpi_params();
+    read_params(configFile);
+    read_eqdsk(eqdskFilepath);
   }
-
-  if (rank == 0)
+  else
   {
-    std::cout << "eqdskFilePath = " << eqdskFilepath << std::endl;
+    std::cerr << "Check config file. Expecting block 'equil_params' containing vital equilibrium "
+                 "parameters \n";
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
+}
 
-  read_eqdsk(eqdskFilepath);
+EquilData::EquilData() { set_mpi_params(); }
+
+void
+EquilData::read_params(const std::shared_ptr<JsonHandler> & configFile)
+{
+  if (configFile->data().contains("equil_params"))
+  {
+    auto equilParamsData = configFile->data()["equil_params"];
+    JsonHandler equilParams(equilParamsData);
+    // get required parameters
+    eqdskFilepath = equilParams.get_required<std::string>("eqdsk");
+    powerSOL = equilParams.get_required<double>("power_sol");
+    lambdaQ = equilParams.get_required<double>("lambda_q");
+    rOutrBdry = equilParams.get_required<double>("r_outrbdry");
+
+    // get optional parameters
+    cenopt = equilParams.get_optional<int>("cenopt").value_or(cenopt);
+    psiref = equilParams.get_optional<double>("psiref").value_or(psiref);
+    rmove = equilParams.get_optional<double>("rmove").value_or(rmove);
+    drawEquRZ = equilParams.get_optional<bool>("draw_equil_rz").value_or(drawEquRZ);
+    drawEquXYZ = equilParams.get_optional<bool>("draw_equil_xyz").value_or(drawEquXYZ);
+    debug = equilParams.get_optional<bool>("debug").value_or(debug);
+  }
+  else
+  {
+    std::cerr << "JSON file missing equil_params block";
+  }
 }
 
 void
@@ -65,7 +79,6 @@ EquilData::read_eqdsk(std::string filename)
   std::stringstream headerSs;
   std::string temp;
   std::vector<int> headerInts;
-
   if (rank == 0)
   {
     std::cout << "------------------------------------------------------" << std::endl;
@@ -812,7 +825,7 @@ EquilData::b_field(std::vector<double> position, std::string startingFrom)
   else
   {
     std::vector<double> polarPosition;
-    polarPosition = CoordTransform::cart_to_polar(position, "forwards");
+    polarPosition = CoordTransform::cart_to_polar(position);
     zr = polarPosition[0];
     zz = polarPosition[1];
   }
@@ -944,10 +957,9 @@ EquilData::write_bfield(int phiSamples)
             log_string(LogLevel::ERROR, "Negative R Values when attempting plot magnetic field. "
                                         "Fixup eqdsk required");
           }
-          polarB = b_field(polarPos, "polar");          // calculate B(R,Z,phi)
-          cartB = b_field_cart(polarB, polarPos[2], 0); // transform to B(x,y,z)
-          cartPos = CoordTransform::cart_to_polar(polarPos,
-                                                  "backwards"); // transform position to cartesian
+          polarB = b_field(polarPos, "polar");               // calculate B(R,Z,phi)
+          cartB = b_field_cart(polarB, polarPos[2], 0);      // transform to B(x,y,z)
+          cartPos = CoordTransform::polar_to_cart(polarPos); // transform position to cartesian
 
           // write out magnetic field data for plotting
           if (cartPos[0] > 0)
@@ -1293,7 +1305,7 @@ EquilData::psi_limiter(std::vector<std::vector<double>> vertices)
   for (auto & i : vertices)
   {
     std::vector<double> cartPos = i;
-    std::vector<double> polarPos = CoordTransform::cart_to_polar(i, "forwards");
+    std::vector<double> polarPos = CoordTransform::cart_to_polar(i);
 
     zr = polarPos[0];
     zz = polarPos[1];
@@ -1397,7 +1409,7 @@ EquilData::get_midplane_params()
 void
 EquilData::check_if_in_bfield(std::vector<double> xyzPos)
 {
-  std::vector<double> polarPos = CoordTransform::cart_to_polar(xyzPos, "forwards");
+  std::vector<double> polarPos = CoordTransform::cart_to_polar(xyzPos);
   double r = polarPos[0];
   double z = polarPos[1];
   if (r < rmin || r > rmax || z < zmin || z > zmax)

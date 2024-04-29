@@ -1,6 +1,7 @@
 #include "ParticleSimulation.h"
 #include <cstdio>
 #include <cstring>
+#include <vector>
 #include <mpi.h>
 #include <unistd.h>
 
@@ -31,10 +32,9 @@ main(int argc, char ** argv)
     configFileName = "aegis_settings.json";
   }
 
-  auto configFile = std::make_shared<InputJSON>(configFileName);
+  auto configFile = std::make_shared<JsonHandler>(configFileName);
 
-  auto equilibrium = std::make_shared<EquilData>();
-  equilibrium->setup(configFile);
+  auto equilibrium = std::make_shared<EquilData>(configFile);
   equilibrium->move();
   equilibrium->psiref_override();
   equilibrium->init_interp_splines();
