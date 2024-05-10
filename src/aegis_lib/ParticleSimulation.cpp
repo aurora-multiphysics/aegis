@@ -175,7 +175,10 @@ ParticleSimulation::Execute_dynamic_mpi()
   if (rank == 0)
   {
     attach_mesh_attribute("Heatflux", targetFacets, handlerQVals);
+    // double meshWriteTimeStart = MPI_Wtime();
     write_out_mesh(meshWriteOptions::BOTH, targetFacets);
+    // double meshWriteTime = MPI_Wtime() - meshWriteTimeStart;
+    // std::cout << "Time taken to write out mesh = " << meshWriteTime << "\n";
   }
 
   mpi_particle_stats();
@@ -192,7 +195,6 @@ ParticleSimulation::handler(std::vector<double> & handlerQVals)
   int mpiIndexTag = 101;
   int workerStartIndex = 0;
   int noMoreWork = -1;
-  int counter = 0;
 
   std::vector<double> workerQVals(dynamicBatchSize);
   std::cout << "Dynamic task scheduling with " << (nprocs - 1) << " processes, each handling "
@@ -220,31 +222,19 @@ ParticleSimulation::handler(std::vector<double> & handlerQVals)
     if (particlesHandled < handlerQVals.size())
     { // send that process the next index to start on
       // in the total list
-      MPI_Send(&particlesHandled, 1, MPI_INT, avaialbleProcess, 1, MPI_COMM_WORLD);
+      MPI_Isend(&particlesHandled, 1, MPI_INT, avaialbleProcess, 1, MPI_COMM_WORLD, &request);
 
-      MPI_Recv(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, MPI_ANY_SOURCE, mpiDataTag,
-               MPI_COMM_WORLD, &status);
-      MPI_Recv(&workerStartIndex, 1, MPI_INT, MPI_ANY_SOURCE, mpiIndexTag, MPI_COMM_WORLD, &status);
+      MPI_Irecv(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, MPI_ANY_SOURCE, mpiDataTag,
+                MPI_COMM_WORLD, &request);
+      MPI_Irecv(&workerStartIndex, 1, MPI_INT, MPI_ANY_SOURCE, mpiIndexTag, MPI_COMM_WORLD,
+                &request);
       // printf("Time taken to recieve next data = %f \n", MPI_Wtime());
 
       particlesHandled += dynamicBatchSize;
       batchesComplete += 1;
       // progress indicator
 
-      if (batchesComplete == totalBatches / 4)
-      {
-        std::cout << "25% ... " << std::flush;
-      }
-      else if (batchesComplete == totalBatches / 2)
-      {
-        std::cout << "50% ... " << std::flush;
-      }
-      else if (batchesComplete == 3 * totalBatches / 4)
-      {
-        std::cout << "75% ... " << std::flush;
-      }
-
-      counter += workerQVals.size();
+      MPI_Wait(&request, MPI_STATUS_IGNORE);
       double * ptr = handlerQVals.data() + workerStartIndex;
       memcpy(ptr, workerQVals.data(), sizeof(double) * workerQVals.size());
     }
@@ -1173,7 +1163,7 @@ ParticleSimulation::write_out_mesh(meshWriteOptions option, moab::Range rangeofE
 
     case meshWriteOptions::BOTH:
       DAG->moab_instance()->write_mesh(aegisOutTarget.c_str(), &targetMeshset, 1);
-      DAG->write_mesh(aegisOut.c_str(), 1);
+      DAG->write_mesh(aegisOutFull.c_str(), 1);
       break;
 
     case meshWriteOptions::PARTIAL:
