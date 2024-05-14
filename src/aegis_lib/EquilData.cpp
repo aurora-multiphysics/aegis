@@ -1406,7 +1406,7 @@ EquilData::get_midplane_params()
 }
 
 // check if in b_field from polar coords (R,Z)
-void
+bool
 EquilData::check_if_in_bfield(std::vector<double> xyzPos)
 {
   std::vector<double> polarPos = CoordTransform::cart_to_polar(xyzPos);
@@ -1414,6 +1414,7 @@ EquilData::check_if_in_bfield(std::vector<double> xyzPos)
   double z = polarPos[1];
   if (r < rmin || r > rmax || z < zmin || z > zmax)
   {
-    throw std::runtime_error("Position outside magnetic field");
+    return false;
   }
+  return true;
 }
