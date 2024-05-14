@@ -139,6 +139,7 @@ class ParticleSimulation : public AegisBase
   bool workerDebug = false;
   coordinateSystem coordSys = coordinateSystem::CARTESIAN; // default cartesian 
   bool noMidplaneTermination = false;
+  int nParticlesPerFacet = 1; // Number of particles launched per facet
 
   std::vector<TriangleSource> listOfTriangles;
   int totalNumberOfFacets = 0;

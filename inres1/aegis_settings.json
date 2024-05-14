@@ -9,6 +9,7 @@
       "force_no_deposition": false,
       "coordinate_system": "flux",
       "execution_type": "dynamic",
+      "number_of_particles_per_facet":5,
       "dynamic_batch_params":{
           "batch_size":16,
           "worker_profiling": false,
@@ -28,6 +29,6 @@
       "print_debug_info": false
   },
   "vtk_params":{
-      "draw_particle_tracks": false
+      "draw_particle_tracks": true
   }
  }

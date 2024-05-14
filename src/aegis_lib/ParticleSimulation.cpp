@@ -126,6 +126,8 @@ ParticleSimulation::Execute_dynamic_mpi()
   // int counter = 0;
   setup_sources();
 
+  double parallelProfilingStart = MPI_Wtime();
+
   if (rank == 0)
   { // handler process...
     handler(handlerQVals);
@@ -174,6 +176,10 @@ ParticleSimulation::Execute_dynamic_mpi()
 
   if (rank == 0)
   {
+    double parallelProfilingEnd = MPI_Wtime();
+    std::cout << "Parallel Compute Runtime = " << parallelProfilingEnd - parallelProfilingStart
+              << std::endl;
+
     attach_mesh_attribute("Heatflux", targetFacets, handlerQVals);
     // double meshWriteTimeStart = MPI_Wtime();
     write_out_mesh(meshWriteOptions::BOTH, targetFacets);
@@ -365,6 +371,9 @@ ParticleSimulation::read_params(const std::shared_ptr<JsonHandler> & configFile)
 
     exeType = aegisParams.get_optional<std::string>("execution_type").value_or(exeType);
 
+    nParticlesPerFacet =
+        aegisParams.get_optional<int>("number_of_particles_per_facet").value_or(nParticlesPerFacet);
+
     if (aegisParamsData.contains("dynamic_batch_params"))
     {
       auto dynamicBatchParamsData = configFile->data()["aegis_params"]["dynamic_batch_params"];
@@ -492,8 +501,11 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
   std::vector<double> triCoords(9);
   std::vector<double> triA(3), triB(3), triC(3);
 
+  // main loop over all facets
   for (int i = startFacet; i < endFacet; ++i)
   { // loop over all facets
+    double heatflux = 0.0;
+    double averagedHeatflux = 0.0;
     auto tri = listOfTriangles[i];
 
     if (i >= targetFacets.size()) // handle padded values
@@ -503,29 +515,28 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
       continue;
     }
 
-    // DagMC::RayHistory history;
-    auto particle = std::make_unique<ParticleBase>(coordSys, tri.launch_pos());
-
-    try
+    // loop over particles per facet
+    for (int j = 0; j < nParticlesPerFacet; ++j)
     {
-      equilibrium->check_if_in_bfield(tri.launch_pos());
+      std::vector<double> launchPos = tri.random_pt();
+      auto particle = std::make_unique<ParticleBase>(coordSys, launchPos);
+      try
+      {
+        equilibrium->check_if_in_bfield(launchPos);
+      }
+      catch (std::runtime_error & e)
+      {
+        log_string(LogLevel::INFO, "Particle start out of bounds. Skipping to next triangle...");
+        terminate_particle_lost(tri);
+        continue;
+      }
+      integrator->set_launch_position(tri.entity_handle(), launchPos);
+      double particleHeat = tri.heatflux() / nParticlesPerFacet;
+      terminationState particleState = loop_over_particle_track(tri, particle);
+      heatflux = (particleState == terminationState::DEPOSITING) ? particleHeat : 0.0;
+      averagedHeatflux += heatflux;
     }
-    catch (std::runtime_error & e)
-    {
-      log_string(LogLevel::INFO, "Particle start out of bounds. Skipping to next triangle...");
-      terminate_particle_lost(tri);
-      continue;
-    }
-    integrator->set_launch_position(tri.entity_handle(), tri.launch_pos());
-    terminationState particleState = loop_over_particle_track(tri, particle);
-
-    // if particle not depositing set heatflux to 0.0
-    if (particleState != terminationState::DEPOSITING)
-    {
-      tri.update_heatflux(0.0);
-    }
-
-    heatfluxVals.push_back(tri.heatflux());
+    heatfluxVals.push_back(averagedHeatflux);
   }
 
   double endTime = MPI_Wtime();
@@ -804,7 +815,7 @@ ParticleSimulation::print_particle_stats(std::array<int, 5> particleStats)
                 << particleStats[3];
     LOG_WARNING << "Number of padded null particles = " << particleStats[4];
     LOG_WARNING << "Number of particles not accounted for = "
-                << (target_num_facets() - particlesCounted);
+                << (target_num_facets() * nParticlesPerFacet - particlesCounted);
   }
   // std::cout << "Number of Ray fire calls = " << numberOfRayFireCalls <<
   // std::endl;
