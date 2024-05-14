@@ -16,13 +16,13 @@ ParticleSimulation::ParticleSimulation(std::shared_ptr<JsonHandler> configFile,
 }
 
 void
-ParticleSimulation::test_cyl_ray_fire(std::unique_ptr<ParticleBase> & particle)
+ParticleSimulation::test_cyl_ray_fire(ParticleBase & particle)
 {
 
   std::ofstream coordinateTest("coords.txt");
   std::ofstream coordinateTest2("coords2.txt");
-  std::vector<double> cartPos = particle->pos;
-  std::vector<double> bfieldXYZ = particle->dir;
+  std::vector<double> cartPos = particle.pos;
+  std::vector<double> bfieldXYZ = particle.dir;
   std::vector<double> polPos = CoordTransform::cart_to_polar(cartPos);
   std::vector<double> bFieldRZ = equilibrium->b_field(cartPos, "");
 
@@ -126,6 +126,8 @@ ParticleSimulation::Execute_dynamic_mpi()
   // int counter = 0;
   setup_sources();
 
+  double parallelProfilingStart = MPI_Wtime();
+
   if (rank == 0)
   { // handler process...
     handler(handlerQVals);
@@ -174,6 +176,10 @@ ParticleSimulation::Execute_dynamic_mpi()
 
   if (rank == 0)
   {
+    double parallelProfilingEnd = MPI_Wtime();
+    std::cout << "Parallel Compute Runtime = " << parallelProfilingEnd - parallelProfilingStart
+              << std::endl;
+
     attach_mesh_attribute("Heatflux", targetFacets, handlerQVals);
     // double meshWriteTimeStart = MPI_Wtime();
     write_out_mesh(meshWriteOptions::BOTH, targetFacets);
@@ -365,6 +371,9 @@ ParticleSimulation::read_params(const std::shared_ptr<JsonHandler> & configFile)
 
     exeType = aegisParams.get_optional<std::string>("execution_type").value_or(exeType);
 
+    nParticlesPerFacet =
+        aegisParams.get_optional<int>("number_of_particles_per_facet").value_or(nParticlesPerFacet);
+
     if (aegisParamsData.contains("dynamic_batch_params"))
     {
       auto dynamicBatchParamsData = configFile->data()["aegis_params"]["dynamic_batch_params"];
@@ -489,43 +498,31 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
   double startTime = MPI_Wtime();
   std::vector<double> heatfluxVals;
 
-  std::vector<double> triCoords(9);
-  std::vector<double> triA(3), triB(3), triC(3);
-
+  // main loop over all facets
   for (int i = startFacet; i < endFacet; ++i)
   { // loop over all facets
-    auto tri = listOfTriangles[i];
+    double heatflux = 0.0;
+    double averagedHeatflux = 0.0;
+    auto triangle = listOfTriangles[i];
 
     if (i >= targetFacets.size()) // handle padded values
     {
-      tri.update_heatflux(-1);
+      triangle.update_heatflux(-1);
       integrator->count_particle(0, terminationState::PADDED, 0.0);
       continue;
     }
+    double heatfluxOnFacet = 0.0;
 
-    // DagMC::RayHistory history;
-    auto particle = std::make_unique<ParticleBase>(coordSys, tri.launch_pos());
-
-    try
+    if (particleLaunchPos == "fixed")
     {
-      equilibrium->check_if_in_bfield(tri.launch_pos());
+      heatfluxOnFacet = fixed_particle_launch(triangle);
     }
-    catch (std::runtime_error & e)
+    else
     {
-      log_string(LogLevel::INFO, "Particle start out of bounds. Skipping to next triangle...");
-      terminate_particle_lost(tri);
-      continue;
-    }
-    integrator->set_launch_position(tri.entity_handle(), tri.launch_pos());
-    terminationState particleState = loop_over_particle_track(tri, particle);
-
-    // if particle not depositing set heatflux to 0.0
-    if (particleState != terminationState::DEPOSITING)
-    {
-      tri.update_heatflux(0.0);
+      heatfluxOnFacet = monte_carlo_particle_launch(triangle);
     }
 
-    heatfluxVals.push_back(tri.heatflux());
+    heatfluxVals.push_back(heatfluxOnFacet);
   }
 
   double endTime = MPI_Wtime();
@@ -538,55 +535,97 @@ ParticleSimulation::loop_over_facets(int startFacet, int endFacet)
   return heatfluxVals;
 }
 
+double
+ParticleSimulation::monte_carlo_particle_launch(TriangleSource triangle)
+{
+  double heatflux = 0.0;
+  double averagedHeatflux = 0.0;
+
+  for (int j = 0; j < nParticlesPerFacet; ++j)
+  {
+    std::vector<double> launchPos = triangle.random_pt();
+    ParticleBase particle(coordSys, launchPos);
+    if (!equilibrium->check_if_in_bfield(launchPos))
+    {
+      log_string(LogLevel::INFO,
+                 "Particle start out of magnetic field bounds. Skipping to next particle...");
+      terminate_particle_lost(triangle);
+      continue;
+    }
+    integrator->set_launch_position(triangle.entity_handle(), launchPos);
+    double particleHeat = triangle.heatflux() / nParticlesPerFacet;
+    terminationState particleState = cartesian_particle_track(triangle, particle);
+    heatflux = (particleState == terminationState::DEPOSITING) ? particleHeat : 0.0;
+    averagedHeatflux += heatflux;
+  }
+  return averagedHeatflux;
+}
+
+double
+ParticleSimulation::fixed_particle_launch(TriangleSource triangle)
+{
+  std::vector<double> launchPos = triangle.launch_pos();
+  ParticleBase particle(coordSys, launchPos);
+  if (!equilibrium->check_if_in_bfield(launchPos))
+  {
+    log_string(LogLevel::INFO,
+               "Particle start out of magnetic field bounds. Skipping to next particle...");
+    terminate_particle_lost(triangle);
+    return 0.0;
+  }
+  integrator->set_launch_position(triangle.entity_handle(), launchPos);
+  double particleHeat = triangle.heatflux() / nParticlesPerFacet;
+  terminationState particleState = cartesian_particle_track(triangle, particle);
+  double heatflux = (particleState == terminationState::DEPOSITING) ? heatflux : 0.0;
+
+  return heatflux;
+}
+
 void
 ParticleSimulation::setup_sources()
 {
 
-  std::vector<double> triCoords(9);
-  std::vector<double> triA(3), triB(3), triC(3);
+  std::vector<double> triangleCoords(9);
+  std::vector<double> trianglePtsA(3), trianglePtsB(3), trianglePtsC(3);
   for (const auto & facet : targetFacets)
   {
-    std::vector<moab::EntityHandle> triNodes;
-    DAG->moab_instance()->get_adjacencies(&facet, 1, 0, false, triNodes);
-    DAG->moab_instance()->get_coords(&triNodes[0], triNodes.size(), triCoords.data());
+    std::vector<moab::EntityHandle> triangleNodes;
+    DAG->moab_instance()->get_adjacencies(&facet, 1, 0, false, triangleNodes);
+    DAG->moab_instance()->get_coords(&triangleNodes[0], triangleNodes.size(),
+                                     triangleCoords.data());
 
     for (int j = 0; j < 3; j++)
     {
-      triA[j] = triCoords[j];
-      triB[j] = triCoords[j + 3];
-      triC[j] = triCoords[j + 6];
+      trianglePtsA[j] = triangleCoords[j];
+      trianglePtsB[j] = triangleCoords[j + 3];
+      trianglePtsC[j] = triangleCoords[j + 6];
     }
 
-    TriangleSource tri(triA, triB, triC, facet, particleLaunchPos);
-
-    try
-    {
-      equilibrium->check_if_in_bfield(tri.launch_pos());
-      tri.set_heatflux_params(equilibrium, "exp");
-    }
-    catch (std::runtime_error & e)
+    TriangleSource triangle(trianglePtsA, trianglePtsB, trianglePtsC, facet, particleLaunchPos);
+    if (!equilibrium->check_if_in_bfield(triangle.launch_pos()))
     {
       log_string(LogLevel::INFO,
                  "Triangle start outside of magnetic field. Skipping to next triangle...");
+      continue;
     }
-    listOfTriangles.push_back(tri);
+    triangle.set_heatflux_params(equilibrium, "exp");
+    listOfTriangles.push_back(triangle);
   }
 }
 
 // loop over single particle track from launch to termination
 terminationState
-ParticleSimulation::loop_over_particle_track(TriangleSource & tri,
-                                             std::unique_ptr<ParticleBase> & particle)
+ParticleSimulation::cartesian_particle_track(TriangleSource & triangle, ParticleBase & particle)
 {
   double euclidDistToNextSurf = 0.0;
   nextSurf = 0;
-  particle->set_pos(tri.launch_pos());
-  particle->set_dir(equilibrium);
-  particle->align_dir_to_surf(tri.BdotN());
+  particle.set_pos(triangle.launch_pos());
+  particle.set_dir(equilibrium);
+  particle.align_dir_to_surf(triangle.BdotN());
   // test_cyl_ray_fire(particle);
 
   vtkInterface->init_new_vtkPoints();
-  vtkInterface->insert_next_point_in_track(particle->get_xyz_pos());
+  vtkInterface->insert_next_point_in_track(particle.get_xyz_pos());
   moab::DagMC::RayHistory history;
 
   for (int step = 0; step < maxTrackSteps; ++step)
@@ -594,58 +633,54 @@ ParticleSimulation::loop_over_particle_track(TriangleSource & tri,
     trackLength += trackStepSize;
     iterationCounter++;
 
-    DAG->ray_fire(implComplementVol, particle->pos.data(), particle->dir.data(), nextSurf,
+    DAG->ray_fire(implComplementVol, particle.pos.data(), particle.dir.data(), nextSurf,
                   nextSurfDist, &history, trackStepSize, rayOrientation);
     numberOfRayFireCalls++;
 
     if (nextSurf != 0)
     {
-      particle->update_vectors(nextSurfDist); // update position to surface intersection point
-      terminate_particle_shadow(tri);
+      particle.update_vectors(nextSurfDist); // update position to surface intersection point
+      terminate_particle_shadow(triangle);
       return terminationState::SHADOWED;
     }
     else
     {
-      particle->update_vectors(trackStepSize); // update position by stepsize
+      particle.update_vectors(trackStepSize); // update position by stepsize
     }
 
-    vtkInterface->insert_next_point_in_track(particle->get_xyz_pos());
+    vtkInterface->insert_next_point_in_track(particle.get_xyz_pos());
 
-    try
+    if (!equilibrium->check_if_in_bfield(particle.pos))
     {
-      equilibrium->check_if_in_bfield(particle->pos);
-    }
-    catch (std::runtime_error & e)
-    {
-      terminate_particle_lost(tri);
+      terminate_particle_lost(triangle);
       return terminationState::LOST;
     }
 
-    particle->set_dir(equilibrium);
-    particle->align_dir_to_surf(tri.BdotN());
-    particle->check_if_midplane_crossed(equilibrium->get_midplane_params());
+    particle.set_dir(equilibrium);
+    particle.align_dir_to_surf(triangle.BdotN());
+    particle.check_if_midplane_crossed(equilibrium->get_midplane_params());
 
-    if (particle->atMidplane != 0 && !noMidplaneTermination)
+    if (particle.atMidplane != 0 && !noMidplaneTermination)
     {
-      terminate_particle_depositing(tri);
+      terminate_particle_depositing(triangle);
       return terminationState::DEPOSITING;
     }
   }
 
-  particle->set_facet_history(history);
+  particle.set_facet_history(history);
   // max length of particle track reached
-  terminate_particle_maxlength(tri);
+  terminate_particle_maxlength(triangle);
   return terminationState::MAXLENGTH;
 }
 
 // terminate particle after reaching midplane
 void
-ParticleSimulation::terminate_particle_depositing(TriangleSource & tri)
+ParticleSimulation::terminate_particle_depositing(TriangleSource & triangle)
 {
   std::stringstream terminationLogString;
-  double heatflux = tri.heatflux();
+  double heatflux = triangle.heatflux();
   vtkInterface->write_particle_track(branchDepositingPart, heatflux);
-  integrator->count_particle(tri.entity_handle(), terminationState::DEPOSITING, heatflux);
+  integrator->count_particle(triangle.entity_handle(), terminationState::DEPOSITING, heatflux);
   terminationLogString << "Midplane reached. Depositing power after travelling " << trackLength
                        << " units";
   log_string(LogLevel::INFO, terminationLogString.str());
@@ -653,12 +688,12 @@ ParticleSimulation::terminate_particle_depositing(TriangleSource & tri)
 
 // terminate particle after hitting shadowing geometry
 void
-ParticleSimulation::terminate_particle_shadow(TriangleSource & tri)
+ParticleSimulation::terminate_particle_shadow(TriangleSource & triangle)
 {
   std::stringstream terminationLogString;
   double heatflux = 0.0;
   vtkInterface->write_particle_track(branchShadowedPart, heatflux);
-  integrator->count_particle(tri.entity_handle(), terminationState::SHADOWED, heatflux);
+  integrator->count_particle(triangle.entity_handle(), terminationState::SHADOWED, heatflux);
   terminationLogString << "Surface " << nextSurf << " hit after travelling " << trackLength
                        << " units";
   log_string(LogLevel::INFO, terminationLogString.str());
@@ -666,12 +701,12 @@ ParticleSimulation::terminate_particle_shadow(TriangleSource & tri)
 
 // terminate particle after leaving magnetic field
 void
-ParticleSimulation::terminate_particle_lost(TriangleSource & tri)
+ParticleSimulation::terminate_particle_lost(TriangleSource & triangle)
 {
   std::stringstream terminationLogString;
   double heatflux = 0.0;
   vtkInterface->write_particle_track(branchLostPart, heatflux);
-  integrator->count_particle(tri.entity_handle(), terminationState::LOST, heatflux);
+  integrator->count_particle(triangle.entity_handle(), terminationState::LOST, heatflux);
   terminationLogString << "Particle leaving magnetic field after travelling " << trackLength
                        << " units";
   log_string(LogLevel::INFO, terminationLogString.str());
@@ -679,31 +714,14 @@ ParticleSimulation::terminate_particle_lost(TriangleSource & tri)
 
 // terminate particle after travelling user specified max distance
 void
-ParticleSimulation::terminate_particle_maxlength(TriangleSource & tri)
+ParticleSimulation::terminate_particle_maxlength(TriangleSource & triangle)
 {
   std::stringstream terminationLogString;
   double heatflux = 0.0;
   vtkInterface->write_particle_track(branchMaxLengthPart, heatflux);
-  integrator->count_particle(tri.entity_handle(), terminationState::MAXLENGTH, heatflux);
+  integrator->count_particle(triangle.entity_handle(), terminationState::MAXLENGTH, heatflux);
   terminationLogString << "Fieldline trace reached maximum length before intersection";
 }
-
-// void
-// ParticleSimulation::ray_hit_on_launch(std::unique_ptr<ParticleBase> & particle)
-// {
-//   DAG->ray_fire(implComplementVol, particle->launchPos.data(), particle->dir.data(), nextSurf,
-//                 nextSurfDist, particle->facet_history(), trackStepSize, rayOrientation);
-//   if (nextSurf != 0)
-//   {
-//     particle->history.get_last_intersection(intersectedFacet);
-//     EntityHandle nextVolEH;
-//     DAG->next_vol(nextSurf, implComplementVol, nextVolEH);
-//     if (rank == 0)
-//     {
-//       LOG_INFO << "---- RAY HIT ON LAUNCH [" << facetCounter << "] ----";
-//     }
-//   }
-// }
 
 // Get triangles from the surface(s) of interest
 moab::Range
@@ -804,7 +822,7 @@ ParticleSimulation::print_particle_stats(std::array<int, 5> particleStats)
                 << particleStats[3];
     LOG_WARNING << "Number of padded null particles = " << particleStats[4];
     LOG_WARNING << "Number of particles not accounted for = "
-                << (target_num_facets() - particlesCounted);
+                << (target_num_facets() * nParticlesPerFacet - particlesCounted);
   }
   // std::cout << "Number of Ray fire calls = " << numberOfRayFireCalls <<
   // std::endl;

@@ -97,19 +97,21 @@ class ParticleSimulation : public AegisBase
   void implicit_complement_testing(); 
   moab::Range select_target_surface(); // get target surfaces of interest from aegis_settings.json
   std::vector<double> loop_over_facets(int startFacet, int endFacet); // loop over facets in target surfaces
-  
+  double monte_carlo_particle_launch(TriangleSource triangle);
+  double fixed_particle_launch(TriangleSource triangle);
+
   void setup_sources();
 
   void cartesian_track();
   void polar_track();
   void flux_track();
   
-  terminationState loop_over_particle_track(TriangleSource&tri, std::unique_ptr<ParticleBase> &particle); // loop over individual particle tracks
-  void terminate_particle_depositing(TriangleSource&tri); // end particle track
-  void terminate_particle_shadow(TriangleSource&tri); // end particle track
-  void terminate_particle_lost(TriangleSource&tri); // end particle track
-  void terminate_particle_maxlength(TriangleSource&tri); // end particle track
-  void test_cyl_ray_fire(std::unique_ptr<ParticleBase> &particle);  
+  terminationState cartesian_particle_track(TriangleSource &triangle, ParticleBase &particle); // loop over individual particle tracks
+  void terminate_particle_depositing(TriangleSource &triangle); // end particle track
+  void terminate_particle_shadow(TriangleSource &triangle); // end particle track
+  void terminate_particle_lost(TriangleSource &triangle); // end particle track
+  void terminate_particle_maxlength(TriangleSource &triangle); // end particle track
+  void test_cyl_ray_fire(ParticleBase &particle);  
   
   
   void ray_hit_on_launch(std::unique_ptr<ParticleBase> &particle); // particle hit on initial launch from surface
@@ -139,6 +141,7 @@ class ParticleSimulation : public AegisBase
   bool workerDebug = false;
   coordinateSystem coordSys = coordinateSystem::CARTESIAN; // default cartesian 
   bool noMidplaneTermination = false;
+  int nParticlesPerFacet = 1; // Number of particles launched per facet
 
   std::vector<TriangleSource> listOfTriangles;
   int totalNumberOfFacets = 0;
