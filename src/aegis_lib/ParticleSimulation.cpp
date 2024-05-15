@@ -877,7 +877,12 @@ ParticleSimulation::Execute_serial()
 
   std::vector<double> qvalues;
   setup_sources();
+  double parallelProfilingStart = MPI_Wtime();
   qvalues = loop_over_facets(start, end);
+  double parallelProfilingEnd = MPI_Wtime();
+  std::cout << "Parallel Compute Runtime = " << parallelProfilingEnd - parallelProfilingStart
+            << std::endl;
+  
   if (qvalues.empty())
   {
     log_string(LogLevel::ERROR, "Error - loop over facets returned no "
@@ -937,7 +942,7 @@ ParticleSimulation::Execute_padded_mpi()
   std::vector<double> qvalues;                  // qvalues buffer local to each processor
   std::vector<double> rootQvalues(totalFacets); // total qvalues buffer on root process for IO
   setup_sources();
-
+  double parallelProfilingStart = MPI_Wtime();
   qvalues = loop_over_facets(startFacet, endFacet); // perform main loop
 
   std::array<int, 5> particleStats = integrator->particle_stats();
@@ -968,6 +973,12 @@ ParticleSimulation::Execute_padded_mpi()
         totalParticleStats[j] += particleStats[j];
       }
     }
+
+
+    double parallelProfilingEnd = MPI_Wtime();
+    std::cout << "Parallel Compute Runtime = " << parallelProfilingEnd - parallelProfilingStart
+              << std::endl;
+              
     attach_mesh_attribute("Heatflux", targetFacets, rootQvalues);
     write_out_mesh(meshWriteOptions::BOTH, targetFacets);
   }
@@ -979,7 +990,6 @@ ParticleSimulation::Execute_padded_mpi()
 void
 ParticleSimulation::Execute_mpi()
 {
-  startTime = MPI_Wtime();
   vtkInterface->init();
   MPI_Status mpiStatus;
 
@@ -1022,9 +1032,8 @@ ParticleSimulation::Execute_mpi()
   int startFacet = displacements[rank];
   int endFacet = startFacet + recieveCounts[rank];
 
-  startTime = MPI_Wtime();
   setup_sources();
-
+  double parallelProfilingStart = MPI_Wtime();
   qvalues = loop_over_facets(startFacet, endFacet); // perform main loop
   double endTime = MPI_Wtime();
 
@@ -1056,6 +1065,11 @@ ParticleSimulation::Execute_mpi()
         totalParticleStats[j] += particleStats[j];
       }
     }
+
+    double parallelProfilingEnd = MPI_Wtime();
+    std::cout << "Parallel Compute Runtime = " << parallelProfilingEnd - parallelProfilingStart
+              << std::endl;
+
     attach_mesh_attribute("Heatflux", targetFacets, rootQvalues);
     write_out_mesh(meshWriteOptions::BOTH, targetFacets);
   }
@@ -1063,7 +1077,6 @@ ParticleSimulation::Execute_mpi()
   mpi_particle_stats();
   print_particle_stats(totalParticleStats);
 
-  endTime = MPI_Wtime();
 }
 
 void
