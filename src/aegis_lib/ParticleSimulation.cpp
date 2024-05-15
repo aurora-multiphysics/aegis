@@ -821,6 +821,10 @@ ParticleSimulation::print_particle_stats(std::array<int, 5> particleStats)
     LOG_WARNING << "Number of particles terminated upon reaching max tracking length = "
                 << particleStats[3];
     LOG_WARNING << "Number of padded null particles = " << particleStats[4];
+
+    int total = (particleLaunchPos == "mc") ? nParticlesPerFacet * target_num_facets()
+                                            : target_num_facets();
+
     LOG_WARNING << "Number of particles not accounted for = "
                 << (target_num_facets() * nParticlesPerFacet - particlesCounted);
   }

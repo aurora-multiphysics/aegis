@@ -9,7 +9,7 @@
       "force_no_deposition": false,
       "coordinate_system": "flux",
       "execution_type": "dynamic",
-      "number_of_particles_per_facet":5,
+      "number_of_particles_per_facet":2,
       "dynamic_batch_params":{
           "batch_size":16,
           "worker_profiling": false,

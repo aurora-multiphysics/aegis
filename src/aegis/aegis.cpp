@@ -58,7 +58,7 @@ main(int argc, char ** argv)
   MPI_Finalize();
   if (rank == 0)
   {
-    std::cout << "Total wall time = " << MPI_Wtime() - startTime << "s" << std::endl;
+    std::cout << "Total wall time = " << MPI_Wtime() - startTime << std::endl;
   }
   return 0;
 }
