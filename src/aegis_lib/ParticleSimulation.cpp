@@ -781,12 +781,18 @@ ParticleSimulation::select_target_surface()
     log_string(LogLevel::WARNING, "WARNING - Will take a significant amount of "
                                   "time for larger geometry sets");
   }
-  if (rank == 0)
-  {
-    LOG_WARNING << "Total Number of Triangles rays launched from = " << numTargetFacets;
-  }
 
   targetNumFacets = targetFacets.size();
+  int totalParticles =
+      (particleLaunchPos == "mc") ? nParticlesPerFacet * targetNumFacets : targetNumFacets;
+  if (rank == 0)
+  {
+    LOG_WARNING << "Total Number of Triangles particles launched from = " << numTargetFacets;
+    LOG_WARNING << "Number of particles launched from each facet = " << nParticlesPerFacet
+                << std::endl;
+    LOG_WARNING << "Total Number of Particles launched = " << totalParticles << std::endl;
+  }
+
   return targetFacets;
 }
 
@@ -826,7 +832,7 @@ ParticleSimulation::print_particle_stats(std::array<int, 5> particleStats)
                                             : target_num_facets();
 
     LOG_WARNING << "Number of particles not accounted for = "
-                << (target_num_facets() * nParticlesPerFacet - particlesCounted);
+                << (totalParticles - particlesCounted);
   }
   // std::cout << "Number of Ray fire calls = " << numberOfRayFireCalls <<
   // std::endl;
@@ -882,7 +888,7 @@ ParticleSimulation::Execute_serial()
   double parallelProfilingEnd = MPI_Wtime();
   std::cout << "Parallel Compute Runtime = " << parallelProfilingEnd - parallelProfilingStart
             << std::endl;
-  
+
   if (qvalues.empty())
   {
     log_string(LogLevel::ERROR, "Error - loop over facets returned no "
@@ -974,11 +980,10 @@ ParticleSimulation::Execute_padded_mpi()
       }
     }
 
-
     double parallelProfilingEnd = MPI_Wtime();
     std::cout << "Parallel Compute Runtime = " << parallelProfilingEnd - parallelProfilingStart
               << std::endl;
-              
+
     attach_mesh_attribute("Heatflux", targetFacets, rootQvalues);
     write_out_mesh(meshWriteOptions::BOTH, targetFacets);
   }
@@ -1076,7 +1081,6 @@ ParticleSimulation::Execute_mpi()
 
   mpi_particle_stats();
   print_particle_stats(totalParticleStats);
-
 }
 
 void

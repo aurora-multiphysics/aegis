@@ -150,6 +150,7 @@ class ParticleSimulation : public AegisBase
   unsigned int numberOfRayFireCalls = 0;
   unsigned int numberOfClosestLocCalls = 0;
   unsigned int iterationCounter=0;
+  int totalParticles = 0;
 
 
   // DAGMC variables
