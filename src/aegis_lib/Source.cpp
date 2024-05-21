@@ -116,13 +116,13 @@ Sources::set_heatflux_params(const std::shared_ptr<EquilData> & equilibrium,
 
   psi = fluxPos[0]; // store psi at particle start
   psid = psi + equilibrium->psibdry;
-  Q = equilibrium->omp_power_dep(psid, Bn, "exp"); // store Q at particle start
+  _totalHeatflux = equilibrium->omp_power_dep(psid, Bn, "exp"); // store Q at particle start
 }
 
 void
 Sources::update_heatflux(double newHeatflux)
 {
-  Q = newHeatflux;
+  _totalHeatflux = newHeatflux;
 }
 
 std::vector<double>
@@ -137,10 +137,16 @@ Sources::BdotN()
   return Bn;
 }
 
+void
+Sources::add_heatflux(double heatflux)
+{
+  _totalHeatflux += heatflux;
+}
+
 double
 Sources::heatflux()
 {
-  return Q;
+  return _totalHeatflux;
 }
 
 moab::EntityHandle

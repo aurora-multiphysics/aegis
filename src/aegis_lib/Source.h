@@ -23,6 +23,7 @@ class Sources : public AegisBase
   std::vector<double> launch_pos(); // return launch position on triangle
   double BdotN();
   double heatflux();
+  void add_heatflux(double heatflux);
   moab::EntityHandle entity_handle();
   double get_psi();
   std::vector<double> get_normal();
@@ -30,6 +31,7 @@ class Sources : public AegisBase
   protected:
   std::vector<double> launchPos;
   double Q = 0.0; // Q of triangle
+  double _totalHeatflux = 0.0;
   double psi = 0.0; // psi at particle start
   double Bn = 0.0; // B.n of Triangle
   moab::EntityHandle entityHandle;
@@ -48,7 +50,6 @@ class TriangleSource : public Sources
   std::vector<double> xyzA;
   std::vector<double> xyzB;
   std::vector<double> xyzC;
-
   double D;
 
 
