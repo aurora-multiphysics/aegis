@@ -9,10 +9,22 @@
 #include <moab/Core.hpp>
 #include <moab/OrientedBoxTreeTool.hpp>
 
-ParticleBase::ParticleBase(coordinateSystem coordSys, std::vector<double> startingPosition)
+ParticleBase::ParticleBase(coordinateSystem coordSys, std::vector<double> startingPosition,
+                           double heatflux, moab::EntityHandle entityHandle)
 {
   coordSystem = coordSys;
   pos = startingPosition;
+  launchPos = startingPosition;
+  _heatflux = heatflux;
+  parentEntity = entityHandle;
+}
+
+ParticleBase::ParticleBase(coordinateSystem coordSys, std::vector<double> startingPosition,
+                           double heatflux)
+{
+  coordSystem = coordSys;
+  pos = startingPosition;
+  _heatflux = heatflux;
 }
 
 void
@@ -110,6 +122,14 @@ ParticleBase::set_dir(const std::shared_ptr<EquilData> & equilibrium)
   normB[1] = magn[1] / norm;
   normB[2] = magn[2] / norm;
   dir = normB;
+
+  // flip sign depending on surface normal particle launched from
+  if (fieldDir == magneticFieldDirection::BACKWARDS)
+  {
+    dir[0] = -dir[0];
+    dir[1] = -dir[1];
+    dir[2] = -dir[2];
+  }
 }
 
 // get current particle direction (along magnetic field)
@@ -125,12 +145,7 @@ ParticleBase::get_dir()
 void
 ParticleBase::align_dir_to_surf(double Bn)
 {
-  if (Bn < 0)
-  {
-    dir[0] = -dir[0];
-    dir[1] = -dir[1];
-    dir[2] = -dir[2];
-  }
+  fieldDir = (Bn < 0) ? magneticFieldDirection::BACKWARDS : magneticFieldDirection::FORWARDS;
 }
 
 // update position vector of particle with set distance travelled
@@ -258,4 +273,16 @@ ParticleBase::check_if_threshold_crossed()
   {
     return false;
   }
+}
+
+double
+ParticleBase::heatflux()
+{
+  return _heatflux;
+}
+
+moab::EntityHandle
+ParticleBase::parent_entity_handle()
+{
+  return parentEntity;
 }

@@ -20,6 +20,7 @@
 #include <unordered_map>
 #include <time.h>
 #include <any>
+#include <numeric>
 
 #include <vtkCellArray.h>
 #include <vtkNew.h>
@@ -87,6 +88,7 @@ class ParticleSimulation : public AegisBase
   void init_geometry();
   std::vector<std::pair<double,double>> psiQ_values; // for l2 norm test
   int target_num_facets();
+  int num_particles_launched();
 
   protected:
 
@@ -96,7 +98,7 @@ class ParticleSimulation : public AegisBase
   void dynamic_task_init();
   void implicit_complement_testing(); 
   moab::Range select_target_surface(); // get target surfaces of interest from aegis_settings.json
-  std::vector<double> loop_over_facets(int startFacet, int endFacet); // loop over facets in target surfaces
+  std::vector<double> loop_over_particles(int startFacet, int endFacet); // loop over particles across all target facets
   double monte_carlo_particle_launch(TriangleSource triangle);
   double fixed_particle_launch(TriangleSource triangle);
 
@@ -106,11 +108,11 @@ class ParticleSimulation : public AegisBase
   void polar_track();
   void flux_track();
   
-  terminationState cartesian_particle_track(TriangleSource &triangle, ParticleBase &particle); // loop over individual particle tracks
-  void terminate_particle_depositing(TriangleSource &triangle); // end particle track
-  void terminate_particle_shadow(TriangleSource &triangle); // end particle track
-  void terminate_particle_lost(TriangleSource &triangle); // end particle track
-  void terminate_particle_maxlength(TriangleSource &triangle); // end particle track
+  terminationState cartesian_particle_track(ParticleBase &particle); // loop over individual particle tracks
+  void terminate_particle_depositing(ParticleBase & particle); // end particle track
+  void terminate_particle_shadow(ParticleBase & particle); // end particle track
+  void terminate_particle_lost(ParticleBase & particle); // end particle track
+  void terminate_particle_maxlength(ParticleBase & particle); // end particle track
   void test_cyl_ray_fire(ParticleBase &particle);  
   
   
@@ -122,6 +124,7 @@ class ParticleSimulation : public AegisBase
   void attach_mesh_attribute(const std::string &tagName, moab::Range &entities, std::vector<std::vector<double>> &dataToAttach);
   
   void write_out_mesh(meshWriteOptions option, moab::Range rangeOfEntities = {});
+  void write_particle_launch_positions(std::vector<double> &particleHeatfluxes);
   void mesh_coord_transform(coordinateSystem coordSys);
   void select_coordinate_system();
   
@@ -138,18 +141,22 @@ class ParticleSimulation : public AegisBase
   int dynamicBatchSize = 16;
   std::string coordinateConfig = "cart";
   bool workerProfiling = false;
-  bool workerDebug = false;
+  bool debugDynamicBatching = false;
   coordinateSystem coordSys = coordinateSystem::CARTESIAN; // default cartesian 
   bool noMidplaneTermination = false;
   int nParticlesPerFacet = 1; // Number of particles launched per facet
+  bool writeParticleLaunchPos = false;
 
   std::vector<TriangleSource> listOfTriangles;
+  std::unordered_map<moab::EntityHandle,double> heatfluxMap;
   int totalNumberOfFacets = 0;
 
   std::vector<int> vectorOfTargetSurfs;
   unsigned int numberOfRayFireCalls = 0;
   unsigned int numberOfClosestLocCalls = 0;
   unsigned int iterationCounter=0;
+  int totalParticles = 0;
+  std::vector<ParticleBase> listOfParticles;
 
 
   // DAGMC variables

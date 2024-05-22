@@ -17,22 +17,27 @@
 #include "CoordTransform.h"
 #include "EquilData.h"
 
-
+enum class magneticFieldDirection
+{
+  FORWARDS,
+  BACKWARDS
+};
 
 class ParticleBase : public AegisBase
 {
   private:
-  double power = 0.0; // power associated with particle
+  double _heatflux = 0.0; // heatflux associated with particle
   double lengthTravelled = 0.0; // total length travelled by particle
   bool directionUp = false; 
   std::vector<double> previousPos; // previous position in particle history
   double thresholdDistanceThreshold = 0.0;
   double euclidDistTravelled = 0.0;
   bool thresholdDistanceCrossed = false;
-  moab::DagMC::RayHistory facetHistory;
+  moab::DagMC::RayHistory facetHistory; // stores entity handles of surfaces crossed and facets hit
+  moab::EntityHandle parentEntity;
+  magneticFieldDirection fieldDir = magneticFieldDirection::BACKWARDS; // set particle along or against magnetic field 
   
   coordinateSystem coordSystem = coordinateSystem::CARTESIAN;
-  //DagMC::RayHistory history; // stores entity handles of surfaces crossed and facets hit
 
   public:
   std::vector<double> Bfield; // magnetic field at current pos
@@ -46,8 +51,10 @@ class ParticleBase : public AegisBase
 
 
 
+  ParticleBase(coordinateSystem coordSys, std::vector<double> startingPosition, double heatflux, moab::EntityHandle entityHandle);  
+  ParticleBase(coordinateSystem coordSys, std::vector<double> startingPosition, double heatflux);  
+  ParticleBase(coordinateSystem coordSys, std::vector<double> startingPosition); 
 
-  ParticleBase(coordinateSystem coordSys, std::vector<double> startingPosition);  
   void set_facet_history(moab::DagMC::RayHistory history);
 
   // set new particle position
@@ -71,7 +78,8 @@ class ParticleBase : public AegisBase
   void check_if_midplane_crossed(const std::array<double, 3> &midplaneParameters); // check if particle has reached inner or outer midplane and set value of atMidplane
   void set_intersection_threshold(double distanceThreshold);
   bool check_if_threshold_crossed();
-
+  double heatflux();
+  moab::EntityHandle parent_entity_handle();
 };
 
 
