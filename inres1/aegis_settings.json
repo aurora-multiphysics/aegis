@@ -4,10 +4,10 @@
       "DAGMC": "inres1_shad.h5m",
       "step_size": 0.01,
       "max_steps": 10000,
-      "launch_pos": "mc",
+      "launch_pos": "fixed",
 
       "monte_carlo_params":{
-            "number_of_particles_per_facet":2,
+            "number_of_particles_per_facet":4,
             "write_particle_launch_positions":true
       },
 

@@ -88,6 +88,7 @@ class ParticleSimulation : public AegisBase
   void init_geometry();
   std::vector<std::pair<double,double>> psiQ_values; // for l2 norm test
   int target_num_facets();
+  int num_particles_launched();
 
   protected:
 

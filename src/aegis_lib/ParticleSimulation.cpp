@@ -141,7 +141,7 @@ ParticleSimulation::Execute_dynamic_mpi()
 
     std::ofstream handlerOutputFile;
     std::stringstream fileName;
-    fileName << "handler_rank(0).txt";
+    fileName << "handler_rank_0.txt";
     handlerOutputFile.open(fileName.str());
     int depositCounter = 0;
     for (const auto i : particleHeatfluxes)
@@ -323,9 +323,9 @@ ParticleSimulation::worker()
     MPI_Send(&rank, 1, MPI_INT, 0, 1, MPI_COMM_WORLD);
     MPI_Recv(&particleStartIndex, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
 
-    if (particleStartIndex + dynamicBatchSize > target_num_facets())
+    if (particleStartIndex + dynamicBatchSize > num_particles_launched())
     {
-      dynamicBatchSize = target_num_facets() - particleStartIndex;
+      dynamicBatchSize = num_particles_launched() - particleStartIndex;
     }
 
     start = particleStartIndex;
@@ -377,7 +377,7 @@ ParticleSimulation::read_params(const std::shared_ptr<JsonHandler> & configFile)
     particleLaunchPos =
         aegisParams.get_optional<std::string>("launch_pos").value_or(particleLaunchPos);
 
-    if (aegisParamsData.contains("monte_carlo_params"))
+    if (aegisParamsData.contains("monte_carlo_params") && particleLaunchPos != "fixed")
     {
       auto monteCarloParamsData = configFile->data()["aegis_params"]["monte_carlo_params"];
       JsonHandler monteCarloParams(monteCarloParamsData);
@@ -548,7 +548,7 @@ ParticleSimulation::setup_sources()
 
   std::vector<double> triangleCoords(9);
   std::vector<double> trianglePtsA(3), trianglePtsB(3), trianglePtsC(3);
-  listOfParticles.reserve(target_num_facets() * (nParticlesPerFacet + 1));
+  listOfParticles.reserve(num_particles_launched());
   for (const auto & facetEH : targetFacets)
   {
     heatfluxMap.insert(std::pair(facetEH, 0.0));
@@ -775,6 +775,12 @@ ParticleSimulation::target_num_facets()
   return targetNumFacets;
 }
 
+int
+ParticleSimulation::num_particles_launched()
+{
+  return (targetNumFacets * nParticlesPerFacet);
+}
+
 // print stats for the entire run
 void
 ParticleSimulation::print_particle_stats(std::array<int, 5> particleStats)
@@ -800,11 +806,8 @@ ParticleSimulation::print_particle_stats(std::array<int, 5> particleStats)
                 << particleStats[3];
     LOG_WARNING << "Number of padded null particles = " << particleStats[4];
 
-    int total = (particleLaunchPos == "mc") ? nParticlesPerFacet * target_num_facets()
-                                            : target_num_facets();
-
     LOG_WARNING << "Number of particles not accounted for = "
-                << (totalParticles - particlesCounted);
+                << (num_particles_launched() - particlesCounted);
   }
   // std::cout << "Number of Ray fire calls = " << numberOfRayFireCalls <<
   // std::endl;
@@ -842,35 +845,42 @@ ParticleSimulation::Execute_serial()
 {
 
   vtkInterface->init();
-
   moab::ErrorCode rval;
 
   targetFacets = select_target_surface();
   integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
+  setup_sources();
 
   // implicit_complement_testing();
 
   int start = 0;
-  int end = targetFacets.size();
+  int end = num_particles_launched();
 
-  std::vector<double> qvalues;
-  setup_sources();
+  std::vector<double> particleHeatfluxes;
   double parallelProfilingStart = MPI_Wtime();
-  qvalues = loop_over_particles(start, end);
+  particleHeatfluxes = loop_over_particles(start, end);
   double parallelProfilingEnd = MPI_Wtime();
   std::cout << "Parallel Compute Runtime = " << parallelProfilingEnd - parallelProfilingStart
             << std::endl;
 
-  if (qvalues.empty())
+  if (particleHeatfluxes.empty())
   {
     log_string(LogLevel::ERROR, "Error - loop over facets returned no "
                                 "heatfluxes, please check logfile. Exiting...");
     std::exit(EXIT_FAILURE);
   }
 
-  std::vector<double> psiStart(target_num_facets());
-  std::vector<double> bnList(target_num_facets());
-  std::vector<std::vector<double>> normalList(target_num_facets());
+  std::vector<double> facetHeatfluxes(target_num_facets());
+  auto particleIter = particleHeatfluxes.begin();
+  for (unsigned int i = 0; i < facetHeatfluxes.size(); ++i)
+  {
+    facetHeatfluxes[i] = std::reduce(particleIter, (particleIter + nParticlesPerFacet));
+    particleIter += nParticlesPerFacet; // step iterator by n particles
+  }
+
+  // std::vector<double> psiStart(target_num_facets());
+  // std::vector<double> bnList(target_num_facets());
+  // std::vector<std::vector<double>> normalList(target_num_facets());
 
   // for (int i = 0; i < listOfTriangles.size(); ++i)
   // {
@@ -879,10 +889,10 @@ ParticleSimulation::Execute_serial()
   //   normalList[i] = listOfTriangles[i].get_normal();
   // }
 
-  attach_mesh_attribute("Heatflux", targetFacets, qvalues);
-  attach_mesh_attribute("Psi Start", targetFacets, psiStart);
-  attach_mesh_attribute("BdotN", targetFacets, bnList);
-  attach_mesh_attribute("Normal", targetFacets, normalList);
+  attach_mesh_attribute("Heatflux", targetFacets, facetHeatfluxes);
+  // attach_mesh_attribute("Psi Start", targetFacets, psiStart);
+  // attach_mesh_attribute("BdotN", targetFacets, bnList);
+  // attach_mesh_attribute("Normal", targetFacets, normalList);
   write_out_mesh(meshWriteOptions::BOTH);
 
   // write out data and print final
