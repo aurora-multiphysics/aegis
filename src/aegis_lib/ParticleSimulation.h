@@ -141,7 +141,7 @@ class ParticleSimulation : public AegisBase
   int dynamicBatchSize = 16;
   std::string coordinateConfig = "cart";
   bool workerProfiling = false;
-  bool workerDebug = false;
+  bool debugDynamicBatching = false;
   coordinateSystem coordSys = coordinateSystem::CARTESIAN; // default cartesian 
   bool noMidplaneTermination = false;
   int nParticlesPerFacet = 1; // Number of particles launched per facet

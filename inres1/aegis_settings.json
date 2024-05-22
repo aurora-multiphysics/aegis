@@ -4,11 +4,11 @@
       "DAGMC": "inres1_shad.h5m",
       "step_size": 0.01,
       "max_steps": 10000,
-      "launch_pos": "fixed",
+      "launch_pos": "mc",
 
       "monte_carlo_params":{
-            "number_of_particles_per_facet":4,
-            "write_particle_launch_positions":true
+            "number_of_particles_per_facet":5,
+            "write_particle_launch_positions":false
       },
 
       "target_surfs": [1,2,3,4,5,6],
@@ -19,7 +19,7 @@
       "dynamic_batch_params":{
           "batch_size":16,
           "worker_profiling": false,
-	      "worker_debug":false
+	  "debug":false
       } 
   },
   "equil_params":{
@@ -35,6 +35,6 @@
       "print_debug_info": false
   },
   "vtk_params":{
-      "draw_particle_tracks": true
+      "draw_particle_tracks": false
   }
  }

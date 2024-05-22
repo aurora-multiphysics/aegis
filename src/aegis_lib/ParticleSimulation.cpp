@@ -122,7 +122,7 @@ ParticleSimulation::Execute_dynamic_mpi()
 
   const int noMoreWork = -1;
 
-  std::vector<double> particleHeatfluxes(target_num_facets() * nParticlesPerFacet);
+  std::vector<double> particleHeatfluxes(num_particles_launched());
   std::vector<double> facetHeatfluxes(target_num_facets());
   setup_sources();
 
@@ -132,6 +132,7 @@ ParticleSimulation::Execute_dynamic_mpi()
   { // handler process...
     handler(particleHeatfluxes);
     // sum particles over triangles
+
     auto particleIter = particleHeatfluxes.begin();
     for (unsigned int i = 0; i < facetHeatfluxes.size(); ++i)
     {
@@ -139,25 +140,30 @@ ParticleSimulation::Execute_dynamic_mpi()
       particleIter += nParticlesPerFacet; // step iterator by n particles
     }
 
-    std::ofstream handlerOutputFile;
-    std::stringstream fileName;
-    fileName << "handler_rank_0.txt";
-    handlerOutputFile.open(fileName.str());
-    int depositCounter = 0;
-    for (const auto i : particleHeatfluxes)
+    // this could be a method in the worker-handler class
+    if (debugDynamicBatching)
     {
-      handlerOutputFile << i << "\n";
-      if (i > 0)
+      std::ofstream handlerOutputFile;
+      std::stringstream fileName;
+      fileName << "handler_rank_0.txt";
+      handlerOutputFile.open(fileName.str());
+      int depositCounter = 0;
+      for (const auto i : particleHeatfluxes)
       {
-        depositCounter += 1;
+        handlerOutputFile << i << "\n";
+        if (i > 0)
+        {
+          depositCounter += 1;
+        }
       }
+      handlerOutputFile << std::endl;
+      handlerOutputFile << "Number of depositing particles = " << depositCounter << std::endl;
     }
-    handlerOutputFile << std::endl;
-    handlerOutputFile << "Number of depositing particles = " << depositCounter << std::endl;
   }
 
   else
   { // worker processes...
+    // abstract this out to its own worker-handler classes?
     worker();
   }
 
@@ -287,13 +293,13 @@ ParticleSimulation::worker()
   int counterDeposit = 0;
   int index = 0;
 
-  // if (workerDebug)
-  // {
   std::ofstream workerOutputFile;
-  std::stringstream fileName;
-  fileName << "rank" << rank << ".txt";
-  workerOutputFile.open(fileName.str());
-  // }
+  if (debugDynamicBatching)
+  {
+    std::stringstream fileName;
+    fileName << "rank" << rank << ".txt";
+    workerOutputFile.open(fileName.str());
+  }
 
   std::vector<double> workerQVals;
   int particleStartIndex = 0;
@@ -303,18 +309,23 @@ ParticleSimulation::worker()
   unsigned int end = start + dynamicBatchSize;
 
   workerQVals = loop_over_particles(start, end); // process initial facets
-  workerOutputFile << "Loop over [" << start << ":" << end << "] particles: \n";
   index = start;
-  for (auto i : workerQVals)
+
+  if (debugDynamicBatching)
   {
-    workerOutputFile << "[" << index + 1 << "] " << i << "\n";
-    if (i > 0)
+    workerOutputFile << "Loop over [" << start << ":" << end << "] particles: \n";
+    index = start;
+    for (auto i : workerQVals)
     {
-      counterDeposit += 1;
+      workerOutputFile << "[" << index + 1 << "] " << i << "\n";
+      if (i > 0)
+      {
+        counterDeposit += 1;
+      }
+      index += 1;
     }
-    index += 1;
+    workerOutputFile << std::endl;
   }
-  workerOutputFile << std::endl;
 
   MPI_Send(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, 0, mpiDataTag, MPI_COMM_WORLD);
   MPI_Send(&start, 1, MPI_INT, 0, mpiIndexTag, MPI_COMM_WORLD);
@@ -338,19 +349,22 @@ ParticleSimulation::worker()
       // send local (to worker) array back to handler process
       MPI_Send(workerQVals.data(), workerQVals.size(), MPI_DOUBLE, 0, mpiDataTag, MPI_COMM_WORLD);
       MPI_Send(&start, 1, MPI_INT, 0, mpiIndexTag, MPI_COMM_WORLD);
-
-      workerOutputFile << "Loop over [" << start << ":" << end << "] particles: \n";
       index = start;
-      for (auto i : workerQVals)
+
+      if (debugDynamicBatching)
       {
-        workerOutputFile << "[" << index + 1 << "] " << i << "\n";
-        if (i > 0)
+        workerOutputFile << "Loop over [" << start << ":" << end << "] particles: \n";
+        for (auto i : workerQVals)
         {
-          counterDeposit += 1;
+          workerOutputFile << "[" << index + 1 << "] " << i << "\n";
+          if (i > 0)
+          {
+            counterDeposit += 1;
+          }
+          index += 1;
         }
-        index += 1;
+        workerOutputFile << std::endl;
       }
-      workerOutputFile << std::endl;
     }
   } while (particleStartIndex != noMoreWork); // while there is work available
 
@@ -377,7 +391,7 @@ ParticleSimulation::read_params(const std::shared_ptr<JsonHandler> & configFile)
     particleLaunchPos =
         aegisParams.get_optional<std::string>("launch_pos").value_or(particleLaunchPos);
 
-    if (aegisParamsData.contains("monte_carlo_params") && particleLaunchPos != "fixed")
+    if (aegisParamsData.contains("monte_carlo_params"))
     {
       auto monteCarloParamsData = configFile->data()["aegis_params"]["monte_carlo_params"];
       JsonHandler monteCarloParams(monteCarloParamsData);
@@ -388,6 +402,11 @@ ParticleSimulation::read_params(const std::shared_ptr<JsonHandler> & configFile)
       writeParticleLaunchPos =
           monteCarloParams.get_optional<bool>("write_particle_launch_positions")
               .value_or(writeParticleLaunchPos);
+    }
+
+    if (particleLaunchPos == "fixed")
+    {
+      nParticlesPerFacet = 1;
     }
 
     noMidplaneTermination =
@@ -409,7 +428,8 @@ ParticleSimulation::read_params(const std::shared_ptr<JsonHandler> & configFile)
       workerProfiling =
           dynamicBatchParams.get_optional<bool>("worker_profiling").value_or(workerProfiling);
 
-      workerDebug = dynamicBatchParams.get_optional<bool>("worker_debug").value_or(workerDebug);
+      debugDynamicBatching =
+          dynamicBatchParams.get_optional<bool>("debug").value_or(debugDynamicBatching);
     }
 
     if (aegisParamsData.contains("target_surfs"))
@@ -1259,12 +1279,12 @@ void
 ParticleSimulation::write_particle_launch_positions(std::vector<double> & particleHeatfluxes)
 {
   std::ofstream particleLaunchPosOut("particle_launch_positions.txt");
-  particleLaunchPosOut << "X Y Z Heatflux_per_particle" << std::endl;
+  particleLaunchPosOut << "X,Y,Z,Heatflux_per_particle" << std::endl;
   for (int i = 0; i < listOfParticles.size(); ++i)
   {
-    particleLaunchPosOut << listOfParticles[i].launchPos[0] << " "
-                         << listOfParticles[i].launchPos[1] << " "
-                         << listOfParticles[i].launchPos[2] << " " << particleHeatfluxes[i] << "\n";
+    particleLaunchPosOut << listOfParticles[i].launchPos[0] << ","
+                         << listOfParticles[i].launchPos[1] << ","
+                         << listOfParticles[i].launchPos[2] << "," << particleHeatfluxes[i] << "\n";
   }
   particleLaunchPosOut << std::flush;
 }
