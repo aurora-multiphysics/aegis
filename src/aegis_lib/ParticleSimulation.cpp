@@ -131,8 +131,8 @@ ParticleSimulation::Execute_dynamic_mpi()
   if (rank == 0)
   { // handler process...
     handler(particleHeatfluxes);
-    // sum particles over triangles
 
+    // sum particles over triangles
     auto particleIter = particleHeatfluxes.begin();
     for (unsigned int i = 0; i < facetHeatfluxes.size(); ++i)
     {
@@ -381,6 +381,7 @@ ParticleSimulation::read_params(const std::shared_ptr<JsonHandler> & configFile)
   {
     auto aegisParamsData = configFile->data()["aegis_params"];
     JsonHandler aegisParams(aegisParamsData);
+    _aegisParams = aegisParams;
 
     dagmcInputFile = aegisParams.get_required<std::string>("DAGMC");
 

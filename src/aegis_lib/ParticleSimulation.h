@@ -55,6 +55,7 @@
 #include "Particle.h"
 #include "VtkInterface.h"
 #include "AegisBase.h"
+#include "DynamicBatching.h"
 
 
 using namespace moab;
@@ -157,6 +158,7 @@ class ParticleSimulation : public AegisBase
   unsigned int iterationCounter=0;
   int totalParticles = 0;
   std::vector<ParticleBase> listOfParticles;
+  JsonHandler _aegisParams;
 
 
   // DAGMC variables
