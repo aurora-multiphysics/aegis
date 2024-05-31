@@ -1170,11 +1170,11 @@ std::map<std::string, double>
 ParticleSimulation::get_profiling_times()
 {
   std::map<std::string, double> profilingTimes;
-  profilingTimes.insert(std::make_pair("DAGMC Mesh read Runtime = ", dagmcMeshReadTime));
-  profilingTimes.insert(std::make_pair("Preparing surfaces for articles Runtime = ", prepSurfacesTime));  
-  profilingTimes.insert(std::make_pair("Pool of Particles generation Runtime = ", setupArrayOfParticlesTime));
-  profilingTimes.insert(std::make_pair("Main loop over particles Runtime = ", mainParticleLoopTime));
-  profilingTimes.insert(std::make_pair("Mesh Write out Runtime = ", aegisMeshWriteTime));
+  profilingTimes.insert(std::make_pair("DAGMC Mesh read runtime = ", dagmcMeshReadTime));
+  profilingTimes.insert(std::make_pair("Preparing surfaces for particles runtime = ", prepSurfacesTime));  
+  profilingTimes.insert(std::make_pair("Pool of particles generation runtime = ", setupArrayOfParticlesTime));
+  profilingTimes.insert(std::make_pair("Main particle tracking loop runtime = ", mainParticleLoopTime));
+  profilingTimes.insert(std::make_pair("Mesh Write out runtime = ", aegisMeshWriteTime));
 
   return profilingTimes;
 }
