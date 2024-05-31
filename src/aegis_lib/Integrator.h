@@ -83,7 +83,7 @@ class SurfaceIntegrator : public AegisBase
   void print_particle_stats(); // return number of particles depositing, shadowed, lost, etc...
 
   void set_launch_position(const moab::EntityHandle &facet, const std::vector<double> &position);
-  std::array<int, 5> particle_stats(); // return array of integers corresponding to particle stats
+  std::array<int, 4> particle_stats(); // return array of integers corresponding to particle stats
   void clear_stats();
 
 
@@ -95,7 +95,6 @@ class SurfaceIntegrator : public AegisBase
   int nParticlesLost=0; // number of particles lost from magnetic domain
   int nParticlesHeatDep=0; // number of particles despositing heat
   int nParticlesMaxLength=0; // number of particles reached max termination length
-  int nParticlesPadded=0; // number of padded null particles 
 
   int nFacets=0; // Number of facets in geometry
   std::vector<EntityHandle> facetEntities; // list of all entity handles in geometry

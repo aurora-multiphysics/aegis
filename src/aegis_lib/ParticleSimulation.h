@@ -72,7 +72,6 @@ enum class ExecuteOptions
 {
   SERIAL,
   MPI,
-  MPI_PADDED,
   MPI_DYNAMIC
 };
 
@@ -84,11 +83,12 @@ class ParticleSimulation : public AegisBase
   void Execute_serial(); // serial
   void Execute_mpi(); // MPI_Gatherv
   void Execute_dynamic_mpi(); // dynamic load balancing
-  void Execute_padded_mpi(); // padded MPI_Gather
   void init_geometry();
   std::vector<std::pair<double,double>> psiQ_values; // for l2 norm test
   int target_num_facets();
   int num_particles_launched();
+
+  std::map<std::string, double> get_profiling_times();
 
   protected:
 
@@ -117,7 +117,7 @@ class ParticleSimulation : public AegisBase
   
   
   void ray_hit_on_launch(std::unique_ptr<ParticleBase> &particle); // particle hit on initial launch from surface
-  void print_particle_stats(std::array<int, 5> particleStats); // print number of particles that reached each termination state
+  void print_particle_stats(std::array<int, 4> particleStats); // print number of particles that reached each termination state
   void mpi_particle_stats(); // get inidividual particle stats for each process
   void read_params(const std::shared_ptr<JsonHandler> &inputs); // read parameters from aegis_settings.json
   void attach_mesh_attribute(const std::string &tagName, moab::Range &entities, std::vector<double> &dataToAttach);
@@ -191,6 +191,12 @@ class ParticleSimulation : public AegisBase
   const std::string branchDepositingPart = "Depositing Particles";
   const std::string branchMaxLengthPart = "Max Length Particles";
   
+  // profiling 
+  double dagmcMeshReadTime = 0.0;
+  double prepSurfacesTime = 0.0;
+  double setupArrayOfParticlesTime = 0.0;
+  double mainParticleLoopTime = 0.0;
+  double aegisMeshWriteTime = 0.0;
 };
 
 #endif

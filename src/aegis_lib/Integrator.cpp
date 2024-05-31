@@ -100,10 +100,6 @@ SurfaceIntegrator::count_particle(const EntityHandle & facet, terminationState t
       }
       break;
 
-    case terminationState::PADDED:
-      nParticlesPadded++;
-      break;
-
     default:
       throw std::invalid_argument("Invalid particle termination state provided.");
   }
@@ -254,7 +250,6 @@ SurfaceIntegrator::print_particle_stats()
     LOG_WARNING << "Number of particles lost from magnetic domain = " << nParticlesLost;
     LOG_WARNING << "Number of particles terminated upon reaching max tracking length = "
                 << nParticlesMaxLength;
-    LOG_WARNING << "Number of padded particles = " << nParticlesPadded;
   }
 };
 
@@ -265,16 +260,15 @@ SurfaceIntegrator::set_launch_position(const moab::EntityHandle & facet,
   launchPositions[facet] = position;
 }
 
-std::array<int, 5>
+std::array<int, 4>
 SurfaceIntegrator::particle_stats()
 {
 
-  std::array<int, 5> particleStats;
+  std::array<int, 4> particleStats;
   particleStats[0] = nParticlesHeatDep;
   particleStats[1] = nParticlesShadowed;
   particleStats[2] = nParticlesLost;
   particleStats[3] = nParticlesMaxLength;
-  particleStats[4] = nParticlesPadded;
 
   return particleStats;
 }

@@ -15,53 +15,6 @@ ParticleSimulation::ParticleSimulation(std::shared_ptr<JsonHandler> configFile,
   init_geometry();
 }
 
-void
-ParticleSimulation::test_cyl_ray_fire(ParticleBase & particle)
-{
-
-  std::ofstream coordinateTest("coords.txt");
-  std::ofstream coordinateTest2("coords2.txt");
-  std::vector<double> cartPos = particle.pos;
-  std::vector<double> bfieldXYZ = particle.dir;
-  std::vector<double> polPos = CoordTransform::cart_to_polar(cartPos);
-  std::vector<double> bFieldRZ = equilibrium->b_field(cartPos, "");
-
-  std::vector<double> outputPosition1(3), outputPosition2(3);
-  ParticleBase cartParticle(coordinateSystem::CARTESIAN, cartPos, 0.0);
-  cartParticle.set_pos(cartPos);
-  cartParticle.set_dir(equilibrium);
-
-  ParticleBase polarParticle(coordinateSystem::POLAR, polPos, 0.0);
-  polarParticle.set_pos(polPos);
-  polarParticle.set_dir(equilibrium);
-
-  double cartStepSize = 0.01;
-  double polarStepSize = 0.1;
-  double distanceToSurf;
-  moab::EntityHandle eh;
-  moab::DagMC::RayHistory history;
-
-  for (int i = 0; i < 1000; ++i)
-  {
-    DAG->ray_fire(implComplementVol, cartParticle.pos.data(), cartParticle.dir.data(), eh,
-                  distanceToSurf, &history, cartStepSize, 1);
-    cartParticle.update_vectors(cartStepSize);
-    cartParticle.set_dir(equilibrium);
-    coordinateTest << cartParticle.pos[0] << " " << cartParticle.pos[1] << " "
-                   << cartParticle.pos[2] << std::endl;
-  }
-
-  for (int i = 0; i < 100; ++i)
-  {
-    DAG->ray_fire(implComplementVol, polarParticle.pos.data(), polarParticle.dir.data(), eh,
-                  distanceToSurf, &history, cartStepSize, 1);
-    polarParticle.update_vectors(polarStepSize);
-    polarParticle.set_dir(equilibrium);
-    cartPos = CoordTransform::polar_to_cart(polarParticle.pos);
-    coordinateTest2 << cartPos[0] << " " << cartPos[1] << " " << cartPos[2] << std::endl;
-  }
-}
-
 // Call different execute functions depending on which execute type selected
 void
 ParticleSimulation::Execute()
@@ -89,12 +42,6 @@ ParticleSimulation::Execute()
     Execute_mpi();
   }
 
-  else if (exeType == "mpi_padded" || exeType == "padded")
-  {
-    log_string(LogLevel::WARNING, "Executing padded MPI with no load balancing...");
-    Execute_padded_mpi();
-  }
-
   else if (exeType == "mpi_dynamic" || exeType == "dynamic")
   {
     log_string(LogLevel::WARNING, "Executing dynamic MPI load balancing...");
@@ -103,7 +50,7 @@ ParticleSimulation::Execute()
 
   else
   {
-    log_string(LogLevel::FATAL, "No suitable execution type ('serial', 'mpi', 'mpi_padded', "
+    log_string(LogLevel::FATAL, "No suitable execution type ('serial', 'mpi', "
                                 "'mpi_dynamic') provided exiting...");
     MPI_Abort(MPI_COMM_WORLD, 1);
     std::exit(1);
@@ -117,16 +64,13 @@ ParticleSimulation::Execute_dynamic_mpi()
 
   MPI_Status mpiStatus;
 
-  targetFacets = select_target_surface();
-  integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
 
   const int noMoreWork = -1;
 
   std::vector<double> particleHeatfluxes(num_particles_launched());
   std::vector<double> facetHeatfluxes(target_num_facets());
-  setup_sources();
 
-  double parallelProfilingStart = MPI_Wtime();
+  double mainParticleLoopStart = MPI_Wtime();
 
   if (rank == 0)
   { // handler process...
@@ -167,8 +111,8 @@ ParticleSimulation::Execute_dynamic_mpi()
     worker();
   }
 
-  std::array<int, 5> particleStats = integrator->particle_stats();
-  std::array<int, 5> totalParticleStats;
+  std::array<int, 4> particleStats = integrator->particle_stats();
+  std::array<int, 4> totalParticleStats;
 
   if (rank != 0)
   {
@@ -196,18 +140,16 @@ ParticleSimulation::Execute_dynamic_mpi()
 
   if (rank == 0)
   {
-    double parallelProfilingEnd = MPI_Wtime();
-    std::cout << "Parallel Compute Runtime = " << parallelProfilingEnd - parallelProfilingStart
-              << std::endl;
+    mainParticleLoopTime = MPI_Wtime() - mainParticleLoopStart;
+
+    double aegisMeshWriteStart = MPI_Wtime();
     if (writeParticleLaunchPos == true)
     {
       write_particle_launch_positions(particleHeatfluxes);
     }
     attach_mesh_attribute("Heatflux", targetFacets, facetHeatfluxes);
-    // double meshWriteTimeStart = MPI_Wtime();
     write_out_mesh(meshWriteOptions::BOTH, targetFacets);
-    // double meshWriteTime = MPI_Wtime() - meshWriteTimeStart;
-    // std::cout << "Time taken to write out mesh = " << meshWriteTime << "\n";
+    aegisMeshWriteTime = MPI_Wtime() - aegisMeshWriteStart;
   }
 
   mpi_particle_stats();
@@ -478,6 +420,8 @@ ParticleSimulation::select_coordinate_system()
 void
 ParticleSimulation::init_geometry()
 {
+  double dagmcMeshReadStart = MPI_Wtime();
+
   // setup dagmc instance
   DAG->load_file(dagmcInputFile.c_str());
   DAG->init_OBBTree();
@@ -496,8 +440,11 @@ ParticleSimulation::init_geometry()
   {
     std::cout << "Particle not in implicit complement. Check volumes." << std::endl;
   }
+  dagmcMeshReadTime = MPI_Wtime() - dagmcMeshReadStart;
 
-  // setup B Field data
+
+  // setup B Field data 
+  double prepSurfacesStart = MPI_Wtime();
 
   std::vector<double> vertexCoordinates;
   DAG->moab_instance()->get_vertex_coordinates(vertexCoordinates);
@@ -532,6 +479,14 @@ ParticleSimulation::init_geometry()
   {
     mesh_coord_transform(coordSys);
   }
+
+  targetFacets = select_target_surface();
+  integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
+  prepSurfacesTime = MPI_Wtime() - prepSurfacesStart;
+  
+  double setupArrayOfParticlesTimeStart = MPI_Wtime();
+  setup_sources();
+  setupArrayOfParticlesTime = MPI_Wtime() - setupArrayOfParticlesTimeStart;
 }
 
 // loop over facets in target surfaces
@@ -613,7 +568,6 @@ ParticleSimulation::cartesian_particle_track(ParticleBase & particle)
   double euclidDistToNextSurf = 0.0;
   nextSurf = 0;
   particle.set_dir(equilibrium);
-  // test_cyl_ray_fire(particle);
 
   vtkInterface->init_new_vtkPoints();
   vtkInterface->insert_next_point_in_track(particle.get_xyz_pos());
@@ -803,7 +757,7 @@ ParticleSimulation::num_particles_launched()
 
 // print stats for the entire run
 void
-ParticleSimulation::print_particle_stats(std::array<int, 5> particleStats)
+ParticleSimulation::print_particle_stats(std::array<int, 4> particleStats)
 {
   unsigned int particlesCounted = 0;
 
@@ -811,8 +765,6 @@ ParticleSimulation::print_particle_stats(std::array<int, 5> particleStats)
   {
     particlesCounted += i;
   }
-
-  particlesCounted -= particleStats[4]; // remove padded particles
 
   if (rank == 0)
   {
@@ -824,7 +776,6 @@ ParticleSimulation::print_particle_stats(std::array<int, 5> particleStats)
     LOG_WARNING << "Number of particles lost from magnetic domain = " << particleStats[2];
     LOG_WARNING << "Number of particles terminated upon reaching max tracking length = "
                 << particleStats[3];
-    LOG_WARNING << "Number of padded null particles = " << particleStats[4];
 
     LOG_WARNING << "Number of particles not accounted for = "
                 << (num_particles_launched() - particlesCounted);
@@ -863,15 +814,11 @@ ParticleSimulation::mpi_particle_stats()
 void
 ParticleSimulation::Execute_serial()
 {
+  double mainParticleLoopStart = MPI_Wtime();
 
   vtkInterface->init();
   moab::ErrorCode rval;
 
-  targetFacets = select_target_surface();
-  integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
-  setup_sources();
-
-  // implicit_complement_testing();
 
   int start = 0;
   int end = num_particles_launched();
@@ -914,95 +861,27 @@ ParticleSimulation::Execute_serial()
   // attach_mesh_attribute("BdotN", targetFacets, bnList);
   // attach_mesh_attribute("Normal", targetFacets, normalList);
   write_out_mesh(meshWriteOptions::BOTH);
+  mainParticleLoopTime = MPI_Wtime() - mainParticleLoopStart;
 
   // write out data and print final
 
-  std::array<int, 5> particleStats = integrator->particle_stats();
+  std::array<int, 4> particleStats = integrator->particle_stats();
 
   vtkInterface->write_multiBlockData("particle_tracks.vtm");
 
   print_particle_stats(particleStats);
-}
 
-void
-ParticleSimulation::Execute_padded_mpi()
-{
-
-  vtkInterface->init();
-  MPI_Status mpiStatus;
-
-  targetFacets = select_target_surface();
-  integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
-
-  int totalFacets = target_num_facets();
-  int remainder = totalFacets % nprocs;
-  int nPadded = 0;
-  if (remainder != 0)
-  {
-    int paddedTotalFacets = target_num_facets() + (nprocs - remainder);
-    nPadded = paddedTotalFacets - totalFacets;
-    totalFacets = paddedTotalFacets;
-  }
-  int nFacetsPerProc = totalFacets / nprocs;
-  int startIndex = rank * nFacetsPerProc;
-  int endIndex = startIndex + nFacetsPerProc;
-  int rootRank = 0;
-
-  std::vector<double> qvalues;                  // qvalues buffer local to each processor
-  std::vector<double> rootQvalues(totalFacets); // total qvalues buffer on root process for IO
-  setup_sources();
-  double parallelProfilingStart = MPI_Wtime();
-  qvalues = loop_over_particles(startIndex, endIndex); // perform main loop
-
-  std::array<int, 5> particleStats = integrator->particle_stats();
-  std::array<int, 5> totalParticleStats;
-  std::vector<double> nonRootQvals(nFacetsPerProc);
-  if (rank != 0)
-  {
-    MPI_Gather(qvalues.data(), qvalues.size(), MPI_DOUBLE, nullptr, 0, MPI_DOUBLE, rootRank,
-               MPI_COMM_WORLD);
-    MPI_Send(particleStats.data(), particleStats.size(), MPI_INT, 0, 11, MPI_COMM_WORLD);
-  }
-  else
-  {
-    totalParticleStats = integrator->particle_stats();
-    MPI_Gather(qvalues.data(), qvalues.size(), MPI_DOUBLE, rootQvalues.data(), qvalues.size(),
-               MPI_DOUBLE, rootRank, MPI_COMM_WORLD);
-    if (rootQvalues.size() > target_num_facets())
-    {
-      rootQvalues.resize(rootQvalues.size() - nPadded);
-    }
-
-    for (int i = 1; i < nprocs; ++i)
-    {
-      MPI_Recv(particleStats.data(), particleStats.size(), MPI_INT, i, 11, MPI_COMM_WORLD,
-               &mpiStatus);
-      for (int j = 0; j < particleStats.size(); ++j)
-      {
-        totalParticleStats[j] += particleStats[j];
-      }
-    }
-
-    double parallelProfilingEnd = MPI_Wtime();
-    std::cout << "Parallel Compute Runtime = " << parallelProfilingEnd - parallelProfilingStart
-              << std::endl;
-
-    attach_mesh_attribute("Heatflux", targetFacets, rootQvalues);
-    write_out_mesh(meshWriteOptions::BOTH, targetFacets);
-  }
-
-  mpi_particle_stats();
-  print_particle_stats(totalParticleStats);
 }
 
 void
 ParticleSimulation::Execute_mpi()
 {
+
+  double mainParticleLoopStart = MPI_Wtime();
+
   vtkInterface->init();
   MPI_Status mpiStatus;
 
-  targetFacets = select_target_surface();
-  integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
 
   int totalFacets = target_num_facets();
   int nFacetsPerProc = totalFacets / nprocs;
@@ -1040,13 +919,12 @@ ParticleSimulation::Execute_mpi()
   int startIndex = displacements[rank];
   int endIndex = startIndex + recieveCounts[rank];
 
-  setup_sources();
   double parallelProfilingStart = MPI_Wtime();
   qvalues = loop_over_particles(startIndex, endIndex); // perform main loop
   double endTime = MPI_Wtime();
 
-  std::array<int, 5> particleStats = integrator->particle_stats();
-  std::array<int, 5> totalParticleStats;
+  std::array<int, 4> particleStats = integrator->particle_stats();
+  std::array<int, 4> totalParticleStats;
   if (rank != 0)
   {
     MPI_Gatherv(qvalues.data(), qvalues.size(), MPI_DOUBLE, nullptr, nullptr, nullptr, MPI_DOUBLE,
@@ -1074,12 +952,10 @@ ParticleSimulation::Execute_mpi()
       }
     }
 
-    double parallelProfilingEnd = MPI_Wtime();
-    std::cout << "Parallel Compute Runtime = " << parallelProfilingEnd - parallelProfilingStart
-              << std::endl;
-
     attach_mesh_attribute("Heatflux", targetFacets, rootQvalues);
     write_out_mesh(meshWriteOptions::BOTH, targetFacets);
+    mainParticleLoopTime = MPI_Wtime() - mainParticleLoopStart;
+
   }
 
   mpi_particle_stats();
@@ -1287,4 +1163,18 @@ ParticleSimulation::write_particle_launch_positions(std::vector<double> & partic
                          << listOfParticles[i].launchPos[2] << "," << particleHeatfluxes[i] << "\n";
   }
   particleLaunchPosOut << std::flush;
+}
+
+// return timings for main parallel loop, mesh setup and mesh write out
+std::map<std::string, double>
+ParticleSimulation::get_profiling_times()
+{
+  std::map<std::string, double> profilingTimes;
+  profilingTimes.insert(std::make_pair("DAGMC Mesh read Runtime = ", dagmcMeshReadTime));
+  profilingTimes.insert(std::make_pair("Preparing surfaces for articles Runtime = ", prepSurfacesTime));  
+  profilingTimes.insert(std::make_pair("Pool of Particles generation Runtime = ", setupArrayOfParticlesTime));
+  profilingTimes.insert(std::make_pair("Main loop over particles Runtime = ", mainParticleLoopTime));
+  profilingTimes.insert(std::make_pair("Mesh Write out Runtime = ", aegisMeshWriteTime));
+
+  return profilingTimes;
 }
