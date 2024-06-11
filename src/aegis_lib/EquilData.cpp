@@ -1421,7 +1421,5 @@ EquilData::check_if_in_bfield(std::vector<double> xyzPos)
 double
 EquilData::get_psi(double r, double z)
 {
-  auto psi = alglib::spline2dcalc(psiSpline, r, z);
-  std::cout << psi << std::endl;
-  return psi;
+  return -(alglib::spline2dcalc(psiSpline, r, z)); // spline returns sign flipped psi
 }

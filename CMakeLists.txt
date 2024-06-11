@@ -28,7 +28,7 @@ include_directories(externals/json/include)
 #include(${CMAKE_SOURCE_DIR}/cmake/SetBuildType.cmake)
 
 # Default to cpmpile with debugging symbols
-set(CMAKE_BUILD_TYPE DEBUG)
+set(CMAKE_BUILD_TYPE RELEASE)
 # set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 # set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 # set(BUILD_TYPE "PROFILING")
@@ -92,7 +92,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 ############################################################
 # Set the build type environment variable
 ############################################################
-if(BUILD_TYPE STREQUAL "TEST")
+if(CMAKE_BUILD_TYPE STREQUAL "TEST")
   set(BUILD_TYPE_COMPILE_FLAGS "-g;-O0;--coverage;")
   set(TEST_LIBRARIES "gcov")
   message(STATUS "BUILD_TYPE SET TO TEST")
