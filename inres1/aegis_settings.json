@@ -7,7 +7,7 @@
       "launch_pos": "mc",
 
       "monte_carlo_params":{
-            "number_of_particles_per_facet":5,
+            "number_of_particles_per_facet":1,
             "write_particle_launch_positions":false
       },
 
@@ -35,6 +35,6 @@
       "print_debug_info": false
   },
   "vtk_params":{
-      "draw_particle_tracks": false
+      "draw_particle_tracks": true
   }
  }

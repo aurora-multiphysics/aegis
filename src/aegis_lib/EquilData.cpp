@@ -746,7 +746,7 @@ EquilData::r_extrema()
         work1[j] = 2;
         break;
       }
-      zpsi = alglib::spline2dcalc(psiSpline, re, ze);
+      zpsi = get_psi(re, ze);
     }
   }
 
@@ -825,7 +825,7 @@ EquilData::b_field(std::vector<double> position, std::string startingFrom)
   else
   {
     std::vector<double> polarPosition;
-    polarPosition = CoordTransform::cart_to_polar(position);
+    polarPosition = CoordTransform::cart_to_polar_xy(position);
     zr = polarPosition[0];
     zz = polarPosition[1];
   }
@@ -1074,7 +1074,7 @@ EquilData::boundary_rb()
       // extremal Z reached
       break;
     }
-    zpsi = alglib::spline2dcalc(psiSpline, re, ze);
+    zpsi = get_psi(re, ze);
 
     if (rsig > 0) // psiaxis < psiqbdry (psi increasing outwards)
     {
@@ -1305,13 +1305,12 @@ EquilData::psi_limiter(std::vector<std::vector<double>> vertices)
   for (auto & i : vertices)
   {
     std::vector<double> cartPos = i;
-    std::vector<double> polarPos = CoordTransform::cart_to_polar(i);
+    std::vector<double> polarPos = CoordTransform::cart_to_polar_xy(i);
 
     zr = polarPos[0];
     zz = polarPos[1];
 
-    zpsi = alglib::spline2dcalc(this->psiSpline, zr,
-                                zz); // spline interpolation of psi(R,Z)
+    zpsi = get_psi(zr, zz);
 
     ztheta = atan2(zz - zcen, zr - rcen);
     if (ztheta < -M_PI_2)
@@ -1409,7 +1408,7 @@ EquilData::get_midplane_params()
 bool
 EquilData::check_if_in_bfield(std::vector<double> xyzPos)
 {
-  std::vector<double> polarPos = CoordTransform::cart_to_polar(xyzPos);
+  std::vector<double> polarPos = CoordTransform::cart_to_polar_xy(xyzPos);
   double r = polarPos[0];
   double z = polarPos[1];
   if (r < rmin || r > rmax || z < zmin || z > zmax)
@@ -1417,4 +1416,12 @@ EquilData::check_if_in_bfield(std::vector<double> xyzPos)
     return false;
   }
   return true;
+}
+
+double
+EquilData::get_psi(double r, double z)
+{
+  auto psi = alglib::spline2dcalc(psiSpline, r, z);
+  std::cout << psi << std::endl;
+  return psi;
 }

@@ -73,21 +73,17 @@ ParticleBase::get_xyz_pos()
 double
 ParticleBase::get_psi(const std::shared_ptr<EquilData> & equilibrium)
 {
-  std::vector<double> fluxPos;
   std::vector<double> polarPos;
   double psi;
   switch (coordSystem)
   {
     case coordinateSystem::CARTESIAN:
-      polarPos = CoordTransform::cart_to_polar(pos);
-      fluxPos = CoordTransform::polar_to_flux(polarPos, equilibrium);
-      psi = fluxPos[0];
+      polarPos = CoordTransform::cart_to_polar_xy(pos);
+      psi = equilibrium->get_psi(polarPos[0], polarPos[1]);
       break;
     case coordinateSystem::POLAR:
-      fluxPos = CoordTransform::polar_to_flux(polarPos, equilibrium);
-      psi = fluxPos[0];
+      psi = equilibrium->get_psi(pos[0], pos[1]);
   }
-
   return psi;
 }
 

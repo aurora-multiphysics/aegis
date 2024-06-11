@@ -91,6 +91,9 @@ class EquilData : public AegisBase
   // Return eqdsk struct
   eqdskData get_eqdsk_struct();
 
+  // return psi value at given (R,Z) coords
+  double get_psi(double r, double z);
+
   // Read eqdsk file
   void read_eqdsk(std::string filename);
 
