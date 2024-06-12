@@ -51,6 +51,9 @@ EquilData::read_params(const std::shared_ptr<JsonHandler> & configFile)
     drawEquRZ = equilParams.get_optional<bool>("draw_equil_rz").value_or(drawEquRZ);
     drawEquXYZ = equilParams.get_optional<bool>("draw_equil_xyz").value_or(drawEquXYZ);
     debug = equilParams.get_optional<bool>("debug").value_or(debug);
+
+    auto splineTypeStr = equilParams.get_optional<std::string>("spline_type").value();
+    _splineType = (splineTypeStr == "linear") ? SplineType::LINEAR : SplineType::CUBIC;
   }
   else
   {
@@ -438,7 +441,7 @@ EquilData::init_interp_splines()
 
   // set_rsig();
 
-  // loop over Z creating spline knots
+  // loop over R creating spline knots
   for (int i = 1; i < nw; i++)
   {
     rPts[i] = rPts[i - 1] + dr;
@@ -481,24 +484,62 @@ EquilData::init_interp_splines()
   psi_1dgrid.setcontent(nw, psi1dpts.data());
   f_grid.setcontent(nw, eqdsk.fpol.data());
 
-  //  for (int i=0 ; i<nh; i++)
-  //  {
-  //    psi1d_out << psi_1dgrid[i] << std::endl;
-  //  }
-
   // Construct the spline interpolant for flux function psi(R,Z)
-  alglib::spline2dbuildbicubicv(r_grid, nw, z_grid, nh, psi_grid, 1, psiSpline);
+  switch (_splineType)
+  {
+    case SplineType::CUBIC:
+      alglib::spline2dbuildbicubicv(r_grid, nw, z_grid, nh, psi_grid, 1, psiSpline);
+      alglib::spline1dbuildcubic(psi_1dgrid, f_grid, fSpline);
 
-  // Construct the spline interpolant for toroidal component flux function
-  // I(psi) aka f(psi)
-  alglib::spline1dbuildcubic(psi_1dgrid, f_grid, fSpline);
+      log_string(LogLevel::WARNING,
+                 "Splines initialised as cubic splines (cubic splines are default, use "
+                 "spline_type:'linear' to switch to linear splines)");
+      break;
+
+    case SplineType::LINEAR:
+      alglib::spline2dbuildbilinearv(r_grid, nw, z_grid, nh, psi_grid, 1, psiSpline); // psi spline
+      alglib::spline1dbuildlinear(psi_1dgrid, f_grid, fSpline); // I(psi) aka f(psi)
+
+      log_string(LogLevel::WARNING, "Splines intialised as linear splines");
+      break;
+  }
+
+  int count2 = 0;
+  std::vector<double> dpsidrPts(nw * nh);
+  std::vector<double> dpsidzPts(nw * nh);
+  double psi, dpsidr, dpsidz, dpsi2drdz;
+  for (int j = 0; j < nh; j++) // flatten Psi(R,Z) array into Psi(index)
+  {
+    for (int i = 0; i < nw; i++)
+    {
+      alglib::spline2ddiff(psiSpline, rPts[i], zPts[j], psi, dpsidr, dpsidz, dpsi2drdz);
+      dpsidrPts[count2] = dpsidr;
+      dpsidzPts[count2] = dpsidz;
+      count2 += 1;
+    }
+  }
+
+  alglib::real_1d_array dpsidr_grid;
+  alglib::real_1d_array dpsidz_grid;
+  dpsidr_grid.setcontent(nw * nh, dpsidrPts.data());
+  dpsidz_grid.setcontent(nw * nh, dpsidzPts.data());
+
+  switch (_splineType)
+  {
+    case SplineType::CUBIC:
+      alglib::spline2dbuildbicubicv(r_grid, nw, z_grid, nh, dpsidr_grid, 1, dpsidrSpline);
+      alglib::spline2dbuildbicubicv(r_grid, nw, z_grid, nh, dpsidz_grid, 1, dpsidzSpline);
+      break;
+
+    case SplineType::LINEAR:
+      alglib::spline2dbuildbilinearv(r_grid, nw, z_grid, nh, dpsidr_grid, 1, dpsidrSpline);
+      alglib::spline2dbuildbilinearv(r_grid, nw, z_grid, nh, dpsidz_grid, 1, dpsidzSpline);
+      break;
+  }
 
   // Alglib::spline2ddiff function can return a value of spline at (R,Z) as well
   // as derivatives. I.e no need to have a separate spline for each derivative
   // dPsidR and dPsidZ
-
-  // create 1d spline for f(psi) aka eqdsk.fpol
-  // alglib::spline1dbuildlinear(f_grid,)
 }
 
 // Write out psi(R,Z) data for gnuplotting
@@ -836,7 +877,10 @@ EquilData::b_field(std::vector<double> position, std::string startingFrom)
   }
 
   // evaluate psi and psi derivs at given (R,Z) coords
-  alglib::spline2ddiff(psiSpline, zr, zz, zpsi, zdpdr, zdpdz, null);
+  zpsi = alglib::spline2dcalc(psiSpline, zr, zz);
+  zdpdr = alglib::spline2dcalc(dpsidrSpline, zr, zz);
+  zdpdz = alglib::spline2dcalc(dpsidzSpline, zr, zz);
+  // alglib::spline2ddiff(psiSpline, zr, zz, zpsi, zdpdr, zdpdz, null);
 
   // evaluate I aka f at psi (I aka f is the flux function)
   zf = alglib::spline1dcalc(fSpline, zpsi);
@@ -1115,6 +1159,7 @@ EquilData::boundary_rb()
 
     // check monotone
     alglib::spline2ddiff(psiSpline, re, ze, zpsi, zdpdr, zdpdz, zddpdz);
+
     zdpdsr = zdpdr * zcostheta + zdpdz * zsintheta;
     if (idplset == 1)
     {
@@ -1337,7 +1382,10 @@ EquilData::psi_limiter(std::vector<std::vector<double>> vertices)
 
   double zdpdr;
   double zdpdz;
-  alglib::spline2ddiff(psiSpline, zr, zz, zpsi, zdpdr, zdpdz, null);
+  // alglib::spline2ddiff(psiSpline, zr, zz, zpsi, zdpdr, zdpdz, null);
+  zpsi = alglib::spline2dcalc(psiSpline, zr, zz);
+  zdpdr = alglib::spline2dcalc(dpsidrSpline, zr, zz);
+  zdpdz = alglib::spline2dcalc(dpsidzSpline, zr, zz);
 
   double zbpbdry, zbtotbdry;
   zbpbdry = (1 / zr) * sqrt(std::max(0.0, (pow(zdpdr, 2) + pow(zdpdz, 2))));
