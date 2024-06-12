@@ -28,7 +28,7 @@ include_directories(externals/json/include)
 #include(${CMAKE_SOURCE_DIR}/cmake/SetBuildType.cmake)
 
 # Default to cpmpile with debugging symbols
-set(CMAKE_BUILD_TYPE DEBUG)
+set(CMAKE_BUILD_TYPE RELEASE)
 # set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 # set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 # set(BUILD_TYPE "PROFILING")
@@ -102,8 +102,8 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
   set(TEST_LIBRARIES "")
   message(STATUS "BUILD_TYPE SET TO DEBUG")
 
-elseif(BUILD_TYPE STREQUAL "RELEASE")
-  set(BUILD_TYPE_COMPILE_FLAGS "-O2")
+elseif(CMAKE_BUILD_TYPE STREQUAL "RELEASE")
+  set(BUILD_TYPE_COMPILE_FLAGS "-g;-O2")
   set(TEST_LIBRARIES "")
   message(STATUS "BUILD_TYPE SET TO RELEASE")
 
