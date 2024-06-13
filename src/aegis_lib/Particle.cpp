@@ -73,21 +73,17 @@ ParticleBase::get_xyz_pos()
 double
 ParticleBase::get_psi(const std::shared_ptr<EquilData> & equilibrium)
 {
-  std::vector<double> fluxPos;
   std::vector<double> polarPos;
   double psi;
   switch (coordSystem)
   {
     case coordinateSystem::CARTESIAN:
-      polarPos = CoordTransform::cart_to_polar(pos);
-      fluxPos = CoordTransform::polar_to_flux(polarPos, equilibrium);
-      psi = fluxPos[0];
+      polarPos = CoordTransform::cart_to_polar_xy(pos);
+      psi = equilibrium->get_psi(polarPos[0], polarPos[1]);
       break;
     case coordinateSystem::POLAR:
-      fluxPos = CoordTransform::polar_to_flux(polarPos, equilibrium);
-      psi = fluxPos[0];
+      psi = equilibrium->get_psi(pos[0], pos[1]);
   }
-
   return psi;
 }
 
@@ -95,8 +91,6 @@ ParticleBase::get_psi(const std::shared_ptr<EquilData> & equilibrium)
 void
 ParticleBase::set_dir(const std::shared_ptr<EquilData> & equilibrium)
 {
-  double norm = 0;              // normalisation constant for magnetic field
-  std::vector<double> normB(3); // normalised magnetic field
   std::vector<double> polarPos; // polar position
   std::vector<double> magn(3);
 
@@ -105,7 +99,7 @@ ParticleBase::set_dir(const std::shared_ptr<EquilData> & equilibrium)
     case coordinateSystem::CARTESIAN:
       polarPos = CoordTransform::cart_to_polar(pos);
       magn = equilibrium->b_field(pos, "cart"); // magnetic field
-      magn = equilibrium->b_field_cart(magn, polarPos[2], 0);
+      magn = equilibrium->b_field_cart(magn, polarPos[2]);
       break;
 
     case coordinateSystem::POLAR:
@@ -116,8 +110,10 @@ ParticleBase::set_dir(const std::shared_ptr<EquilData> & equilibrium)
       break;
   }
 
-  norm = sqrt(pow(magn[0], 2) + pow(magn[1], 2) + pow(magn[2], 2));
+  // normalise particle direction vector
+  double norm = sqrt(pow(magn[0], 2) + pow(magn[1], 2) + pow(magn[2], 2));
   Bfield = magn;
+  std::vector<double> normB(3);
   normB[0] = magn[0] / norm;
   normB[1] = magn[1] / norm;
   normB[2] = magn[2] / norm;
@@ -150,7 +146,7 @@ ParticleBase::align_dir_to_surf(double Bn)
 
 // update position vector of particle with set distance travelled
 void
-ParticleBase::update_vectors(double distanceTravelled)
+ParticleBase::update_vectors(const double & distanceTravelled)
 {
   // This will update the position
   std::vector<double> newPt(3);
@@ -172,7 +168,7 @@ ParticleBase::update_vectors(double distanceTravelled)
 // update position vector of particle with set distance travelled and update
 // the particle direction at new position
 void
-ParticleBase::update_vectors(double distanceTravelled,
+ParticleBase::update_vectors(const double & distanceTravelled,
                              const std::shared_ptr<EquilData> & equilibrium)
 {
   // This will update the position and direction vector of the particle

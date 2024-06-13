@@ -101,11 +101,10 @@ Sources::set_heatflux_params(const std::shared_ptr<EquilData> & equilibrium,
   std::vector<double> bFieldXYZ;
 
   polarPos = CoordTransform::cart_to_polar(launchPos);
-  fluxPos = CoordTransform::polar_to_flux(polarPos, equilibrium);
 
   bField = equilibrium->b_field(polarPos, "forwards");
 
-  bField = equilibrium->b_field_cart(bField, polarPos[2], 0);
+  bField = equilibrium->b_field_cart(bField, polarPos[2]);
   double product = 0;
   for (int i = 0; i < 3; i++)
   {
@@ -114,7 +113,7 @@ Sources::set_heatflux_params(const std::shared_ptr<EquilData> & equilibrium,
 
   Bn = product; // store B.n
 
-  psi = fluxPos[0]; // store psi at particle start
+  psi = equilibrium->get_psi(polarPos[0], polarPos[1]); // store psi at particle start
   psid = psi + equilibrium->psibdry;
   _totalHeatflux = equilibrium->omp_power_dep(psid, Bn, "exp"); // store Q at particle start
 }

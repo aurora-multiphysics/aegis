@@ -64,7 +64,6 @@ ParticleSimulation::Execute_dynamic_mpi()
 
   MPI_Status mpiStatus;
 
-
   const int noMoreWork = -1;
 
   std::vector<double> particleHeatfluxes(num_particles_launched());
@@ -442,8 +441,7 @@ ParticleSimulation::init_geometry()
   }
   dagmcMeshReadTime = MPI_Wtime() - dagmcMeshReadStart;
 
-
-  // setup B Field data 
+  // setup B Field data
   double prepSurfacesStart = MPI_Wtime();
 
   std::vector<double> vertexCoordinates;
@@ -483,7 +481,7 @@ ParticleSimulation::init_geometry()
   targetFacets = select_target_surface();
   integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
   prepSurfacesTime = MPI_Wtime() - prepSurfacesStart;
-  
+
   double setupArrayOfParticlesTimeStart = MPI_Wtime();
   setup_sources();
   setupArrayOfParticlesTime = MPI_Wtime() - setupArrayOfParticlesTimeStart;
@@ -819,7 +817,6 @@ ParticleSimulation::Execute_serial()
   vtkInterface->init();
   moab::ErrorCode rval;
 
-
   int start = 0;
   int end = num_particles_launched();
 
@@ -870,7 +867,6 @@ ParticleSimulation::Execute_serial()
   vtkInterface->write_multiBlockData("particle_tracks.vtm");
 
   print_particle_stats(particleStats);
-
 }
 
 void
@@ -881,7 +877,6 @@ ParticleSimulation::Execute_mpi()
 
   vtkInterface->init();
   MPI_Status mpiStatus;
-
 
   int totalFacets = target_num_facets();
   int nFacetsPerProc = totalFacets / nprocs;
@@ -955,7 +950,6 @@ ParticleSimulation::Execute_mpi()
     attach_mesh_attribute("Heatflux", targetFacets, rootQvalues);
     write_out_mesh(meshWriteOptions::BOTH, targetFacets);
     mainParticleLoopTime = MPI_Wtime() - mainParticleLoopStart;
-
   }
 
   mpi_particle_stats();
@@ -1171,9 +1165,12 @@ ParticleSimulation::get_profiling_times()
 {
   std::map<std::string, double> profilingTimes;
   profilingTimes.insert(std::make_pair("DAGMC Mesh read runtime = ", dagmcMeshReadTime));
-  profilingTimes.insert(std::make_pair("Preparing surfaces for particles runtime = ", prepSurfacesTime));  
-  profilingTimes.insert(std::make_pair("Pool of particles generation runtime = ", setupArrayOfParticlesTime));
-  profilingTimes.insert(std::make_pair("Main particle tracking loop runtime = ", mainParticleLoopTime));
+  profilingTimes.insert(
+      std::make_pair("Preparing surfaces for particles runtime = ", prepSurfacesTime));
+  profilingTimes.insert(
+      std::make_pair("Pool of particles generation runtime = ", setupArrayOfParticlesTime));
+  profilingTimes.insert(
+      std::make_pair("Main particle tracking loop runtime = ", mainParticleLoopTime));
   profilingTimes.insert(std::make_pair("Mesh Write out runtime = ", aegisMeshWriteTime));
 
   return profilingTimes;

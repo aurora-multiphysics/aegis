@@ -91,6 +91,9 @@ class EquilData : public AegisBase
   // Return eqdsk struct
   eqdskData get_eqdsk_struct();
 
+  // return psi value at given (R,Z) coords
+  double get_psi(const double &r, const double &z);
+
   // Read eqdsk file
   void read_eqdsk(std::string filename);
 
@@ -114,10 +117,10 @@ class EquilData : public AegisBase
 
   // Caculate B field vector (in toroidal polars) at given position
   // set string to "polar" if position vector already in polars
-  std::vector<double> b_field(std::vector<double> position, std::string startingFrom);
+  std::vector<double> b_field(const std::vector<double> &position, std::string startingFrom);
   
   // Convert B Field vectors to cartesian given polar form and value of angle 
-  std::vector<double> b_field_cart(std::vector<double> polarBVector, double phi, int normalise); 
+  std::vector<double> b_field_cart(const std::vector<double> &polarBVector,const double &phi); 
 
   // Write out positions and associated BField vectors in cartesian and/or polar toroidal
   void write_bfield(int phiSamples = 12);
@@ -127,7 +130,7 @@ class EquilData : public AegisBase
   // Determine Rm and Bpm (R and Bpol at omp)
   void boundary_rb();
 
-  double omp_power_dep(double psi, double bn, std::string formula);
+  double omp_power_dep(const double &psi, const double &bn, std::string formula);
 
   void psi_limiter(std::vector<std::vector<double>> vertices);
 
@@ -135,7 +138,7 @@ class EquilData : public AegisBase
 
   void psiref_override();
 
-  bool check_if_in_bfield(std::vector<double> xyzPos);
+  bool check_if_in_bfield(const std::vector<double> &xyzPos);
 
   std::array<double, 3> get_midplane_params(); // return rInnerMidplane, rOuterMidplane, zMidplane
 
