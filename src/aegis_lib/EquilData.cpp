@@ -803,7 +803,7 @@ EquilData::rz_splines()
 
 // Caculate B field vector (in toroidal polars) at given position
 std::vector<double>
-EquilData::b_field(std::vector<double> position, std::string startingFrom)
+EquilData::b_field(const std::vector<double> & position, std::string startingFrom)
 {
   std::vector<double> bVector(3); // B in toroidal polars
   double zr;                      // local R from position vector supplied
@@ -824,8 +824,7 @@ EquilData::b_field(std::vector<double> position, std::string startingFrom)
   // otherwise transform from cartesian -> polar before calculating B
   else
   {
-    std::vector<double> polarPosition;
-    polarPosition = CoordTransform::cart_to_polar_xy(position);
+    auto polarPosition = CoordTransform::cart_to_polar_xy(position);
     zr = polarPosition[0];
     zz = polarPosition[1];
   }
@@ -851,35 +850,14 @@ EquilData::b_field(std::vector<double> position, std::string startingFrom)
 }
 
 std::vector<double>
-EquilData::b_field_cart(std::vector<double> polarBVector, double phi, int normalise)
+EquilData::b_field_cart(const std::vector<double> & polarBVector, const double & phi)
 {
-  std::vector<double> cartBVector(3);
-  double zbx; // cartesian Bx component
-  double zby; // cartesian By component
-  double zbz; // Bz component
-  double zbr; // polar Br component
-  double zbt; // polar toroidal Bt component
-
-  zbr = polarBVector[0];
-  zbz = polarBVector[1];
-  zbt = polarBVector[2];
-
-  zbx = zbr * cos(phi) - zbt * sin(phi);
-  zby = -(zbr * sin(phi) + zbt * cos(phi));
-
-  cartBVector[0] = zbx;
-  cartBVector[1] = zby;
-  cartBVector[2] = zbz;
-
-  if (normalise == 1)
-  {
-    double norm;
-    norm = sqrt(pow(cartBVector[0], 2) + pow(cartBVector[1], 2) + pow(cartBVector[2], 2));
-    cartBVector[0] = cartBVector[0] / norm;
-    cartBVector[1] = cartBVector[1] / norm;
-    cartBVector[2] = cartBVector[2] / norm;
-  }
-
+  double zbr = polarBVector[0];
+  double zbz = polarBVector[1];
+  double zbt = polarBVector[2];
+  double zbx = zbr * cos(phi) - zbt * sin(phi);
+  double zby = -(zbr * sin(phi) + zbt * cos(phi));
+  std::vector<double> cartBVector = {zbx, zby, zbz};
   return cartBVector;
 }
 
@@ -958,7 +936,7 @@ EquilData::write_bfield(int phiSamples)
                                         "Fixup eqdsk required");
           }
           polarB = b_field(polarPos, "polar");               // calculate B(R,Z,phi)
-          cartB = b_field_cart(polarB, polarPos[2], 0);      // transform to B(x,y,z)
+          cartB = b_field_cart(polarB, polarPos[2]);         // transform to B(x,y,z)
           cartPos = CoordTransform::polar_to_cart(polarPos); // transform position to cartesian
 
           // write out magnetic field data for plotting
@@ -1249,7 +1227,7 @@ EquilData::boundary_rb()
 }
 
 double
-EquilData::omp_power_dep(double psi, double bn, std::string formula)
+EquilData::omp_power_dep(const double & psi, const double & bn, std::string formula)
 {
   double heatFlux;
   double exponential, fpfac;
@@ -1406,7 +1384,7 @@ EquilData::get_midplane_params()
 
 // check if in b_field from polar coords (R,Z)
 bool
-EquilData::check_if_in_bfield(std::vector<double> xyzPos)
+EquilData::check_if_in_bfield(const std::vector<double> & xyzPos)
 {
   std::vector<double> polarPos = CoordTransform::cart_to_polar_xy(xyzPos);
   double r = polarPos[0];
@@ -1419,7 +1397,7 @@ EquilData::check_if_in_bfield(std::vector<double> xyzPos)
 }
 
 double
-EquilData::get_psi(double r, double z)
+EquilData::get_psi(const double & r, const double & z)
 {
   return -(alglib::spline2dcalc(psiSpline, r, z)); // spline returns sign flipped psi
 }

@@ -9,199 +9,85 @@
 #include "SimpleLogger.h"
 
 std::vector<double>
-CoordTransform::cart_to_polar(std::vector<double> inputVector)
+CoordTransform::cart_to_polar(const std::vector<double> & inputVector)
 {
-  std::vector<double> outputVector(3);
-  double r;   // polar r
-  double phi; // polar phi
-  double x;   // cart x
-  double y;   // cart y
-  double z;   // cart z
-
-  x = inputVector[0];
-  y = inputVector[1];
-  z = inputVector[2];
-
-  r = sqrt(pow(x, 2) + pow(y, 2)); // calculate
-  phi = atan2(-y, x);              // calculate phi
-
-  outputVector[0] = r;
-  outputVector[1] = z;
-  outputVector[2] = phi;
-  return outputVector;
-}
-
-// cart_to_polar without the calculation of phi
-std::vector<double>
-CoordTransform::cart_to_polar_xy(std::vector<double> inputVector)
-{
-  std::vector<double> outputVector(3);
-  double r;   // polar r
-  double phi; // polar phi
-  double x;   // cart x
-  double y;   // cart y
-  double z;   // cart z
-
-  x = inputVector[0];
-  y = inputVector[1];
-  z = inputVector[2];
-
-  r = sqrt(pow(x, 2) + pow(y, 2)); // calculate
-
-  outputVector[0] = r;
-  outputVector[1] = z;
+  double x = inputVector[0];
+  double y = inputVector[1];
+  double z = inputVector[2];
+  double r = sqrt(pow(x, 2) + pow(y, 2)); // calculate
+  double phi = atan2(-y, x);              // calculate phi
+  std::vector<double> outputVector = {r, z, phi};
   return outputVector;
 }
 
 std::vector<double>
-CoordTransform::polar_to_cart(std::vector<double> inputVector)
+CoordTransform::polar_to_cart(const std::vector<double> & inputVector)
 {
-  std::vector<double> outputVector(3);
-  double r;   // polar r
-  double phi; // polar phi
-  double x;   // cart x
-  double y;   // cart y
-  double z;   // cart z
-
-  r = inputVector[0];
-  z = inputVector[1];
-  phi = inputVector[2];
-
-  x = r * cos(phi);  // calculate x
-  y = -r * sin(phi); // calculate y
-
-  outputVector[0] = x;
-  outputVector[1] = y;
-  outputVector[2] = z;
-
+  double r = inputVector[0];
+  double z = inputVector[1];
+  double phi = inputVector[2];
+  double x = r * cos(phi);  // calculate x
+  double y = -r * sin(phi); // calculate y
+  std::vector<double> outputVector = {x, y, z};
   return outputVector;
 }
 
 std::vector<double>
-CoordTransform::cart_to_polar(double e0, double e1, double e2)
+CoordTransform::cart_to_polar(const double & e0, const double & e1, const double & e2)
 {
-  std::vector<double> outputVector(3);
-  double r;   // polar r
-  double phi; // polar phi
-  double x;   // cart x
-  double y;   // cart y
-  double z;   // cart z
-  x = e0;
-  y = e1;
-  z = e2;
-
-  r = sqrt(pow(x, 2) + pow(y, 2)); // calculate
-  phi = atan2(-y, x);              // calculate phi
-
-  outputVector[0] = r;
-  outputVector[1] = z;
-  outputVector[2] = phi;
+  double x = e0;
+  double y = e1;
+  double z = e2;
+  double r = sqrt(pow(x, 2) + pow(y, 2)); // calculate
+  double phi = atan2(-y, x);              // calculate phi
+  std::vector<double> outputVector = {r, z, phi};
   return outputVector;
 }
 
 std::vector<double>
-CoordTransform::polar_to_cart(double e0, double e1, double e2)
+CoordTransform::polar_to_cart(const double & e0, const double & e1, const double & e2)
 {
-  std::vector<double> outputVector(3);
-  double r;   // polar r
-  double phi; // polar phi
-  double x;   // cart x
-  double y;   // cart y
-  double z;   // cart z
-
-  r = e0;
-  z = e1;
-  phi = e2;
-
-  x = r * cos(phi); // calculate x
-
-  y = -r * sin(phi); // calculate y
-
-  outputVector[0] = x;
-  outputVector[1] = y;
-  outputVector[2] = z;
-
+  double r = e0;
+  double z = e1;
+  double phi = e2;
+  double x = r * cos(phi);  // calculate x
+  double y = -r * sin(phi); // calculate y
+  std::vector<double> outputVector = {x, y, z};
   return outputVector;
 }
 
 std::vector<double>
-CoordTransform::polar_to_flux(std::vector<double> inputVector,
+CoordTransform::polar_to_flux(const std::vector<double> & inputVector,
                               const std::shared_ptr<EquilData> & equilibrium)
 {
-  std::vector<double> outputVector(3);
-  double r;     // local polar r
-  double z;     // local polar z
-  double phi;   // local polar phi
-  double psi;   // local psi
-  double theta; // local theta
-
-  r = inputVector[0];
-  z = inputVector[1];
-  phi = inputVector[2];
-
-  psi = alglib::spline2dcalc(equilibrium->psiSpline, r, z); // spline interpolation of psi(R,Z)
-
-  theta = atan2(z - equilibrium->zcen, r - equilibrium->rcen);
+  double r = inputVector[0];
+  double z = inputVector[1];
+  double phi = inputVector[2];
+  double psi =
+      alglib::spline2dcalc(equilibrium->psiSpline, r, z); // spline interpolation of psi(R,Z)
+  double theta = atan2(z - equilibrium->zcen, r - equilibrium->rcen);
   if (theta < -M_PI_2)
   {
     theta = 2 * M_PI + theta;
   }
-
-  outputVector[0] = -psi;
-  outputVector[1] = theta;
-  outputVector[2] = phi;
-
+  std::vector<double> outputVector = {-psi, theta, phi};
   return outputVector;
 }
 
-// TODO
-// std::vector<double>
-// CoordTransform::flux_to_polar(std::vector<double> inputVector,
-//                               const std::shared_ptr<EquilData> & equilibrium)
-// {
-//   std::vector<double> outputVector(3);
-//   double r;     // local polar r
-//   double z;     // local polar z
-//   double phi;   // local polar phi
-//   double psi;   // local psi
-//   double theta; // local theta
-
-//   if (direction == "backwards") // backwards transform (flux -> polar coords)
-//   {
-//     psi = inputVector[0];
-//     theta = inputVector[1];
-//     phi = inputVector[2];
-//   }
-
-//   return outputVector;
-// }
-
 std::vector<double>
-CoordTransform::polar_to_flux(double e0, double e1, double e2,
+CoordTransform::polar_to_flux(const double & e0, const double & e1, const double & e2,
                               const std::shared_ptr<EquilData> & equilibrium)
 {
-  std::vector<double> outputVector(3);
-  double r;     // local polar r
-  double z;     // local polar z
-  double phi;   // local polar phi
-  double psi;   // local psi
-  double theta; // local theta
-
-  r = e0;
-  z = e1;
-  phi = e2;
-
-  psi = alglib::spline2dcalc(equilibrium->psiSpline, r, z); // spline interpolation of psi(R,Z)
-
-  theta = atan2(z - equilibrium->zcen, r - equilibrium->rcen);
+  double r = e0;
+  double z = e1;
+  double phi = e2;
+  double psi =
+      alglib::spline2dcalc(equilibrium->psiSpline, r, z); // spline interpolation of psi(R,Z)
+  double theta = atan2(z - equilibrium->zcen, r - equilibrium->rcen);
   if (theta < -M_PI_2)
   {
     theta = 2 * M_PI + theta;
   }
-
-  outputVector[0] = -psi;
-  outputVector[1] = theta;
-  outputVector[2] = phi;
-
+  std::vector<double> outputVector = {-psi, theta, phi};
   return outputVector;
 }
