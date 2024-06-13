@@ -10,6 +10,12 @@
 #include "SimpleLogger.h"
 #include "AegisBase.h"
 
+enum class SplineType
+{
+  CUBIC,
+  LINEAR
+};
+
 
 struct eqdskData
 {
@@ -90,6 +96,9 @@ class EquilData : public AegisBase
   
   // Return eqdsk struct
   eqdskData get_eqdsk_struct();
+
+  // return psi value at given (R,Z) coords
+  double get_psi(double r, double z);
 
   // Read eqdsk file
   void read_eqdsk(std::string filename);
@@ -202,7 +211,12 @@ class EquilData : public AegisBase
   alglib::spline2dinterpolant psiSpline; // 2d spline interpolant for Psi(R,Z)
   alglib::spline1dinterpolant fSpline; // 1d spline interpolant for f(psi) or I(psi) toroidal component
 
+  alglib::spline2dinterpolant dpsidrSpline; // 2d spline interpolant for dpsidr(R,Z)
+  alglib::spline2dinterpolant dpsidzSpline; // 2d spline interpolant for dpsidz(R,Z)
+  
+
   private:
+  SplineType _splineType = SplineType::CUBIC; 
 
   bool debug = false;
   bool drawEquRZ = false;

@@ -31,6 +31,28 @@ CoordTransform::cart_to_polar(std::vector<double> inputVector)
   return outputVector;
 }
 
+// cart_to_polar without the calculation of phi
+std::vector<double>
+CoordTransform::cart_to_polar_xy(std::vector<double> inputVector)
+{
+  std::vector<double> outputVector(3);
+  double r;   // polar r
+  double phi; // polar phi
+  double x;   // cart x
+  double y;   // cart y
+  double z;   // cart z
+
+  x = inputVector[0];
+  y = inputVector[1];
+  z = inputVector[2];
+
+  r = sqrt(pow(x, 2) + pow(y, 2)); // calculate
+
+  outputVector[0] = r;
+  outputVector[1] = z;
+  return outputVector;
+}
+
 std::vector<double>
 CoordTransform::polar_to_cart(std::vector<double> inputVector)
 {
