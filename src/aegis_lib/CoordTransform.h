@@ -21,10 +21,10 @@ class Position3D : public AegisBase
   coordinateSystem coordSys() { return _coordSys; } 
 
   // return STL array of coords
-  const std::array<double, 3> coords() { return {_e0, _e1, _e2}; } 
+  std::array<double, 3> coords() { return {_e0, _e1, _e2}; } 
 
   // return STL vector of coords
-  const std::vector<double> coords_vec() { return {_e0, _e1, _e2}; }
+  std::vector<double> coords_vec() { return {_e0, _e1, _e2}; }
 
   // update coordinates without changing system 
   template <typename T> void update_coords(T newCoords)
@@ -128,6 +128,14 @@ inline Position3D cart_to_polar_xy(const Position3D &pos)
   return newPos;
 }
 
+inline Position3D cart_to_polar_xy(const Position3D &pos)
+{
+  double r = sqrt(pow(pos[0], 2) + pow(pos[1], 2));
+  double z = pos[2];
+  Position3D newPos(r, z, 0.0, coordinateSystem::POLAR);
+  return newPos;
+}
+
 // get polar angle (PHI) from (X,Y)
 inline double cart_to_polar_phi(const std::vector<double> &xyz)
 {
@@ -135,6 +143,9 @@ inline double cart_to_polar_phi(const std::vector<double> &xyz)
   return phi;
 };
 
+Position3D cart_to_polar(const Position3D & pos);
+Position3D polar_to_cart(const Position3D & pos);
+Position3D polar_to_flux(Position3D & pos, const std::shared_ptr<EquilData> & equilibrium);
 Position3D cart_to_polar(const Position3D & pos);
 Position3D polar_to_cart(const Position3D & pos);
 Position3D polar_to_flux(Position3D & pos, const std::shared_ptr<EquilData> & equilibrium);
