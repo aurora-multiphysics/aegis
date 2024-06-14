@@ -28,6 +28,7 @@ class ParticleBase : public AegisBase
   private:
   double _heatflux = 0.0; // heatflux associated with particle
   double lengthTravelled = 0.0; // total length travelled by particle
+  int numberOfSteps = 0;
   bool directionUp = false; 
   std::vector<double> previousPos; // previous position in particle history
   double thresholdDistanceThreshold = 0.0;
