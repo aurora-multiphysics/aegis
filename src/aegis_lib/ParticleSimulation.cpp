@@ -483,7 +483,7 @@ ParticleSimulation::init_geometry()
   prepSurfacesTime = MPI_Wtime() - prepSurfacesStart;
 
   double setupArrayOfParticlesTimeStart = MPI_Wtime();
-  setup_sources();
+  setup_particles();
   setupArrayOfParticlesTime = MPI_Wtime() - setupArrayOfParticlesTimeStart;
 }
 
@@ -500,7 +500,17 @@ ParticleSimulation::loop_over_particles(int startIndex, int endIndex)
   {
     auto particle = listOfParticles[i];
     integrator->set_launch_position(particle.parent_entity_handle(), particle.get_pos());
-    terminationState particleState = cartesian_particle_track(particle);
+    terminationState particleState;
+
+    if (coordSys == coordinateSystem::CARTESIAN)
+    {
+      particleState = cartesian_particle_track(particle);
+    }
+    else
+    {
+      particleState = polar_particle_track(particle);
+    }
+
     double heatflux = (particleState == terminationState::DEPOSITING) ? particle.heatflux() : 0.0;
     heatfluxVals.emplace_back(heatflux);
   }
@@ -516,7 +526,7 @@ ParticleSimulation::loop_over_particles(int startIndex, int endIndex)
 }
 
 void
-ParticleSimulation::setup_sources()
+ParticleSimulation::setup_particles()
 {
 
   std::vector<double> triangleCoords(9);
@@ -552,7 +562,10 @@ ParticleSimulation::setup_sources()
     for (int i = 0; i < nParticlesPerFacet; ++i)
     {
       auto launchPos = (particleLaunchPos == "fixed") ? triangle.centroid() : triangle.random_pt();
-      ParticleBase particle(coordinateSystem::CARTESIAN, launchPos, heatfluxPerParticle, facetEH);
+      Position3D launchPosition3D(launchPos, coordSys);
+
+      ParticleBase particle(coordinateSystem::CARTESIAN, launchPos, heatfluxPerParticle, facetEH,
+                            launchPosition3D);
       particle.align_dir_to_surf(triangle.BdotN());
       listOfParticles.emplace_back(particle);
     }
@@ -566,7 +579,6 @@ ParticleSimulation::cartesian_particle_track(ParticleBase & particle)
   double euclidDistToNextSurf = 0.0;
   nextSurf = 0;
   particle.set_dir(equilibrium);
-
   vtkInterface->init_new_vtkPoints();
   vtkInterface->insert_next_point_in_track(particle.get_xyz_pos());
   moab::DagMC::RayHistory history;
@@ -594,6 +606,78 @@ ParticleSimulation::cartesian_particle_track(ParticleBase & particle)
     vtkInterface->insert_next_point_in_track(particle.get_xyz_pos());
 
     if (!equilibrium->check_if_in_bfield(particle.pos))
+    {
+      terminate_particle_lost(particle);
+      return terminationState::LOST;
+    }
+
+    particle.set_dir(equilibrium);
+    particle.check_if_midplane_crossed(equilibrium->get_midplane_params());
+
+    if (particle.atMidplane != 0 && !noMidplaneTermination)
+    {
+      terminate_particle_depositing(particle);
+      return terminationState::DEPOSITING;
+    }
+  }
+
+  particle.set_facet_history(history);
+  // max length of particle track reached
+  terminate_particle_maxlength(particle);
+  return terminationState::MAXLENGTH;
+}
+
+// loop over single particle track from launch to termination in polar coordinates
+terminationState
+ParticleSimulation::polar_particle_track(ParticleBase & particle)
+{
+  auto xyzStartPos = particle.get_pos();
+  vtkInterface->init_new_vtkPoints();
+
+  std::vector<double> cartPos;
+  auto polarPos = CoordTransform::cart_to_polar(particle.get_pos());
+  particle.set_pos(polarPos);
+  particle.coordSystem = coordinateSystem::POLAR;
+  vtkInterface->insert_next_point_in_track(xyzStartPos);
+
+  double euclidDistToNextSurf = 0.0;
+  nextSurf = 0;
+  particle.set_dir(equilibrium);
+
+  moab::DagMC::RayHistory history;
+
+  for (int step = 0; step < maxTrackSteps; ++step)
+  {
+    trackLength += trackStepSize;
+    iterationCounter++;
+
+    auto currentPos = particle.get_pos();
+    auto magn = equilibrium->b_field(currentPos, "polar");
+    double norm = sqrt(pow(magn[0], 2) + pow(magn[1], 2) + pow(magn[2], 2));
+    std::vector<double> normB(3);
+    normB[0] = magn[0] / norm;
+    normB[1] = magn[1] / norm;
+    normB[2] = magn[2] / norm;
+    auto dir = normB;
+
+    DAG->ray_fire(implComplementVol, particle.pos.data(), particle.dir.data(), nextSurf,
+                  nextSurfDist, &history, trackStepSize, rayOrientation);
+    numberOfRayFireCalls++;
+
+    if (nextSurf != 0)
+    {
+      particle.update_vectors(nextSurfDist); // update position to surface intersection point
+      // terminate_particle_shadow(particle);
+      // return terminationState::SHADOWED;
+    }
+    else
+    {
+      particle.update_vectors(trackStepSize); // update position by stepsize
+    }
+    cartPos = CoordTransform::polar_to_cart(particle.get_pos());
+    vtkInterface->insert_next_point_in_track(cartPos);
+
+    if (!equilibrium->check_if_in_bfield_polar(particle.pos))
     {
       terminate_particle_lost(particle);
       return terminationState::LOST;
@@ -1047,6 +1131,8 @@ ParticleSimulation::attach_mesh_attribute(const std::string & tagName, moab::Ran
 void
 ParticleSimulation::write_out_mesh(meshWriteOptions option, moab::Range rangeofEntities)
 {
+  std::cout << "Results collected. Writing output meshes..." << std::endl;
+
   // mesh_coord_transform(coordinateSystem::CARTESIAN);
   // get target meshset for aegis_target outputs
   DAG->remove_graveyard();

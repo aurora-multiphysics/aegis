@@ -20,7 +20,7 @@
     {
       "label": "make",
       "type": "shell",
-      "command": "make",
+      "command": "make -j 6 && make",
       "options": {
         "cwd": "${workspaceRoot}/bld"
       },

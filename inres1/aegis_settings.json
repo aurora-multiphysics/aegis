@@ -13,7 +13,7 @@
   
         "target_surfs": [1,2,3,4,5,6],
         "force_no_deposition": false,
-        "coordinate_system": "flux",
+        "coordinate_system": "cart",
         "execution_type": "dynamic",
   
         "dynamic_batch_params":{

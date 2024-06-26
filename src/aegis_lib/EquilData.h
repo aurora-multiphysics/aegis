@@ -139,6 +139,7 @@ class EquilData : public AegisBase
   void psiref_override();
 
   bool check_if_in_bfield(const std::vector<double> &xyzPos);
+  bool check_if_in_bfield_polar(const std::vector<double> & polarPos);
 
   std::array<double, 3> get_midplane_params(); // return rInnerMidplane, rOuterMidplane, zMidplane
 

@@ -26,6 +26,7 @@ enum class magneticFieldDirection
 class ParticleBase : public AegisBase
 {
   private:
+  Position3D _position;
   double _heatflux = 0.0; // heatflux associated with particle
   double lengthTravelled = 0.0; // total length travelled by particle
   int numberOfSteps = 0;
@@ -38,7 +39,6 @@ class ParticleBase : public AegisBase
   moab::EntityHandle parentEntity;
   magneticFieldDirection fieldDir = magneticFieldDirection::BACKWARDS; // set particle along or against magnetic field 
   
-  coordinateSystem coordSystem = coordinateSystem::CARTESIAN;
 
   public:
   std::vector<double> Bfield; // magnetic field at current pos
@@ -52,12 +52,12 @@ class ParticleBase : public AegisBase
 
 
 
-  ParticleBase(coordinateSystem coordSys, std::vector<double> startingPosition, double heatflux, moab::EntityHandle entityHandle);  
+  ParticleBase(coordinateSystem coordSys, std::vector<double> startingPosition, double & heatflux, moab::EntityHandle entityHandle, Position3D position);
   ParticleBase(coordinateSystem coordSys, std::vector<double> startingPosition, double heatflux);  
   ParticleBase(coordinateSystem coordSys, std::vector<double> startingPosition); 
 
   void set_facet_history(moab::DagMC::RayHistory history);
-
+  Position3D& posi();
   // set new particle position
   void set_pos(std::vector<double> newPosition); 
 
@@ -81,6 +81,9 @@ class ParticleBase : public AegisBase
   bool check_if_threshold_crossed();
   double heatflux();
   moab::EntityHandle parent_entity_handle();
+  coordinateSystem coordSystem = coordinateSystem::CARTESIAN;
+
+
 };
 
 
