@@ -21,10 +21,10 @@ class Position3D : public AegisBase
   coordinateSystem coordSys() { return _coordSys; } 
 
   // return STL array of coords
-  std::array<double, 3> coords() { return {_e0, _e1, _e2}; } 
+  const std::array<double, 3> coords() { return {_e0, _e1, _e2}; } 
 
   // return STL vector of coords
-  std::vector<double> coords_vec() { return {_e0, _e1, _e2}; }
+  const std::vector<double> coords_vec() { return {_e0, _e1, _e2}; }
 
   // update coordinates without changing system 
   template <typename T> void update_coords(T newCoords)
