@@ -106,13 +106,14 @@ class ParticleSimulation : public AegisBase
   double monte_carlo_particle_launch(TriangleSource triangle);
   double fixed_particle_launch(TriangleSource triangle);
 
-  void setup_sources();
+  void setup_particles();
 
   void cartesian_track();
   void polar_track();
   void flux_track();
   
   terminationState cartesian_particle_track(ParticleBase &particle); // loop over individual particle tracks
+  terminationState polar_particle_track(ParticleBase &particle); // loop over individual particle tracks
   void terminate_particle_depositing(ParticleBase & particle); // end particle track
   void terminate_particle_shadow(ParticleBase & particle); // end particle track
   void terminate_particle_lost(ParticleBase & particle); // end particle track
@@ -160,7 +161,6 @@ class ParticleSimulation : public AegisBase
   unsigned int iterationCounter=0;
   int totalParticles = 0;
   std::vector<ParticleBase> listOfParticles;
-
 
   // DAGMC variables
   std::unique_ptr<moab::DagMC> DAG;

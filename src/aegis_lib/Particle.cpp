@@ -10,13 +10,14 @@
 #include <moab/OrientedBoxTreeTool.hpp>
 
 ParticleBase::ParticleBase(coordinateSystem coordSys, std::vector<double> startingPosition,
-                           double heatflux, moab::EntityHandle entityHandle)
+                           double & heatflux, moab::EntityHandle entityHandle, Position3D position)
 {
   coordSystem = coordSys;
   pos = startingPosition;
   launchPos = startingPosition;
   _heatflux = heatflux;
   parentEntity = entityHandle;
+  _position = position;
 }
 
 ParticleBase::ParticleBase(coordinateSystem coordSys, std::vector<double> startingPosition,
@@ -52,6 +53,12 @@ ParticleBase::get_pos()
 {
   std::vector<double> currentPosition = pos;
   return currentPosition;
+}
+
+Position3D &
+ParticleBase::posi()
+{
+  return _position;
 }
 
 std::vector<double>

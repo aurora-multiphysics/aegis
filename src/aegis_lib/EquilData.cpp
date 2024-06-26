@@ -1396,6 +1396,18 @@ EquilData::check_if_in_bfield(const std::vector<double> & xyzPos)
   return true;
 }
 
+bool
+EquilData::check_if_in_bfield_polar(const std::vector<double> & polarPos)
+{
+  double r = polarPos[0];
+  double z = polarPos[1];
+  if (r < rmin || r > rmax || z < zmin || z > zmax)
+  {
+    return false;
+  }
+  return true;
+}
+
 double
 EquilData::get_psi(const double & r, const double & z)
 {

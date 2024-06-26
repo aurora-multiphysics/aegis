@@ -119,5 +119,8 @@ VtkInterface::init_new_vtkPoints()
 void
 VtkInterface::insert_next_point_in_track(std::vector<double> pointsToAdd)
 {
-  particleTrackPoints->InsertNextPoint(pointsToAdd[0], pointsToAdd[1], pointsToAdd[2]);
+  if (drawParticleTracks == true)
+  {
+    particleTrackPoints->InsertNextPoint(pointsToAdd[0], pointsToAdd[1], pointsToAdd[2]);
+  }
 }

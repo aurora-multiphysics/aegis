@@ -57,22 +57,19 @@ main(int argc, char ** argv)
   simulation.Execute();
   // ---------------------------------------------------------------------------------
 
-  // Print individual process stats
+  // print wall times for each process
   for (int i = 1; i < nprocs; ++i)
   {
     if (rank == i)
     {
-      std::cout << "\nProcess " << i << " handled particles: \n";
-      integrator->print_particle_stats();
       double endTime = MPI_Wtime();
       double totalTime = endTime - startTime;
-      std::cout << "Elapsed wall Time on process " << i << " = " << totalTime << "\n";
+      std::cout << "Elapsed wall Time on process " << i << " = " << totalTime << std::endl;
+      std::cout << "----------------------------" << std::endl << std::endl;
     }
   }
-  std::cout << "\n";
-  // ---------------------------------------------------------------------------------
 
-  // Print wall time and other profiling times
+  MPI_Finalize();
   if (rank == 0)
   {
     std::map<std::string, double> profilingTimes = simulation.get_profiling_times();
