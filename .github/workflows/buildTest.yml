@@ -23,12 +23,12 @@ jobs:
     - name: DockerBuildTestPull 
       if: ${{ github.event.pull_request.head.sha != '' }} 
       run: docker build -t ci-dagmc-ubuntu \ 
-                        --build-arg build_git_sha="${PRCOMMITSHA:-$GITHUB_SHA}" 
+                        --build-arg build_git_sha="${PRCOMMITSHA:-$GITHUB_SHA}" \
                         --build-arg build_git_repo="${PRREPOSITORY:-$GITHUB_REPOSITORY}" \
                         docker/limited_build/
     - name: DockerBuildTestPush
       if: ${{ github.event.pull_request.head.sha == '' }}
-      run: docker build -t ci-dagmc-ubuntu --build-arg build_git_sha=$GITHUB_SHA 
-                        --build-arg build_git_sha="${PRCOMMITSHA:-$GITHUB_SHA}" 
+      run: docker build -t ci-dagmc-ubuntu \
+                        --build-arg build_git_sha="${PRCOMMITSHA:-$GITHUB_SHA}" \
                         --build-arg build_git_repo="${PRREPOSITORY:-$GITHUB_REPOSITORY}" \
                         docker/limited_build/      
