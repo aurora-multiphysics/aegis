@@ -6,6 +6,8 @@
 #include <moab/OrientedBoxTreeTool.hpp>
 #include "SimpleLogger.h"
 
+SurfaceIntegrator::SurfaceIntegrator() {}
+
 // surface integrator class constructor
 // initialise list of EntityHandles and maps associated with
 SurfaceIntegrator::SurfaceIntegrator(moab::Range const & Facets)
@@ -14,6 +16,18 @@ SurfaceIntegrator::SurfaceIntegrator(moab::Range const & Facets)
   nFacets = Facets.size();
 
   for (auto i : Facets)
+  {
+    facetEntities.push_back(i);
+    particlesShadowedBy[i] = 0;
+    powFac[i] = 0;
+  }
+}
+
+void
+SurfaceIntegrator::set_facets(moab::Range const & Facets)
+{
+  nFacets = Facets.size();
+  for (const auto i : Facets)
   {
     facetEntities.push_back(i);
     particlesShadowedBy[i] = 0;
@@ -238,19 +252,17 @@ SurfaceIntegrator::piecewise_multilinear_out(
   }
 }
 
+// return number of particles depositing, shadowed, lost etc.
 void
 SurfaceIntegrator::print_particle_stats()
-{ // return number of particles depositing, shadowed, lost etc.
-
-  if (rank == 0)
-  {
-    LOG_WARNING << "Number of particles launched = " << nFacets;
-    LOG_WARNING << "Number of particles depositing power from omp = " << nParticlesHeatDep;
-    LOG_WARNING << "Number of shadowed particle intersections = " << nParticlesShadowed;
-    LOG_WARNING << "Number of particles lost from magnetic domain = " << nParticlesLost;
-    LOG_WARNING << "Number of particles terminated upon reaching max tracking length = "
-                << nParticlesMaxLength;
-  }
+{
+  std::cout << "DEPOSITING - " << nParticlesHeatDep << "\n";
+  std::cout << "SHADOWED - " << nParticlesShadowed << "\n";
+  std::cout << "LOST - " << nParticlesLost << "\n";
+  std::cout << "MAX LENGTH - " << nParticlesTotal << "\n";
+  int totalParticlesHandled =
+      nParticlesHeatDep + nParticlesShadowed + nParticlesLost + nParticlesMaxLength;
+  std::cout << "TOTAL - " << totalParticlesHandled << "\n";
 };
 
 void

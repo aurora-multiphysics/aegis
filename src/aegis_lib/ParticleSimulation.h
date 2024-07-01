@@ -78,7 +78,11 @@ enum class ExecuteOptions
 class ParticleSimulation : public AegisBase
 {
   public:
-  ParticleSimulation(std::shared_ptr<JsonHandler> configFile, std::shared_ptr<EquilData> equil);
+  ParticleSimulation(std::shared_ptr<JsonHandler> configFile, std::shared_ptr<EquilData> equilibrium, std::shared_ptr<SurfaceIntegrator> integrator);
+  
+  
+  
+  
   void Execute(); // switch between runs
   void Execute_serial(); // serial
   void Execute_mpi(); // MPI_Gatherv
@@ -148,7 +152,6 @@ class ParticleSimulation : public AegisBase
   bool writeParticleLaunchPos = false;
 
   std::vector<TriangleSource> listOfTriangles;
-  std::unordered_map<moab::EntityHandle,double> heatfluxMap;
   int totalNumberOfFacets = 0;
 
   std::vector<int> vectorOfTargetSurfs;
@@ -183,7 +186,7 @@ class ParticleSimulation : public AegisBase
 
   std::shared_ptr<EquilData> equilibrium;
   
-  std::unique_ptr<SurfaceIntegrator> integrator;
+  std::shared_ptr<SurfaceIntegrator> _integrator;
 
   std::unique_ptr<VtkInterface> vtkInterface;
   const std::string branchShadowedPart = "Shadowed Particles";

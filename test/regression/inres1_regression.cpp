@@ -82,13 +82,14 @@ double dot_product(std::vector<double> vector_a, std::vector<double> vector_b);
   auto configFile = std::make_shared<JsonHandler>(configFilename);
 
   auto equilibrium = std::make_shared<EquilData>(configFile);
-   equilibrium->move();
+  equilibrium->move();
   equilibrium->psiref_override();
   equilibrium->init_interp_splines();
   equilibrium->centre(1);
   equilibrium->write_bfield();
 
-  ParticleSimulation aegis(configFile, equilibrium);
+  std::shared_ptr<SurfaceIntegrator> integrator;
+  ParticleSimulation aegis(configFile, equilibrium, integrator);
 
   if (std::filesystem::exists(configFilename)){
     aegis.Execute_serial();

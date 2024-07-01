@@ -12,6 +12,7 @@
 #include "Source.h"
 #include "CoordTransform.h"
 #include "SimpleLogger.h"
+#include "mpi.h"
  
 using namespace moab;
 
@@ -289,7 +290,7 @@ TEST_F(aegisUnitTest, SMARDDA_comparison_test) {
 
 
 TEST_F(aegisUnitTest, eqdsk_read) {
-
+  MPI_Init(NULL, NULL);
   auto equilibrium = std::make_shared<EquilData>();
   equilibrium->read_eqdsk("test.eqdsk");
   eqdskData eqdsk = equilibrium->get_eqdsk_struct();
@@ -332,6 +333,7 @@ TEST_F(aegisUnitTest, eqdsk_read) {
   EXPECT_FLOAT_EQ(eqdsk.zbdry[39], 0.986207476);
   EXPECT_FLOAT_EQ(eqdsk.rlim[27], 557.200115);
   EXPECT_FLOAT_EQ(eqdsk.zlim[1], -149.995359);
+  MPI_Finalize();
 }
 
 
@@ -362,7 +364,7 @@ TEST_F(aegisUnitTest, polar_to_cart_transform){
 }
 
 TEST_F(aegisUnitTest, polar_to_flux_transform){
-
+  MPI_Init(NULL, NULL);
   auto equilibrium = std::make_shared<EquilData>();
   equilibrium->read_eqdsk("test.eqdsk");
   equilibrium->init_interp_splines();
@@ -378,7 +380,7 @@ TEST_F(aegisUnitTest, polar_to_flux_transform){
   EXPECT_FLOAT_EQ(output[0], -2.5001357);
   EXPECT_FLOAT_EQ(output[1], 2.1932724);
   EXPECT_FLOAT_EQ(output[2], -2);
-
+  MPI_Finalize();
 }
 
 double * vecNorm(double vector[3]){

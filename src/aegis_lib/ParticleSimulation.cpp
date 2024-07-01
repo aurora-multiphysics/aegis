@@ -3,16 +3,17 @@
 
 // setup AEGIS simulation
 ParticleSimulation::ParticleSimulation(std::shared_ptr<JsonHandler> configFile,
-                                       std::shared_ptr<EquilData> equil)
+                                       std::shared_ptr<EquilData> equilibirum,
+                                       std::shared_ptr<SurfaceIntegrator> integrator)
 {
   set_mpi_params();
-
   read_params(configFile);
-  equilibrium = equil;
+  equilibrium = equilibirum;
   DAG = std::make_unique<moab::DagMC>();
   vtkInterface = std::make_unique<VtkInterface>(configFile);
-
   init_geometry();
+  _integrator = integrator;
+  _integrator->set_facets(targetFacets);
 }
 
 // Call different execute functions depending on which execute type selected
@@ -110,7 +111,7 @@ ParticleSimulation::Execute_dynamic_mpi()
     worker();
   }
 
-  std::array<int, 4> particleStats = integrator->particle_stats();
+  std::array<int, 4> particleStats = _integrator->particle_stats();
   std::array<int, 4> totalParticleStats;
 
   if (rank != 0)
@@ -119,7 +120,7 @@ ParticleSimulation::Execute_dynamic_mpi()
   }
   else
   {
-    totalParticleStats = integrator->particle_stats();
+    totalParticleStats = _integrator->particle_stats();
   }
 
   for (int i = 1; i < nprocs; ++i)
@@ -150,8 +151,6 @@ ParticleSimulation::Execute_dynamic_mpi()
     write_out_mesh(meshWriteOptions::BOTH, targetFacets);
     aegisMeshWriteTime = MPI_Wtime() - aegisMeshWriteStart;
   }
-
-  mpi_particle_stats();
 
   print_particle_stats(totalParticleStats);
 }
@@ -479,7 +478,6 @@ ParticleSimulation::init_geometry()
   }
 
   targetFacets = select_target_surface();
-  integrator = std::make_unique<SurfaceIntegrator>(targetFacets);
   prepSurfacesTime = MPI_Wtime() - prepSurfacesStart;
 
   double setupArrayOfParticlesTimeStart = MPI_Wtime();
@@ -499,7 +497,7 @@ ParticleSimulation::loop_over_particles(int startIndex, int endIndex)
   for (int i = startIndex; i < endIndex; ++i)
   {
     auto particle = listOfParticles[i];
-    integrator->set_launch_position(particle.parent_entity_handle(), particle.get_pos());
+    _integrator->set_launch_position(particle.parent_entity_handle(), particle.get_pos());
     terminationState particleState = cartesian_particle_track(particle);
     double heatflux = (particleState == terminationState::DEPOSITING) ? particle.heatflux() : 0.0;
     heatfluxVals.emplace_back(heatflux);
@@ -524,7 +522,6 @@ ParticleSimulation::setup_sources()
   listOfParticles.reserve(num_particles_launched());
   for (const auto & facetEH : targetFacets)
   {
-    heatfluxMap.insert(std::pair(facetEH, 0.0));
     std::vector<moab::EntityHandle> triangleNodes;
     DAG->moab_instance()->get_adjacencies(&facetEH, 1, 0, false, triangleNodes);
     DAG->moab_instance()->get_coords(&triangleNodes[0], triangleNodes.size(),
@@ -622,8 +619,8 @@ ParticleSimulation::terminate_particle_depositing(ParticleBase & particle)
   std::stringstream terminationLogString;
   double heatflux = particle.heatflux();
   vtkInterface->write_particle_track(branchDepositingPart, heatflux);
-  integrator->count_particle(particle.parent_entity_handle(), terminationState::DEPOSITING,
-                             heatflux);
+  _integrator->count_particle(particle.parent_entity_handle(), terminationState::DEPOSITING,
+                              heatflux);
   terminationLogString << "Midplane reached. Depositing power after travelling " << trackLength
                        << " units";
   log_string(LogLevel::INFO, terminationLogString.str());
@@ -636,7 +633,8 @@ ParticleSimulation::terminate_particle_shadow(ParticleBase & particle)
   std::stringstream terminationLogString;
   double heatflux = 0.0;
   vtkInterface->write_particle_track(branchShadowedPart, heatflux);
-  integrator->count_particle(particle.parent_entity_handle(), terminationState::SHADOWED, heatflux);
+  _integrator->count_particle(particle.parent_entity_handle(), terminationState::SHADOWED,
+                              heatflux);
   terminationLogString << "Surface " << nextSurf << " hit after travelling " << trackLength
                        << " units";
   log_string(LogLevel::INFO, terminationLogString.str());
@@ -649,7 +647,7 @@ ParticleSimulation::terminate_particle_lost(ParticleBase & particle)
   std::stringstream terminationLogString;
   double heatflux = 0.0;
   vtkInterface->write_particle_track(branchLostPart, heatflux);
-  integrator->count_particle(particle.parent_entity_handle(), terminationState::LOST, heatflux);
+  _integrator->count_particle(particle.parent_entity_handle(), terminationState::LOST, heatflux);
   terminationLogString << "Particle leaving magnetic field after travelling " << trackLength
                        << " units";
   log_string(LogLevel::INFO, terminationLogString.str());
@@ -662,8 +660,8 @@ ParticleSimulation::terminate_particle_maxlength(ParticleBase & particle)
   std::stringstream terminationLogString;
   double heatflux = 0.0;
   vtkInterface->write_particle_track(branchMaxLengthPart, heatflux);
-  integrator->count_particle(particle.parent_entity_handle(), terminationState::MAXLENGTH,
-                             heatflux);
+  _integrator->count_particle(particle.parent_entity_handle(), terminationState::MAXLENGTH,
+                              heatflux);
   terminationLogString << "Fieldline trace reached maximum length before intersection";
 }
 
@@ -793,7 +791,7 @@ ParticleSimulation::mpi_particle_stats()
     {
       std::cout << std::endl
                 << "process " << i << " has the following particle stats:" << std::endl;
-      std::array localRankParticleStats = integrator->particle_stats();
+      std::array localRankParticleStats = _integrator->particle_stats();
 
       std::cout << "DEPOSITING - " << localRankParticleStats[0] << std::endl;
       std::cout << "SHADOWED - " << localRankParticleStats[1] << std::endl;
@@ -862,7 +860,7 @@ ParticleSimulation::Execute_serial()
 
   // write out data and print final
 
-  std::array<int, 4> particleStats = integrator->particle_stats();
+  std::array<int, 4> particleStats = _integrator->particle_stats();
 
   vtkInterface->write_multiBlockData("particle_tracks.vtm");
 
@@ -918,7 +916,7 @@ ParticleSimulation::Execute_mpi()
   qvalues = loop_over_particles(startIndex, endIndex); // perform main loop
   double endTime = MPI_Wtime();
 
-  std::array<int, 4> particleStats = integrator->particle_stats();
+  std::array<int, 4> particleStats = _integrator->particle_stats();
   std::array<int, 4> totalParticleStats;
   if (rank != 0)
   {
@@ -930,7 +928,7 @@ ParticleSimulation::Execute_mpi()
   }
   else
   {
-    totalParticleStats = integrator->particle_stats();
+    totalParticleStats = _integrator->particle_stats();
     MPI_Gatherv(qvalues.data(), qvalues.size(), MPI_DOUBLE, rootQvalues.data(),
                 recieveCounts.data(), displacements.data(), MPI_DOUBLE, rootRank, MPI_COMM_WORLD);
     // MPI_Gather(qvalues.data(), qvalues.size(), MPI_DOUBLE,
@@ -952,7 +950,6 @@ ParticleSimulation::Execute_mpi()
     mainParticleLoopTime = MPI_Wtime() - mainParticleLoopStart;
   }
 
-  mpi_particle_stats();
   print_particle_stats(totalParticleStats);
 }
 
