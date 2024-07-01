@@ -17,9 +17,9 @@ JsonHandler::JsonHandler(std::string filename)
   read_json();
 }
 
-JsonHandler::JsonHandler(json existingJSON) { jsonData = existingJSON; }
+JsonHandler::JsonHandler(nlohmann::json existingJSON) { jsonData = existingJSON; }
 
-json
+nlohmann::json
 JsonHandler::data()
 {
   return jsonData;
@@ -37,7 +37,7 @@ JsonHandler::read_json()
     {
       std::cout << "Settings found in JSON file '" << filepath << "'" << std::endl;
     }
-    jsonData = json::parse(file);
+    jsonData = nlohmann::json::parse(file);
     return;
   }
   else

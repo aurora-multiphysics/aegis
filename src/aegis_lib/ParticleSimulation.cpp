@@ -780,32 +780,6 @@ ParticleSimulation::print_particle_stats(std::array<int, 4> particleStats)
   // std::endl;
 }
 
-// print individual particle stats for each MPI rank
-void
-ParticleSimulation::mpi_particle_stats()
-{
-
-  for (int i = 1; i < nprocs; ++i)
-  {
-    if (rank == i)
-    {
-      std::cout << std::endl
-                << "process " << i << " has the following particle stats:" << std::endl;
-      std::array localRankParticleStats = _integrator->particle_stats();
-
-      std::cout << "DEPOSITING - " << localRankParticleStats[0] << std::endl;
-      std::cout << "SHADOWED - " << localRankParticleStats[1] << std::endl;
-      std::cout << "LOST - " << localRankParticleStats[2] << std::endl;
-      std::cout << "MAX LENGTH - " << localRankParticleStats[3] << std::endl;
-
-      int totalParticlesHandled = localRankParticleStats[0] + localRankParticleStats[1] +
-                                  localRankParticleStats[2] + localRankParticleStats[3];
-
-      std::cout << "TOTAL - " << totalParticlesHandled << std::endl;
-    }
-  }
-}
-
 // run AEGIS simulation on single core
 void
 ParticleSimulation::Execute_serial()

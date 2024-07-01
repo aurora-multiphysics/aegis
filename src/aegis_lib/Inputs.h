@@ -18,7 +18,6 @@
  * More structured format to replace settings class
 */
 
-using json = nlohmann::json;
 
 class JsonHandler : public AegisBase
 {
@@ -26,8 +25,8 @@ public:
 
   JsonHandler();
   JsonHandler(std::string filename);
-  JsonHandler(json existingJSON);
-  json data();
+  JsonHandler(nlohmann::json existingJSON);
+  nlohmann::json data();
   void read_json();
 
   template <class T> [[nodiscard]] T get_required(std::string paramName)  
@@ -54,7 +53,7 @@ public:
   
 private:
   std::string filepath; 
-  json jsonData;
+  nlohmann::json jsonData;
 
 };
 
