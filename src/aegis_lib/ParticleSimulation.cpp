@@ -319,7 +319,7 @@ ParticleSimulation::read_params(const std::shared_ptr<JsonHandler> & configFile)
 
   if (configFile->data().contains("aegis_params"))
   {
-    auto aegisParamsData = configFile->data()["aegis_params"];
+    nlohmann::json aegisParamsData = configFile->data()["aegis_params"];
     JsonHandler aegisParams(aegisParamsData);
 
     dagmcInputFile = aegisParams.get_required<std::string>("DAGMC");
@@ -333,7 +333,8 @@ ParticleSimulation::read_params(const std::shared_ptr<JsonHandler> & configFile)
 
     if (aegisParamsData.contains("monte_carlo_params"))
     {
-      auto monteCarloParamsData = configFile->data()["aegis_params"]["monte_carlo_params"];
+      nlohmann::json monteCarloParamsData =
+          configFile->data()["aegis_params"]["monte_carlo_params"];
       JsonHandler monteCarloParams(monteCarloParamsData);
 
       nParticlesPerFacet = monteCarloParams.get_optional<int>("number_of_particles_per_facet")
@@ -359,7 +360,8 @@ ParticleSimulation::read_params(const std::shared_ptr<JsonHandler> & configFile)
 
     if (aegisParamsData.contains("dynamic_batch_params"))
     {
-      auto dynamicBatchParamsData = configFile->data()["aegis_params"]["dynamic_batch_params"];
+      nlohmann::json dynamicBatchParamsData =
+          configFile->data()["aegis_params"]["dynamic_batch_params"];
       JsonHandler dynamicBatchParams(dynamicBatchParamsData);
 
       dynamicBatchSize =
