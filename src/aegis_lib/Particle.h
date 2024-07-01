@@ -73,8 +73,8 @@ class ParticleBase : public AegisBase
   // return STL vector of unit direction
   std::vector<double> get_dir(); 
   void align_dir_to_surf(double Bn); // align particle dir to surface normal
-  void update_vectors(double distanceTravelled); // update position  
-  void update_vectors(double distanceTravelled, const std::shared_ptr<EquilData> &EquData); // overload to update dir as well
+  void update_vectors(const double &distanceTravelled); // update position  
+  void update_vectors(const double &distanceTravelled, const std::shared_ptr<EquilData> &EquData); // overload to update dir as well
   void check_if_midplane_crossed(const std::array<double, 3> &midplaneParameters); // check if particle has reached inner or outer midplane and set value of atMidplane
   void set_intersection_threshold(double distanceThreshold);
   bool check_if_threshold_crossed();
