@@ -3,7 +3,7 @@
 
 VtkInterface::VtkInterface(const std::shared_ptr<JsonHandler> & inputs)
 {
-  json vtkNamelist;
+  nlohmann::json vtkNamelist;
 
   if (inputs->data().contains("vtk_params"))
   {

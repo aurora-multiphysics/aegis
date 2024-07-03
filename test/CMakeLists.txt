@@ -7,6 +7,7 @@ set(Boost_PACKAGES system log log_setup)
 set(BOOST_REQUESTED_VERSION 1.71)
 
 find_package(Boost REQUIRED COMPONENTS ${Boost_PACKAGES})
+find_package(MPI REQUIRED)
 
 include(ExternalProject)
 

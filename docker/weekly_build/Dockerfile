@@ -117,22 +117,12 @@ RUN cd /$WORKDIR/ && \
     mkdir VTK && \
     git clone https://github.com/Kitware/VTK.git && \
     cd VTK && \
+    git checkout release && \
     mkdir VTK-build && \
     cd VTK-build && \
     cmake ../ && \ 
     make && \
     make install
-
-# Install Catch2
-RUN cd /$WORKDIR/ && \
-    mkdir Catch2 && \
-    git clone https://github.com/catchorg/Catch2.git && \
-    cd Catch2 && \
-    mkdir build && \
-    cd build && \
-    cmake ../ && \
-    make && \
-    make install 
 
    
     

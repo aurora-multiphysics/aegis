@@ -2,21 +2,24 @@
 #include <cstdio>
 #include <cstring>
 #include <vector>
+#include <array>
 #include <mpi.h>
 #include <unistd.h>
+#include "Integrator.h"
 
 int
 main(int argc, char ** argv)
 {
-
+  // Setup MPI
   int rank, nprocs;
   MPI_Init(&argc, &argv);
 
-  double startTime = MPI_Wtime(); // get start time on across all processes
-
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+  double startTime = MPI_Wtime(); // get start time across all processes
+  // ---------------------------------------------------------------------------------
 
+  // Get Config file
   std::string configFileName;
   if (argc > 1)
   {
@@ -32,9 +35,10 @@ main(int argc, char ** argv)
     }
     configFileName = "aegis_settings.json";
   }
+  // ---------------------------------------------------------------------------------
 
+  // equilibrium setup
   auto configFile = std::make_shared<JsonHandler>(configFileName);
-
   double equilibriumInstantiationStart = MPI_Wtime();
   auto equilibrium = std::make_shared<EquilData>(configFile);
   equilibrium->move();
@@ -42,23 +46,33 @@ main(int argc, char ** argv)
   equilibrium->init_interp_splines();
   equilibrium->centre(1);
   double equilibriumInstantionTime = MPI_Wtime();
+  // ---------------------------------------------------------------------------------
 
-  ParticleSimulation simulation(configFile, equilibrium);
+  // Integrator setup
+  auto integrator = std::make_shared<SurfaceIntegrator>();
+  // ---------------------------------------------------------------------------------
+
+  // Main Particle simulation
+  ParticleSimulation simulation(configFile, equilibrium, integrator);
   simulation.Execute();
+  // ---------------------------------------------------------------------------------
 
-  // print wall times for each process
-  // for (int i = 1; i < nprocs; ++i)
-  // {
-  //   if (rank == i)
-  //   {
-  //     double endTime = MPI_Wtime();
-  //     double totalTime = endTime - startTime;
-  //     std::cout << "Elapsed wall Time on process " << i << " = " << totalTime << std::endl;
-  //     std::cout << "----------------------------" << std::endl << std::endl;
-  //   }
-  // }
+  // Print individual process stats
+  for (int i = 1; i < nprocs; ++i)
+  {
+    if (rank == i)
+    {
+      std::cout << "\nProcess " << i << " handled particles: \n";
+      integrator->print_particle_stats();
+      double endTime = MPI_Wtime();
+      double totalTime = endTime - startTime;
+      std::cout << "Elapsed wall Time on process " << i << " = " << totalTime << "\n";
+    }
+  }
+  std::cout << "\n";
+  // ---------------------------------------------------------------------------------
 
-  MPI_Finalize();
+  // Print wall time and other profiling times
   if (rank == 0)
   {
     std::map<std::string, double> profilingTimes = simulation.get_profiling_times();
@@ -72,5 +86,8 @@ main(int argc, char ** argv)
     std::cout << "Total wall time = " << MPI_Wtime() - startTime << "\n";
     std::cout << "------------------------------------" << std::endl;
   }
+  // ---------------------------------------------------------------------------------
+
+  MPI_Finalize();
   return 0;
 }
