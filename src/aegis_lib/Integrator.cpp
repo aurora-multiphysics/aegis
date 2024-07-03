@@ -24,7 +24,7 @@ SurfaceIntegrator::SurfaceIntegrator(moab::Range const & Facets)
 }
 
 void
-SurfaceIntegrator::set_facets(moab::Range const & Facets)
+SurfaceIntegrator::set_facets(moab::Range & Facets)
 {
   nFacets = Facets.size();
   for (const auto i : Facets)

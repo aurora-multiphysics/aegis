@@ -65,7 +65,7 @@ class SurfaceIntegrator : public AegisBase
   
 //   void q_values(); // return list of qvalues for each triangle
 //   void psi_values(); // return list of psi values for each triangle
-  void set_facets(moab::Range const &Facets);
+  void set_facets(moab::Range &Facets);
   void count_hit(EntityHandle facet_hit); // count hits belonging to each facet
   void count_lost_ray();
   void store_heat_flux(EntityHandle facet, double heatflux); // store the power associated with a particular facet
