@@ -100,7 +100,6 @@ class ParticleSimulation : public AegisBase
   void worker();
   void handler(std::vector<double> &handlerQVals);
   void dynamic_task_init();
-  void implicit_complement_testing(); 
   moab::Range select_target_surface(); // get target surfaces of interest from aegis_settings.json
   std::vector<double> loop_over_particles(int startFacet, int endFacet); // loop over particles across all target facets
   double monte_carlo_particle_launch(TriangleSource triangle);
@@ -120,7 +119,6 @@ class ParticleSimulation : public AegisBase
   void terminate_particle_maxlength(ParticleBase & particle); // end particle track
   void test_cyl_ray_fire(ParticleBase &particle);  
   
-  
   void ray_hit_on_launch(std::unique_ptr<ParticleBase> &particle); // particle hit on initial launch from surface
   void print_particle_stats(std::array<int, 4> particleStats); // print number of particles that reached each termination state
   void mpi_particle_stats(); // get inidividual particle stats for each process
@@ -132,6 +130,7 @@ class ParticleSimulation : public AegisBase
   void write_particle_launch_positions(std::vector<double> &particleHeatfluxes);
   void mesh_coord_transform(coordinateSystem coordSys);
   void select_coordinate_system();
+  void set_new_particle_direction(ParticleBase &particle);
   
   // Simulation config parameters
   std::string exeType = "dynamic";

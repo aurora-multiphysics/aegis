@@ -13,6 +13,7 @@
 #include "CoordTransform.h"
 #include "SimpleLogger.h"
 #include "mpi.h"
+#include "Particle.h"
  
 using namespace moab;
 
@@ -383,6 +384,8 @@ TEST_F(aegisUnitTest, polar_to_flux_transform){
   MPI_Finalize();
 }
 
+
+
 double * vecNorm(double vector[3]){
   static double normalised_vector[3];
   double vector_mag;
@@ -393,3 +396,5 @@ double * vecNorm(double vector[3]){
   }
   return normalised_vector;
 }
+
+

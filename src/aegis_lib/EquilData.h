@@ -10,6 +10,7 @@
 #include "SimpleLogger.h"
 #include "AegisBase.h"
 
+class ParticleBase;
 
 struct eqdskData
 {
@@ -141,6 +142,8 @@ class EquilData : public AegisBase
   bool check_if_in_bfield(const std::vector<double> &xyzPos);
   bool check_if_in_bfield_polar(const std::vector<double> & polarPos);
 
+  int check_if_midplane_crossed(ParticleBase &particle);
+
   std::array<double, 3> get_midplane_params(); // return rInnerMidplane, rOuterMidplane, zMidplane
 
   // override for ITER corrections to eqdsk
@@ -219,6 +222,10 @@ class EquilData : public AegisBase
   double zmove = 0.0; // move equilibrium in Z
   double fscale = 1.0; // scale equilibrium
   double psiref = 0.0; // user specified psi if necessary   
+
+  // pre-computed R squared values to save unecessary sqrt or pow calls
+  double rbdrySq = 0.0;
+  double rOutrBdrySq = 0.0;
 };
 
 #endif

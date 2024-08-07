@@ -31,7 +31,7 @@
         "psiref": -2.1628794,
         "rmove": -0.006,
         "draw_equil_rz": false,
-        "draw_equil_xyz": true,
+        "draw_equil_xyz": false,
         "print_debug_info": false
     },
     "vtk_params":{

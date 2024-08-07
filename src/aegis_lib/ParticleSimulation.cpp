@@ -499,7 +499,7 @@ ParticleSimulation::loop_over_particles(int startIndex, int endIndex)
   for (int i = startIndex; i < endIndex; ++i)
   {
     auto particle = listOfParticles[i];
-    _integrator->set_launch_position(particle.parent_entity_handle(), particle.get_pos());
+    _integrator->set_launch_position(particle.parent_entity_handle(), particle.pos());
     terminationState particleState;
 
     if (coordSys == coordinateSystem::CARTESIAN)
@@ -566,9 +566,28 @@ ParticleSimulation::setup_particles()
       ParticleBase particle(coordinateSystem::CARTESIAN, launchPos, heatfluxPerParticle, facetEH,
                             launchPosition3D);
       particle.align_dir_to_surf(triangle.BdotN());
+
       listOfParticles.emplace_back(particle);
     }
   }
+}
+
+// moves particle along fieldline by distance returned from ray trace (or user specified set
+// distance) and sets the particle's new direction vector
+void
+ParticleSimulation::set_new_particle_direction(ParticleBase & particle)
+{
+  std::vector<double> position = particle.pos();
+  auto polarPos = CoordTransform::cart_to_polar(position);
+  auto magn = equilibrium->b_field(position, "cart"); // magnetic field
+  magn = equilibrium->b_field_cart(magn, polarPos[2]);
+
+  // normalise particle direction vector
+  double norm = sqrt(pow(magn[0], 2) + pow(magn[1], 2) + pow(magn[2], 2));
+  magn[0] = magn[0] / norm;
+  magn[1] = magn[1] / norm;
+  magn[2] = magn[2] / norm;
+  particle.set_dir(magn);
 }
 
 // loop over single particle track from launch to termination
@@ -577,43 +596,41 @@ ParticleSimulation::cartesian_particle_track(ParticleBase & particle)
 {
   double euclidDistToNextSurf = 0.0;
   nextSurf = 0;
-  particle.set_dir(equilibrium);
+  set_new_particle_direction(particle);
+
   vtkInterface->init_new_vtkPoints();
-  vtkInterface->insert_next_point_in_track(particle.get_xyz_pos());
+  vtkInterface->insert_next_point_in_track(particle.pos());
   moab::DagMC::RayHistory history;
 
   for (int step = 0; step < maxTrackSteps; ++step)
   {
     trackLength += trackStepSize;
-    iterationCounter++;
-
-    DAG->ray_fire(implComplementVol, particle.pos.data(), particle.dir.data(), nextSurf,
+    DAG->ray_fire(implComplementVol, particle.pos().data(), particle.dir().data(), nextSurf,
                   nextSurfDist, &history, trackStepSize, rayOrientation);
     numberOfRayFireCalls++;
 
     if (nextSurf != 0)
     {
-      particle.update_vectors(nextSurfDist); // update position to surface intersection point
+      particle.step(nextSurfDist); // update position to surface intersection point
       terminate_particle_shadow(particle);
       return terminationState::SHADOWED;
     }
     else
     {
-      particle.update_vectors(trackStepSize); // update position by stepsize
+      particle.step(trackStepSize); // update position by stepsize
     }
 
-    vtkInterface->insert_next_point_in_track(particle.get_xyz_pos());
+    vtkInterface->insert_next_point_in_track(particle.pos());
 
-    if (!equilibrium->check_if_in_bfield(particle.pos))
+    if (!equilibrium->check_if_in_bfield(particle.pos()))
     {
       terminate_particle_lost(particle);
       return terminationState::LOST;
     }
 
-    particle.set_dir(equilibrium);
-    particle.check_if_midplane_crossed(equilibrium->get_midplane_params());
+    set_new_particle_direction(particle);
 
-    if (particle.atMidplane != 0 && !noMidplaneTermination)
+    if (equilibrium->check_if_midplane_crossed(particle) != 0 && !noMidplaneTermination)
     {
       terminate_particle_depositing(particle);
       return terminationState::DEPOSITING;
@@ -630,18 +647,18 @@ ParticleSimulation::cartesian_particle_track(ParticleBase & particle)
 terminationState
 ParticleSimulation::polar_particle_track(ParticleBase & particle)
 {
-  auto xyzStartPos = particle.get_pos();
+  auto xyzStartPos = particle.pos();
   vtkInterface->init_new_vtkPoints();
 
   std::vector<double> cartPos;
-  auto polarPos = CoordTransform::cart_to_polar(particle.get_pos());
+  auto polarPos = CoordTransform::cart_to_polar(particle.pos());
   particle.set_pos(polarPos);
-  particle.coordSystem = coordinateSystem::POLAR;
+  particle.set_coordinate_system(coordinateSystem::POLAR);
   vtkInterface->insert_next_point_in_track(xyzStartPos);
 
   double euclidDistToNextSurf = 0.0;
   nextSurf = 0;
-  particle.set_dir(equilibrium);
+  set_new_particle_direction(particle);
 
   moab::DagMC::RayHistory history;
 
@@ -650,7 +667,7 @@ ParticleSimulation::polar_particle_track(ParticleBase & particle)
     trackLength += trackStepSize;
     iterationCounter++;
 
-    auto currentPos = particle.get_pos();
+    auto currentPos = particle.pos();
     auto magn = equilibrium->b_field(currentPos, "polar");
     double norm = sqrt(pow(magn[0], 2) + pow(magn[1], 2) + pow(magn[2], 2));
     std::vector<double> normB(3);
@@ -659,33 +676,30 @@ ParticleSimulation::polar_particle_track(ParticleBase & particle)
     normB[2] = magn[2] / norm;
     auto dir = normB;
 
-    DAG->ray_fire(implComplementVol, particle.pos.data(), particle.dir.data(), nextSurf,
+    DAG->ray_fire(implComplementVol, particle.pos().data(), particle.dir().data(), nextSurf,
                   nextSurfDist, &history, trackStepSize, rayOrientation);
     numberOfRayFireCalls++;
 
     if (nextSurf != 0)
     {
-      particle.update_vectors(nextSurfDist); // update position to surface intersection point
+      particle.step(nextSurfDist); // update position to surface intersection point
       // terminate_particle_shadow(particle);
       // return terminationState::SHADOWED;
     }
     else
     {
-      particle.update_vectors(trackStepSize); // update position by stepsize
+      particle.step(trackStepSize); // update position by stepsize
     }
-    cartPos = CoordTransform::polar_to_cart(particle.get_pos());
+    cartPos = CoordTransform::polar_to_cart(particle.pos());
     vtkInterface->insert_next_point_in_track(cartPos);
 
-    if (!equilibrium->check_if_in_bfield_polar(particle.pos))
+    if (!equilibrium->check_if_in_bfield_polar(particle.pos()))
     {
       terminate_particle_lost(particle);
       return terminationState::LOST;
     }
-
-    particle.set_dir(equilibrium);
-    particle.check_if_midplane_crossed(equilibrium->get_midplane_params());
-
-    if (particle.atMidplane != 0 && !noMidplaneTermination)
+    set_new_particle_direction(particle);
+    if (equilibrium->check_if_midplane_crossed(particle) != 0 && !noMidplaneTermination)
     {
       terminate_particle_depositing(particle);
       return terminationState::DEPOSITING;
@@ -1013,31 +1027,6 @@ ParticleSimulation::Execute_mpi()
   print_particle_stats(totalParticleStats);
 }
 
-void
-ParticleSimulation::implicit_complement_testing()
-{
-
-  std::vector<EntityHandle> children;
-  DAG->moab_instance()->get_child_meshsets(implComplementVol, children, 1);
-  std::vector<EntityHandle> vertices;
-  DAG->moab_instance()->list_entity(implComplementVol);
-
-  for (const auto & i : children)
-  {
-    std::vector<EntityHandle> temp;
-    DAG->moab_instance()->get_entities_by_type(i, MBVERTEX, vertices, false);
-    vertices.insert(vertices.begin(), temp.begin(), temp.end());
-  }
-  std::vector<double> vertexCoords(vertices.size() * 3);
-  std::vector<double> vertexCoordsFlux(vertices.size() * 3);
-
-  DAG->moab_instance()->get_coords(&vertices[0], vertices.size(), vertexCoords.data());
-
-  std::cout << "Number of Nodes in implicit complement = " << vertexCoords.size() << std::endl;
-
-  return;
-}
-
 // create a moab tag and attach that data to each element in the moab::Range
 // provided
 void
@@ -1181,9 +1170,10 @@ ParticleSimulation::write_particle_launch_positions(std::vector<double> & partic
   particleLaunchPosOut << "X,Y,Z,Heatflux_per_particle" << std::endl;
   for (int i = 0; i < listOfParticles.size(); ++i)
   {
-    particleLaunchPosOut << listOfParticles[i].launchPos[0] << ","
-                         << listOfParticles[i].launchPos[1] << ","
-                         << listOfParticles[i].launchPos[2] << "," << particleHeatfluxes[i] << "\n";
+    particleLaunchPosOut << listOfParticles[i].launchPos()[0] << ","
+                         << listOfParticles[i].launchPos()[1] << ","
+                         << listOfParticles[i].launchPos()[2] << "," << particleHeatfluxes[i]
+                         << "\n";
   }
   particleLaunchPosOut << std::flush;
 }

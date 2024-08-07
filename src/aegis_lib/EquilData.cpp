@@ -12,6 +12,7 @@
 #include "EquilData.h"
 #include "SimpleLogger.h"
 #include <mpi.h>
+#include "Particle.h"
 
 EquilData::EquilData(const std::shared_ptr<JsonHandler> & configFile)
 {
@@ -1411,4 +1412,64 @@ double
 EquilData::get_psi(const double & r, const double & z)
 {
   return -(alglib::spline2dcalc(psiSpline, r, z)); // spline returns sign flipped psi
+}
+
+int
+EquilData::check_if_midplane_crossed(ParticleBase & particle)
+{
+  int particleAtMidplane = -1;
+
+  double x, y, r;
+  double currentZ, prevZ;
+
+  auto position = particle.pos();
+  auto previousPosition = particle.previous_pos();
+
+  switch (particle.coord_sys())
+  {
+    case coordinateSystem::CARTESIAN:
+      x = position[0];
+      y = position[1];
+      r = sqrt(pow(x, 2) + pow(y, 2));
+      currentZ = position[2];
+      prevZ = previousPosition[2];
+      break;
+    case coordinateSystem::POLAR:
+      r = position[0];
+      currentZ = position[1];
+      prevZ = previousPosition[1];
+  }
+
+  particleAtMidplane = 0;
+
+  if (prevZ > currentZ)
+  {
+    if (currentZ <= zcen)
+    {
+      if (r <= rbdry)
+      {
+        particleAtMidplane = 1;
+      }
+      else if (r >= rOutrBdry)
+      {
+        particleAtMidplane = 2;
+      }
+    }
+  }
+  else if (prevZ < currentZ)
+  {
+    if (currentZ >= zcen)
+    {
+      if (r <= rbdry)
+      {
+        particleAtMidplane = 1;
+      }
+      else if (r >= rOutrBdry)
+      {
+        particleAtMidplane = 2;
+      }
+    }
+  }
+
+  return particleAtMidplane;
 }
