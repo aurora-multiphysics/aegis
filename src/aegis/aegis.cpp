@@ -45,6 +45,7 @@ main(int argc, char ** argv)
   equilibrium->psiref_override();
   equilibrium->init_interp_splines();
   equilibrium->centre(1);
+  equilibrium->write_bfield();
   double equilibriumInstantionTime = MPI_Wtime();
   // ---------------------------------------------------------------------------------
 
@@ -69,7 +70,6 @@ main(int argc, char ** argv)
     }
   }
 
-  MPI_Finalize();
   if (rank == 0)
   {
     std::map<std::string, double> profilingTimes = simulation.get_profiling_times();

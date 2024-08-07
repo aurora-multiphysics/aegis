@@ -938,7 +938,6 @@ EquilData::write_bfield(int phiSamples)
           polarB = b_field(polarPos, "polar");               // calculate B(R,Z,phi)
           cartB = b_field_cart(polarB, polarPos[2]);         // transform to B(x,y,z)
           cartPos = CoordTransform::polar_to_cart(polarPos); // transform position to cartesian
-
           // write out magnetic field data for plotting
           if (cartPos[0] > 0)
           {

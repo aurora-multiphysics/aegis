@@ -499,7 +499,7 @@ ParticleSimulation::loop_over_particles(int startIndex, int endIndex)
   for (int i = startIndex; i < endIndex; ++i)
   {
     auto particle = listOfParticles[i];
-    integrator->set_launch_position(particle.parent_entity_handle(), particle.get_pos());
+    _integrator->set_launch_position(particle.parent_entity_handle(), particle.get_pos());
     terminationState particleState;
 
     if (coordSys == coordinateSystem::CARTESIAN)
@@ -1020,6 +1020,7 @@ ParticleSimulation::implicit_complement_testing()
   std::vector<EntityHandle> children;
   DAG->moab_instance()->get_child_meshsets(implComplementVol, children, 1);
   std::vector<EntityHandle> vertices;
+  DAG->moab_instance()->list_entity(implComplementVol);
 
   for (const auto & i : children)
   {
@@ -1031,37 +1032,6 @@ ParticleSimulation::implicit_complement_testing()
   std::vector<double> vertexCoordsFlux(vertices.size() * 3);
 
   DAG->moab_instance()->get_coords(&vertices[0], vertices.size(), vertexCoords.data());
-
-  // DAG->moab_instance()->list_entities(children);
-
-  std::ofstream implicitComplCoordsxyz("implcit_complement_xyz.txt");
-  std::ofstream implicitComplCoordsFlux("implcit_complement_flux.txt");
-  std::vector<double> temp1, temp2;
-
-  for (int i = 0; i < vertexCoords.size(); i += 3)
-  {
-    implicitComplCoordsxyz << vertexCoords[i] << " " << vertexCoords[i + 1] << " "
-                           << vertexCoords[i + 2] << std::endl;
-    temp1 =
-        CoordTransform::cart_to_polar(vertexCoords[i], vertexCoords[i + 1], vertexCoords[i + 2]);
-    temp2 = CoordTransform::polar_to_flux(temp1, equilibrium);
-    vertexCoordsFlux[i] = temp2[0];
-    vertexCoordsFlux[i + 1] = temp2[1];
-    vertexCoordsFlux[i + 2] = temp2[2];
-    implicitComplCoordsFlux << temp2[0] << " " << temp2[1] << " " << temp2[2] << std::endl;
-  }
-
-  // int ctr = 101;
-  // for (const auto &i:vertexCoordsFlux)
-  // {
-  //   implicitComplCoordsFlux << i[0] << " " << i[1] << " " << i[2] <<
-  //   std::endl; EntityHandle vertexHandle = ctr;
-  //   fluxDAG->moab_instance()->create_vertex(i.data(), vertexHandle);
-  //   EntityHandle tri_conn[] = {i[0], vertex1, vertex2, vertex3};
-  //   EntityHandle quad_handle = 0;
-  //   create_element( MeshQuad, quad_conn, 4, quad_handle );
-  //   ctr +=1;
-  // }
 
   std::cout << "Number of Nodes in implicit complement = " << vertexCoords.size() << std::endl;
 

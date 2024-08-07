@@ -79,7 +79,7 @@ class ParticleSimulation : public AegisBase
 {
   public:
   ParticleSimulation(std::shared_ptr<JsonHandler> configFile, std::shared_ptr<EquilData> equilibrium, std::shared_ptr<SurfaceIntegrator> integrator);
-  
+  void convex_hull();
   
   
   

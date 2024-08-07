@@ -1,0 +1,293 @@
+#include <gtest/gtest.h>
+#include <stdio.h>
+#include "DagMC.hpp"
+#include <iostream>
+#include "moab/Core.hpp"
+#include "moab/Interface.hpp"
+#include <fstream>
+#include <vector>
+#include <cmath>
+#include "EquilData.h"
+#include "Integrator.h"
+#include "Source.h"
+#include "CoordTransform.h"
+#include "SimpleLogger.h"
+#include "mpi.h"
+#include "stack"
+#include <stdlib.h>
+#include <algorithm>
+
+using namespace moab;
+
+using moab::DagMC;
+
+class convexHullUnitTest: public ::testing::Test {
+ protected:
+  virtual void SetUp() {}
+  virtual void TearDown() {}
+};
+
+struct Point
+{
+  double r,z;
+};
+
+// A global point needed for  sorting points with reference
+// to  the first point Used in compare function of qsort()
+Point p0;
+
+// return next in stack after top
+Point nextToTop(std::stack<Point> &s)
+{
+  Point p = s.top();
+  s.pop();
+  Point res = s.top();
+  s.push(p);
+  return res;
+}
+
+// To find orientation of ordered triplet (p, q, r).
+// The function returns following values
+// 0 --> p, q and r are collinear
+// 1 --> Clockwise
+// 2 --> Counterclockwise
+int orientation(Point p, Point q, Point r)
+{
+  int val = (q.z - p.z) * (r.r - q.r) -
+               (q.r - p.r) * (r.z - q.z);
+  if (val == 0) return 0; // collinear
+  return (val > 0)? 1:2; // clock or anticlock wise
+}
+
+// utility function to swap two points
+void swap(Point &p1, Point &p2)
+{
+  Point temp = p1;
+  p1 = p2;
+  p2 = temp;
+}
+
+// compute distance squared between two points
+int distSq(Point p1, Point p2)
+{
+  return (p1.r - p2.r)*(p1.r - p2.r) + 
+         (p1.z - p2.z)*(p1.z - p2.z);
+}
+
+// A function used by library function qsort() to sort an array of
+// points with respect to the first point
+int compare(const void *vp1, const void *vp2)
+{
+  Point *p1 = (Point *)vp1;
+  Point *p2 = (Point *)vp2;
+  // Find orientation
+  int o = orientation(p0, *p1, *p2);
+  if (o == 0) // handle collinear
+    return (distSq(p0, *p2) >= distSq(p0, *p1))? -1 : 1;
+  
+  return (o==2)? -1 : 1;
+}
+
+void jarvis_march(std::vector<Point> &points);
+void graham_scan(std::vector<Point> &points);
+
+TEST_F(convexHullUnitTest, recoverSurfaces) {
+  moab::ErrorCode rval;
+
+  // initialise DAGMC
+  auto DAG = std::make_unique<DagMC>();
+  rval = DAG->load_file("res12_double_div_shad.h5m"); EXPECT_EQ(0, rval);
+  rval = DAG->init_OBBTree(); EXPECT_EQ(0, rval);
+  
+  // get list of volumes and surfaces
+  moab::Range surfaces, volumes;
+  rval = DAG->setup_geometry(surfaces, volumes); EXPECT_EQ(0, rval);
+
+  // get implicit complement volume
+  auto implcitComplementVolume = DAG->entity_by_index(3, volumes.size());
+
+  // rval = DAG->moab_instance()->list_entity(implcitComplementVolume); EXPECT_EQ(0, rval);
+
+  // get children meshsets of implicit complement
+  std::vector<EntityHandle> children;
+  rval = DAG->moab_instance()->get_child_meshsets(implcitComplementVolume, children, 1); EXPECT_EQ(0, rval);
+  
+  // print information about childsets
+  // DAG->moab_instance()->list_entities(children.data(), children.size());
+
+  // get vertices in implicit complement
+  std::vector<EntityHandle> vertices;
+  for(const auto & child:children)
+  {
+    rval = DAG->moab_instance()->get_entities_by_type(child, MBVERTEX, vertices, false); EXPECT_EQ(0, rval);
+  }
+  std::vector<double> vertexCoords(vertices.size()*3);
+  rval = DAG->moab_instance()->get_coords(&vertices[0], vertices.size(), vertexCoords.data()); EXPECT_EQ(0, rval);
+
+
+  // write out implicit complement coords
+  double f = 0.95;
+  double x = 0;
+  double y = 0;
+  double z = 0.485034;
+
+  std::ofstream implicitComplementCoordsCart("implicit_complement_coords_xyz.txt");
+  std::ofstream implicitComplementCoordsPolar("implicit_complement_coords_rz.txt");
+  std::vector<std::vector<double>> coords(vertices.size());
+  std::vector<double> polarCoords;
+  int index = 0;
+  std::vector<Point> points;
+
+  for (auto &i:coords)
+  {
+    i.push_back(vertexCoords[index]);
+    i.push_back(vertexCoords[index+1]);
+    i.push_back(vertexCoords[index+2]);
+    index +=3;
+
+    // i[0] = f*(i[0]-x)+x;
+    // i[1] = f*(i[1]-y)+y;
+    // i[2] = f*(i[2]-z)+z;
+
+    implicitComplementCoordsCart << i[0] << " " << i[1] << " " << i[2] << std::endl;
+
+    polarCoords = CoordTransform::cart_to_polar_xy(i);
+    implicitComplementCoordsPolar << polarCoords[0] << " " << polarCoords[1] << std::endl;
+    Point temp;
+    temp.r = polarCoords[0];
+    temp.z = polarCoords[1];
+    points.push_back(temp);
+  
+  }
+
+
+
+  jarvis_march(points);
+  // graham_scan(points);
+}
+
+void jarvis_march(std::vector<Point> &points)
+{
+  int n = points.size();
+
+  std::vector<Point> convexHull; // initialise results
+  
+  // find the smallest r point
+  int l = 0;
+  for (int i = 1; i < points.size(); i++)
+  {
+    if (points[i].r < points[l].r) { l = i; }
+  }
+
+  // start from smallest r moving counter clockwise until we reach start again
+  int p = l, q;
+
+  do 
+  {
+    // Add current point to our convex hull result
+    convexHull.push_back(points[p]);
+
+    // search for a point q such that the orientation(p, q, x) is counterclockwise for all points x.
+    q = (p+1)%n;
+    for (int i = 0; i < n; i++)
+    {
+      // if i more counterclockwise than current q then update q
+      if (orientation(points[p], points[i], points[q]) == 2) { q = i; }
+    }
+
+    // now q is the most counterclockwise with respect to p.
+    // set p as q fr next iteration so that q is added to the convex hull
+    p = q;
+    
+  } while (p != l); // while we dont come back to the first point
+
+  // print our result to a file
+  std::ofstream hull("convex_hull_pts.txt");
+  for (const auto &i:convexHull)
+  {
+    hull << i.r << " " << i.z << std::endl;
+  }
+
+}
+
+void graham_scan(std::vector<Point> &points)
+{
+  int n = points.size();
+
+  int zmin = points[0].z;
+  int min = 0;
+
+  for (int i = 1; i < n; i++)
+  {
+    int z = points[i].z;
+
+     // Pick the bottom-most or choose the left
+     // most point in case of tie
+     if ((z < zmin) || (zmin == z && points[0].r < points[min].r))
+     {
+       zmin = points[i].z;
+       min = i;
+     }
+  }
+
+  // place the bottom-most point at the first position
+  swap(points[0], points[min]);
+
+  // Sort n-1 points with respect to the first point.
+  // A point p1 comes before p2 in sorted output if p2
+  // has larger polar angle (in counterclockwise
+  // direction) than p1
+  p0 = points[0];
+  std::qsort(&points[1], n-1, sizeof(Point), compare);
+
+  
+
+   // If two or more points make same angle with p0, 
+   // Remove all but the one that is farthest from p0
+   // Remember that, in above sorting, our criteria was
+   // to keep the farthest point at the end when more than
+   // one points have same angle.
+   int m = 1; // Initialize size of modified array
+
+   for (int i = 1; i < n; ++i)
+   {
+     // Keep removing i while angle of i and i+1 is same
+     // with respect to p0
+     while (i < n-1 && orientation(p0, points[i], points[i+1]) == 0)
+     {
+       i++;
+       points[m] = points[i];
+       m++; // update size of modified array
+     }
+     
+     if (m < 3) return;
+
+
+     // Create an empty stack and push first three points
+     // to it.
+     std::stack<Point> S;
+     S.push(points[0]);
+     S.push(points[1]);
+     S.push(points[2]);
+     
+     // Process the remaining n-3 points
+     for (int i = 3; i < m; ++i)
+     {
+       // Keep removing top while the angle formed by
+       // points next-to-top, top, and points[i] makes
+       // a non-left turn
+       while (S.size() > 1 && orientation(nextToTop(S), S.top(), points[i]) != 2) { S.pop(); }
+       S.push(points[i]);
+     } 
+     // Now stack has the output points, print contents of stack
+     std::ofstream convexHull("graham_scan.txt");
+     
+     while (!S.empty())
+     {
+      Point p = S.top();
+      convexHull << p.r << " " << p.z << std::endl;
+      S.pop();
+     }
+   }
+
+}
