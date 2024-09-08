@@ -852,16 +852,16 @@ ParticleSimulation::Execute_mpi()
   vtkInterface->init();
   MPI_Status mpiStatus;
 
-  int totalFacets = target_num_facets();
-  int nFacetsPerProc = totalFacets / nprocs;
-  int remainder = totalFacets % nprocs;
+  int totalParticles = listOfParticles.size();
+  int nParticlesPerProc = totalParticles / nprocs;
+  int remainder = totalParticles % nprocs;
 
   int rootRank = 0;
 
-  std::vector<double> qvalues;                  // qvalues buffer local to each processor
-  std::vector<double> rootQvalues(totalFacets); // total qvalues buffer on root process for IO
+  std::vector<double> qvalues;                     // qvalues buffer local to each processor
+  std::vector<double> rootQvalues(totalParticles); // total qvalues buffer on root process for IO
 
-  std::vector<int> recieveCounts(nprocs, nFacetsPerProc);
+  std::vector<int> recieveCounts(nprocs, nParticlesPerProc);
   auto recvItr = recieveCounts.begin();
 
   int remaindersHandled = 0;

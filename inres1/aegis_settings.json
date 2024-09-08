@@ -2,19 +2,19 @@
     "description": "inres1 test case to compare against SMARDDA",
     "aegis_params":{
         "DAGMC": "inres1_shad.h5m",
-        "step_size": 0.01,
+        "step_size": 2.5,
         "max_steps": 10000,
-        "launch_pos": "fixed",
+        "launch_pos": "mc",
   
         "monte_carlo_params":{
-              "number_of_particles_per_facet":1,
+              "number_of_particles_per_facet":5,
               "write_particle_launch_positions":false
         },
   
         "target_surfs": [1,2,3,4,5,6],
         "force_no_deposition": false,
         "coordinate_system": "flux",
-        "execution_type": "dynamic",
+        "execution_type": "mpi",
   
         "dynamic_batch_params":{
             "batch_size":16,
@@ -31,11 +31,11 @@
         "psiref": -2.1628794,
         "rmove": -0.006,
         "draw_equil_rz": false,
-        "draw_equil_xyz": false,
+        "draw_equil_xyz": true,
         "print_debug_info": false
     },
     "vtk_params":{
-        "draw_particle_tracks": false
+        "draw_particle_tracks": true
     }
    }
   
