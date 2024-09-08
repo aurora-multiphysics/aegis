@@ -35,12 +35,12 @@ set(CMAKE_BUILD_TYPE DEBUG)
 find_package(VTK COMPONENTS REQUIRED
    CommonCore
    CommonDataModel
-  #  FiltersCore
-  #  FiltersGeometry
-  #  FiltersSources
+    FiltersCore
+    FiltersGeometry
+    FiltersSources
    IOXML
-  #  IOGeometry
-  #  IOLegacy
+    IOGeometry
+    IOLegacy
 )
 
 message (STATUS "Found VTK COMPONENTS" ${VTK_DIR})
