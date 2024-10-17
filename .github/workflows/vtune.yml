@@ -20,6 +20,6 @@ jobs:
 
       - name: Run Vtune
         run: |
-          # Include the command to run Intel VTune here
-          # For example:
+          # Source oneAPI environment to enable VTune commands
+          source /opt/intel/oneapi/setvars.sh
           vtune -help
