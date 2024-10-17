@@ -22,9 +22,9 @@ jobs:
           echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
           sudo apt update
           sudo apt install -y intel-oneapi-vtune 
-          sudo echo 0 > /proc/sys/kernel/yama/ptrace_scope
-          sudo echo 0 > /proc/sys/kernel/perf_event_paranoid
-          sudo echo 0 > /proc/sys/kernel/kptr_restrict 
+          cat /proc/sys/kernel/yama/ptrace_scope
+          cat > /proc/sys/kernel/perf_event_paranoid
+          cat > /proc/sys/kernel/kptr_restrict 
 
       # Build repo code
       - name: Build repo code
