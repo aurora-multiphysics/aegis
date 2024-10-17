@@ -16,10 +16,11 @@ jobs:
       # Build repo code
       - name: Build repo code
         run: |
-             docker build -t ci-dagmc-ubuntu \ 
-                    --build-arg build_git_sha="${PRCOMMITSHA:-$GITHUB_SHA}" \
-                    --build-arg build_git_repo="${PRREPOSITORY:-$GITHUB_REPOSITORY}" \
-                    docker/limited_build/
+          docker build -t ci-dagmc-ubuntu \
+              --build-arg build_git_sha="${PRCOMMITSHA:-$GITHUB_SHA}" \
+              --build-arg build_git_repo="${PRREPOSITORY:-$GITHUB_REPOSITORY}" \
+              docker/limited_build/
+
     
       # Get VTune
       - name: Install and setup Intel VTune
