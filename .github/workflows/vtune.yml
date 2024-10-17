@@ -12,15 +12,6 @@ jobs:
       # Checkout the repo code
       - name: Check out repository code
         uses: actions/checkout@v2
-
-      # Build repo code
-      - name: Build repo code
-        run: |
-          docker build -t ci-dagmc-ubuntu \
-              --build-arg build_git_sha="${PRCOMMITSHA:-$GITHUB_SHA}" \
-              --build-arg build_git_repo="${PRREPOSITORY:-$GITHUB_REPOSITORY}" \
-              docker/limited_build/
-
     
       # Get VTune
       - name: Install and setup Intel VTune
@@ -34,6 +25,14 @@ jobs:
           sudo echo 0 > /proc/sys/kernel/yama/ptrace_scope
           sudo echo 0 > /proc/sys/kernel/perf_event_paranoid
           sudo echo 0 > /proc/sys/kernel/kptr_restrict 
+
+      # Build repo code
+      - name: Build repo code
+        run: |
+          docker build -t ci-dagmc-ubuntu \
+              --build-arg build_git_sha="${PRCOMMITSHA:-$GITHUB_SHA}" \
+              --build-arg build_git_repo="${PRREPOSITORY:-$GITHUB_REPOSITORY}" \
+              docker/limited_build/
 
       # Run VTune hotspots
       - name: Collect hotspots analysis with VTune
