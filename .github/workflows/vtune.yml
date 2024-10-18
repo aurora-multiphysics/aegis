@@ -25,7 +25,6 @@ jobs:
           sudo sysctl kernel.yama.ptrace_scope=0
           sudo sysctl kernel.perf_event_paranoid=0
           sudo sysctl kernel.kptr_restrict=0 
-          ./opt/intel/oneapi/vtune/latest/bin64/vtune-self-checker.sh
           
       # Build repo code
       - name: Build repo code
