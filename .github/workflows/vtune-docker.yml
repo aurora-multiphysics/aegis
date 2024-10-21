@@ -1,4 +1,4 @@
-name: VTune hotspots analysis
+name: VTune hotspots analysis (docker)
 
 on:
   workflow_dispatch:
