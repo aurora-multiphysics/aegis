@@ -13,6 +13,9 @@ jobs:
       # Step 1: Checkout the code from the repository
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          ref:
+            CI/automated-profiling
       
       # Step 2: Build the Docker image
       - name: Build Docker Image
