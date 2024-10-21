@@ -29,10 +29,7 @@ jobs:
       # Build repo code
       - name: Build repo code
         run: |
-          docker build -t ci-dagmc-ubuntu \
-              --build-arg build_git_sha="${PRCOMMITSHA:-$GITHUB_SHA}" \
-              --build-arg build_git_repo="${PRREPOSITORY:-$GITHUB_REPOSITORY}" \
-              docker/limited_build/
+          ${GITHUB_WORKSPACE}/scripts/build_aegis_ubuntu.sh
 
       # Run VTune hotspots
       - name: Collect hotspots analysis with VTune
@@ -45,7 +42,13 @@ jobs:
 
       # Collect VTune Data
       - name: Collect VTune Results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.4.3
         with:
-          name: vtune-hotspots-results
+          # Artifact name
+          name: vtune-hotspots-results # optional, default is artifact
           path: hotspots_summary.html
+          if-no-files-found: warn # optional, default is warn
+          retention-days: 1 # optional, 1 - 90 days
+          compression-level: 6 # optional, default is 6
+          overwrite: false # optional, default is false
+          include-hidden-files: false # optional, default is false
