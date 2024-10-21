@@ -20,7 +20,7 @@ jobs:
       # Step 2: Build the Docker image
       - name: Build Docker Image
         run: |
-           docker build -t ci-vtune-aegis \ 
+           docker build -t ci-vtune-aegis \
                         --build-arg build_git_sha="${PRCOMMITSHA:-$GITHUB_SHA}" \
                         --build-arg build_git_repo="${PRREPOSITORY:-$GITHUB_REPOSITORY}" \
                         docker/vtune-ci/
