@@ -1,0 +1,30 @@
+name: VTune hotspots analysis (docker)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  vtune-analysis:
+    runs-on: ubuntu-latest
+    env: 
+      PRCOMMITSHA : ${{ github.event.pull_request.head.sha }}
+
+    steps:
+      # Step 1: Checkout the code from the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      # Step 2: Build the Docker image
+      - name: Build Docker Image
+        run: |
+          docker build -t your-image-name .
+
+      # Step 3: Run Docker container, create an artifact, and upload it to GitHub
+      - name: Create Artifact and Upload to GitHub Releases
+        run: |
+          docker run --rm your-image-name sh -c " \
+            tar -czf artifact.tar.gz hotspots_summary.html && \
+            echo $GITHUB_TOKEN | gh auth login --with-token && \
+            gh release upload v1.0.0 hotspots.tar.gz"
+        env:
+          GITHUB_TOKEN: ${{ secrets.ARTIFACT_TOKEN }}  # Token must have repo access
