@@ -135,6 +135,10 @@ function build_aegis(){
   cmake ../ -DDAGMC_DIR=$WORKDIR/aegis-deps/DAGMC/ -DCMAKE_PREFIX_PATH=$WORKDIR/aegis-deps/VTK
   make 
   make test
+  cd ../bin
+  export AEGIS_EXE=$PWD/bin
+  cd ../inres1
+  export AEGIS_INRES1_DIR=$PWD
 }
 
 #load_modules
