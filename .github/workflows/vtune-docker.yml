@@ -33,7 +33,7 @@ jobs:
         run: |
           docker cp profiling-container:/opt/artifacts/hotspots_summary.html ./hotspots_summary.html
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: vtune-hotspots-results
           path: ./hotspots_summary
