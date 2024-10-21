@@ -36,7 +36,7 @@ jobs:
         run: |
           # Source oneAPI environment to enable VTune commands
           source /opt/intel/oneapi/setvars.sh
-          vtune -collect hotspots -strategy=:trace:trace --app-working-dir=${GITHUB_WORKSPACE}/inres1 ${GITHUB_WORKSPACE}/bin/aegis
+          vtune -collect hotspots -strategy=:trace:trace --app-working-dir=$AEGIS_INRES1_DIR $AEGIS_EXE
           vtune -report summary -format=html > hotspots_summary.html
           tar -c r00* > vtune_result.tar
 
