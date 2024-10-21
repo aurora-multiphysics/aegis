@@ -117,7 +117,7 @@ RUN cd /$WORKDIR/ && \
     mkdir VTK && \
     git clone https://github.com/Kitware/VTK.git && \
     cd VTK && \
-    git checkout release && \
+    git checkout v9.3.1 && \
     mkdir VTK-build && \
     cd VTK-build && \
     cmake ../ && \ 

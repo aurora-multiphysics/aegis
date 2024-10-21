@@ -1,19 +1,51 @@
-name: VTune github runner testing
+name: VTune hotspots analysis
+
 on:
   workflow_dispatch:
 
-
 jobs:
-  build:
+  vtune-analysis:
     runs-on: ubuntu-latest
+    env: 
+      PRCOMMITSHA : ${{ github.event.pull_request.head.sha }}
     steps:
+      # Checkout the repo code
       - name: Check out repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
+    
+      # Get VTune
       - name: Install and setup Intel VTune
         run: |
-             sudo apt update
-             sudo apt install -y gpg-agent wget
-             wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
-             echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
-             sudo apt update
-             sudo apt install intel-oneapi-vtune
+          sudo apt update
+          sudo apt install -y gpg-agent wget
+          wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+          sudo apt update
+          sudo apt install -y intel-oneapi-vtune 
+          sudo sysctl kernel.yama.ptrace_scope=0
+          sudo sysctl kernel.perf_event_paranoid=0
+          sudo sysctl kernel.kptr_restrict=0 
+          
+      # Build repo code
+      - name: Build repo code
+        run: |
+          docker build -t ci-dagmc-ubuntu \
+              --build-arg build_git_sha="${PRCOMMITSHA:-$GITHUB_SHA}" \
+              --build-arg build_git_repo="${PRREPOSITORY:-$GITHUB_REPOSITORY}" \
+              docker/limited_build/
+
+      # Run VTune hotspots
+      - name: Collect hotspots analysis with VTune
+        run: |
+          # Source oneAPI environment to enable VTune commands
+          source /opt/intel/oneapi/setvars.sh
+          vtune -collect hotspots -strategy=:trace:trace --app-working-dir=${GITHUB_WORKSPACE}/inres1 ${GITHUB_WORKSPACE}/bin/aegis
+          vtune -report summary -format=html > hotspots_summary.html
+          tar -c r00* > vtune_result.tar
+
+      # Collect VTune Data
+      - name: Collect VTune Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: vtune-hotspots-results
+          path: hotspots_summary.html
