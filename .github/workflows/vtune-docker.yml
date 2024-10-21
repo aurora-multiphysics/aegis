@@ -17,13 +17,15 @@ jobs:
       # Step 2: Build the Docker image
       - name: Build Docker Image
         run: |
-          cd docker/vtune-ci
-          docker build -t Dockerfile .
+           docker build -t ci-vtune-aegis \ 
+                        --build-arg build_git_sha="${PRCOMMITSHA:-$GITHUB_SHA}" \
+                        --build-arg build_git_repo="${PRREPOSITORY:-$GITHUB_REPOSITORY}" \
+                        docker/vtune-ci/
 
       # Step 3: Run Docker container, create an artifact, and upload it to GitHub
       - name: Create Artifact and Upload to GitHub Releases
         run: |
-          docker run --rm your-image-name sh -c " \
+          docker run --rm ci-vtune-aegis sh -c " \
             tar -czf artifact.tar.gz hotspots_summary.html && \
             echo $GITHUB_TOKEN | gh auth login --with-token && \
             gh release upload v1.0.0 hotspots.tar.gz"
