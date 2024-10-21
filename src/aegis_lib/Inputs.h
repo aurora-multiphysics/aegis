@@ -12,6 +12,7 @@
 #include <nlohmann/json.hpp>
 #include <variant>
 #include <AegisBase.h>
+#include <optional>
 
 /**
  * Class for storing input settings from JSON file
