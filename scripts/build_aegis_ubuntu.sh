@@ -14,10 +14,10 @@ function load_modules() {
 install_apt_deps() {
 
   # Update the package list
-  apt-get update
+  sudo apt-get update
 
   # Install required packages
-  apt-get install -y \
+  sudo apt-get install -y \
     wget \
     python3 \
     pip \
@@ -41,8 +41,9 @@ install_apt_deps() {
     libboost-test-dev \
     libboost-log-dev \
     libtbb-dev \
-    libx11-dev
-    pkg-config
+    libx11-dev \
+    pkg-config \
+    libgl1-mesa-dev
 }
 
 function build_moab(){
