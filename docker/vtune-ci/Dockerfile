@@ -38,7 +38,7 @@ RUN cd /$WORKDIR && \
 
 # Collect VTune results
 RUN cd ${WORKDIR} && \
-    ./opt/intel/oneapi/setvars.sh && \
+    . /opt/intel/oneapi/setvars.sh && \
     vtune -collect hotspots -strategy=:trace:trace --app-working-dir=/opt/aegis/inres1 /opt/aegis/bin/aegis && \
     vtune -report summary -format=html > hotspots_summary.html && \
     tar -cvf hotspots_results.tar r000hs/ 
