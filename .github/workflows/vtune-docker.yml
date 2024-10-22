@@ -32,8 +32,8 @@ jobs:
         run: |
           cd $HOME
           mkdir artifacts
-          docker cp profiling-container:/opt/hotspots_summary.html ./artifacts/hotspots_summary.html 
-          docker cp profiling-container:/opt/hotspots_results.tar ./artifacts/hotspots_results.tar
+          docker cp vtune-container:/opt/hotspots_summary.html ./artifacts/hotspots_summary.html 
+          docker cp vtune-container:/opt/hotspots_results.tar ./artifacts/hotspots_results.tar
           
       # Step 5 Upload VTune results artifacts    
       - name: Upload VTune results summary
