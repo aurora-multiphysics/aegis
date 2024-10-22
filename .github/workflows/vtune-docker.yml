@@ -1,4 +1,4 @@
-name: VTune hotspots analysis (docker)
+name: VTune Hotspots Analysis (Docker)
 
 on:
   workflow_dispatch:
@@ -6,34 +6,39 @@ on:
 jobs:
   vtune-analysis:
     runs-on: ubuntu-latest
-    env: 
-      PRCOMMITSHA : ${{ github.event.pull_request.head.sha }}
 
     steps:
       # Step 1: Checkout the code from the repository
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          ref:
-            CI/automated-profiling
-      
+          ref: CI/automated-profiling
+
       # Step 2: Build the Docker image
       - name: Build Docker Image
         run: |
-           docker build -t ci-vtune-aegis \
-                        --build-arg build_git_sha="${PRCOMMITSHA:-$GITHUB_SHA}" \
-                        --build-arg build_git_repo="${PRREPOSITORY:-$GITHUB_REPOSITORY}" \
-                        docker/vtune-ci/
-      
-      - name: Start Docker container
+          docker build -t ci-vtune-aegis \
+                       --build-arg build_git_sha="${PRCOMMITSHA:-$GITHUB_SHA}" \
+                       --build-arg build_git_repo="${PRREPOSITORY:-$GITHUB_REPOSITORY}" \
+                       docker/vtune-ci/
+
+      # Step 3: Start Docker container                  
+      - name: Start Docker Container
         run: |
-          docker run --name profiling-container ci-vtune-aegis sh 
+          docker run --privileged --name vtune-container -td ci-vtune-aegis
           
-      - name: Copy artifact from container
+      # Step 4: Copy VTune Results from container
+      - name: Copy VTune Results
         run: |
           docker cp profiling-container:/opt/artifacts/hotspots_summary.html ./hotspots_summary.html
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: vtune-hotspots-results
-          path: ./hotspots_summary
+          path: /vtune-results/hotspots_summary.html
+
+      # Step 6: Cleanup Docker Container
+      - name: Cleanup Docker Container
+        run: |
+          docker stop vtune-container
+          docker rm vtune-container

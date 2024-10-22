@@ -5,8 +5,6 @@ ARG WORKDIR="opt"
 
 # Install aegis  
 RUN cd /$WORKDIR && \
-    mkdir temp && \
-    cd temp && \
     git clone --recurse https://github.com/aurora-multiphysics/aegis.git && \
     cd aegis && \
     mkdir bld && \
@@ -16,18 +14,15 @@ RUN cd /$WORKDIR && \
     make test 
 
 # Install Intel VTune
-RUN apt update && \
+    RUN apt update && \
     apt install -y gpg-agent wget && \
     wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null && \
     echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list && \
     apt update && \
-    apt install -y intel-oneapi-vtune && \
-    kernel.yama.ptrace_scope=0 && \
-    kernel.perf_event_paranoid=0 && \
-    kernel.kptr_restrict=0
+    apt install -y intel-oneapi-vtune
 
 # Run Intel VTune hotspots analysis 
-RUN cd $WORKDIR && \
+    RUN cd $WORKDIR && \
     mkdir artifacts && \
     cd artifacts && \
     source /opt/intel/oneapi/setvars.sh && \
