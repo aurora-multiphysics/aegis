@@ -30,12 +30,25 @@ jobs:
       # Step 4: Copy VTune Results from container
       - name: Copy VTune Results
         run: |
-          docker cp profiling-container:/opt/artifacts/hotspots_summary.html ./hotspots_summary.html
-      - name: Upload artifact
+          mkdir -p /artifacts
+          docker cp profiling-container:/opt/hotspots_summary.html /artifacts/hotspots_summary.html 
+          docker cp profiling-container:/opt/hotspots_results.tar /artifacts/hotspots_results.tar
+          
+      # Step 5 Upload VTune results artifacts    
+      - name: Upload VTune results summary
         uses: actions/upload-artifact@v4
         with:
-          name: vtune-hotspots-results
-          path: /vtune-results/hotspots_summary.html
+          name: vtune-results-summary
+          path: /artifacts/hotspots_summary.html
+          if-no-files-found: error
+
+      - name: Upload full VTune results 
+        uses: actions/upload-artifact@v4
+        with:
+          name: vtune-results-full
+          path: /artifacts/hotspots_results.tar
+          if-no-files-found: error
+           
 
       # Step 6: Cleanup Docker Container
       - name: Cleanup Docker Container
