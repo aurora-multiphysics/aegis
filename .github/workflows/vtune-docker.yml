@@ -40,14 +40,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: vtune-results-summary
-          path: ./artifacts/hotspots_summary.html
+          path: $HOME/artifacts/hotspots_summary.html
           if-no-files-found: error
 
       - name: Upload full VTune results 
         uses: actions/upload-artifact@v4
         with:
           name: vtune-results-full
-          path: ./artifacts/hotspots_results.tar
+          path: $HOME/artifacts/hotspots_results.tar
           if-no-files-found: error
            
 
