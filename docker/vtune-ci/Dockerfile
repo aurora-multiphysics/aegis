@@ -17,15 +17,6 @@ RUN apt-get update && apt-get upgrade -y && \
     ca-certificates build-essential pkg-config gnupg libarchive13 openssh-server openssh-client wget net-tools git intel-oneapi-vtune  && \
     rm -rf /var/lib/apt/lists/*
 
-# VTune environment variables
-ENV LANG=C.UTF-8
-ENV ONEAPI_ROOT='/opt/intel/oneapi'
-ENV PATH='/opt/intel/oneapi/vtune/2024.2/bin64:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
-ENV PKG_CONFIG_PATH='/opt/intel/oneapi/vtune/2024.2/include/pkgconfig/lib64:'
-ENV SETVARS_COMPLETED='0'
-ENV VTUNE_PROFILER_2024_DIR='/opt/intel/oneapi/vtune/2024.2'
-ENV VTUNE_PROFILER_DIR='/opt/intel/oneapi/vtune/2024.2'
-
 # Install aegis  
 RUN cd /$WORKDIR && \
     git clone --recurse https://github.com/aurora-multiphysics/aegis.git && \
