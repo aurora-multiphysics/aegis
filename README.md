@@ -39,11 +39,11 @@ This produces an `aegis` executable located in `bin`. The `inres1` case can be r
 AEGIS requires a json config file to set various runtime parameters before execution. An example of such a config file can be found in /inres1/aegis_settings.json. AEGIS will search for a config file named "aegis_settings.json" in the current working directory otherwise, a different json file can be passed as a positional argument to the aegis executable. An exhaustive list of options will be provided in documentation. However, the required parameters and some of the more useful optional parameters are listed below:
 
 Required parameters: 
-- The path to a DAGMC h5m file in `aegis_params{"DAGMC":}`
-- The path to a g-eqdsk file in `equil_params{"eqdsk":}`
-- The power at the Scrape-Off-Layer being mapped onto components in `equil_params{"power_sol":}`
-- The Scrape-Off-Layer width in `equil_params{"lambda_q":}`
-- The radial coordinate of the outer midplane in `equil_params{"r_outrbdry":}`
+- `aegis_params{"DAGMC":}` - The path to a DAGMC h5m file 
+- `equil_params{"eqdsk":}` - The path to a g-eqdsk file
+- `equil_params{"power_sol":}` - The power at the Scrape-Off-Layer being mapped onto components
+- `equil_params{"lambda_q":}` - The Scrape-Off-Layer width
+- `equil_params{"r_outrbdry":}` - The radial coordinate of the outer midplane
 
 Optional parameters for the `aegis_params` block:
 - `"step_size":` - The straight-line distance a particle moves along fieldline (length of ray-tracing query)
