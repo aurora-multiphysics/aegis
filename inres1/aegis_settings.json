@@ -1,13 +1,13 @@
 {
     "description": "inres1 test case to compare against SMARDDA",
     "aegis_params":{
-        "DAGMC": "inres1_32x.h5m",
+        "DAGMC": "inres1_shad.h5m",
         "step_size": 0.001,
         "max_steps": 100000,
-        "launch_pos": "fixed",
+        "launch_pos": "random",
   
         "monte_carlo_params":{
-              "number_of_particles_per_facet":1,
+              "number_of_particles_per_facet":10,
               "write_particle_launch_positions":false
         },
   
