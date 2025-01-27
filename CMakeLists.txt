@@ -28,7 +28,7 @@ include_directories(externals/json/include)
 #include(${CMAKE_SOURCE_DIR}/cmake/SetBuildType.cmake)
 
 # Default to cpmpile with debugging symbols
-set(CMAKE_BUILD_TYPE DEBUG)
+set(CMAKE_BUILD_TYPE RELEASE)
 
 
 # Import VTK
