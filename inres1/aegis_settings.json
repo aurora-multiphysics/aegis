@@ -2,18 +2,18 @@
     "description": "inres1 test case to compare against SMARDDA",
     "aegis_params":{
         "DAGMC": "inres1_shad.h5m",
-        "step_size": 0.01,
-        "max_steps": 10000,
-        "launch_pos": "fixed",
+        "step_size": 0.001,
+        "max_steps": 100000,
+        "launch_pos": "random",
   
         "monte_carlo_params":{
-              "number_of_particles_per_facet":1,
+              "number_of_particles_per_facet":10,
               "write_particle_launch_positions":false
         },
   
         "target_surfs": [1,2,3,4,5,6],
         "force_no_deposition": false,
-        "coordinate_system": "flux",
+        "coordinate_system": "xyz",
         "execution_type": "dynamic",
   
         "dynamic_batch_params":{

@@ -74,3 +74,4 @@ Some example outputs from an Aegis run with the same magnetic equilibrium and ge
 </p>
 
 **Right: Individual particle tracks (launched from cells in CAD mesh) coloured by their respective Heatflux with OMP and 2D magnetic equilibrium constructed from G-eqdsk read**
+
