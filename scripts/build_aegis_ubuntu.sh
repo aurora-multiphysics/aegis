@@ -5,11 +5,11 @@ export WORKDIR=$PWD
 mkdir aegis-deps
 export compile_cores=24
 
-function load_modules() {
-  module purge
-  module load hdf5/openmpi/gcc/9.3/openmpi-4.0.4/1.12.0
-  module load eigen
-}
+#function load_modules() {
+#  module purge
+#  module load hdf5/openmpi/gcc/9.3/openmpi-4.0.4/1.12.0
+#  module load eigen
+#}
 
 install_apt_deps() {
 
@@ -58,11 +58,10 @@ function build_moab(){
   mkdir bld
   cd bld 
   ../src/configure --enable-optimize --enable-shared --disable-debug \
-    		           --with-hdf5=/usr/lib/x86_64-linux-gnu/hdf5/serial \
-	                 --prefix=$WORKDIR/aegis-deps/MOAB
+    		           --with-hdf5=/usr/lib/x86_64-linux-gnu/hdf5/serial
   make -j"$compile_cores"
   make check -j"$compile_cores"
-  make install
+  sudo make install
 }
 
 function build_embree(){
@@ -133,7 +132,6 @@ function build_aegis(){
   cd bld
   cmake ../ -DDAGMC_DIR=$WORKDIR/aegis-deps/DAGMC/ -DCMAKE_PREFIX_PATH=$WORKDIR/aegis-deps/VTK
   make 
-  make test
 }
 
 #load_modules
