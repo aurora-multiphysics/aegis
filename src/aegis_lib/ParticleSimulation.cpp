@@ -432,6 +432,14 @@ ParticleSimulation::init_geometry()
   nodeCoords.resize(nodesList.size() * 3);
   DAG->moab_instance()->get_coords(&nodesList[0], nodesList.size(), nodeCoords.data());
 
+  for (auto &i:nodeCoords)
+  {
+    i = i*0.01; // scale down to m
+  }
+  DAG->moab_instance()->set_coords(&nodesList[0], nodesList.size(), nodeCoords.data());
+  DAG->write_mesh("scaled.vtk", 1);
+  std::exit(1);
+  
   totalNumberOfFacets = facetsList.size();
 
   implComplementVol = DAG->entity_by_index(3, volsList.size());
@@ -518,27 +526,28 @@ ParticleSimulation::loop_over_particles(int startIndex, int endIndex)
 void
 ParticleSimulation::setup_sources()
 {
-
   std::vector<double> triangleCoords(9);
   std::vector<double> trianglePtsA(3), trianglePtsB(3), trianglePtsC(3);
-  listOfParticles.reserve(num_particles_launched());
-  for (const auto & facetEH : targetFacets)
-  {
+
+  // Preallocate exactly num_particles_launched() elements
+  listOfParticles.resize(num_particles_launched());
+
+  // Index-based modification
+  size_t particleIndex = 0;
+  for (const auto &facetEH : targetFacets) {
     std::vector<moab::EntityHandle> triangleNodes;
     DAG->moab_instance()->get_adjacencies(&facetEH, 1, 0, false, triangleNodes);
     DAG->moab_instance()->get_coords(&triangleNodes[0], triangleNodes.size(),
                                      triangleCoords.data());
 
-    for (int j = 0; j < 3; j++)
-    {
+    for (int j = 0; j < 3; j++) {
       trianglePtsA[j] = triangleCoords[j];
       trianglePtsB[j] = triangleCoords[j + 3];
       trianglePtsC[j] = triangleCoords[j + 6];
     }
 
     TriangleSource triangle(trianglePtsA, trianglePtsB, trianglePtsC, facetEH, particleLaunchPos);
-    if (!equilibrium->check_if_in_bfield(triangle.launch_pos()))
-    {
+    if (!equilibrium->check_if_in_bfield(triangle.launch_pos())) {
       log_string(LogLevel::INFO,
                  "Triangle start outside of magnetic field. Skipping to next triangle...");
       continue;
@@ -548,12 +557,13 @@ ParticleSimulation::setup_sources()
     double heatflux = equilibrium->omp_power_dep(psid, triangle.BdotN(), "exp");
     triangle.update_heatflux(heatflux);
     double heatfluxPerParticle = heatflux / nParticlesPerFacet;
-    for (int i = 0; i < nParticlesPerFacet; ++i)
-    {
+
+    for (int i = 0; i < nParticlesPerFacet; ++i) {
+      if (particleIndex >= listOfParticles.size()) break; // Safety check
       auto launchPos = (particleLaunchPos == "fixed") ? triangle.centroid() : triangle.random_pt();
-      ParticleBase particle(coordinateSystem::CARTESIAN, launchPos, heatfluxPerParticle, facetEH);
-      particle.align_dir_to_surf(triangle.BdotN());
-      listOfParticles.emplace_back(particle);
+      listOfParticles[particleIndex] = ParticleBase(coordinateSystem::CARTESIAN, launchPos, heatfluxPerParticle, facetEH);
+      listOfParticles[particleIndex].align_dir_to_surf(triangle.BdotN());
+      ++particleIndex;
     }
   }
 }
