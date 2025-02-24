@@ -83,7 +83,12 @@
     "*.in": "cpp",
     "slist": "cpp",
     "*.txx": "cpp",
-    "*.ipp": "cpp"
+    "*.ipp": "cpp",
+    "compare": "cpp",
+    "concepts": "cpp",
+    "numbers": "cpp",
+    "ranges": "cpp",
+    "span": "cpp"
   },
 
 }

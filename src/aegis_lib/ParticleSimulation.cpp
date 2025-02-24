@@ -381,6 +381,21 @@ ParticleSimulation::read_params(const std::shared_ptr<JsonHandler> & configFile)
         vectorOfTargetSurfs.push_back(i);
       }
     }
+    
+    auto _str = aegisParams.get_optional<std::string>("mesh_units");
+    if (_str) { // Check if the optional has a value and then set to enum
+      if (*_str == "m") meshDimension = MeshUnits::M;
+      else if (*_str == "cm") meshDimension = MeshUnits::CM;
+      else if (*_str == "mm") meshDimension = MeshUnits::MM;
+    }
+
+    _str = aegisParams.get_optional<std::string>("write_mesh");
+    if (_str) { // Check if the optional has a value and then set to enum
+      if (*_str == "target") writeMesh = meshWriteOptions::TARGET;
+      else if (*_str == "full") writeMesh = meshWriteOptions::FULL;
+      else if (*_str == "partial") writeMesh = meshWriteOptions::PARTIAL;
+    }
+
   }
 
   std::string launchType = "Launching particles from triangles at ";
@@ -415,6 +430,28 @@ ParticleSimulation::select_coordinate_system()
   }
 }
 
+
+void ParticleSimulation::scale_mesh(MeshUnits from)
+{
+  float scalingFactor = 1.0f;
+  switch (from)
+  {
+  case MeshUnits::CM:
+    scalingFactor = 0.01f;
+    break;
+
+  case MeshUnits::MM:
+    scalingFactor = 0.001f;
+    break;
+  }
+
+  for (auto &i:nodeCoords)
+  {
+    i = i*scalingFactor;
+  }
+  DAG->moab_instance()->set_coords(&nodesList[0], nodesList.size(), nodeCoords.data());
+}
+
 // initialise CAD geometry for AEGIS and magnetic field equilibrium for CAD
 // Geometry
 void
@@ -432,13 +469,8 @@ ParticleSimulation::init_geometry()
   nodeCoords.resize(nodesList.size() * 3);
   DAG->moab_instance()->get_coords(&nodesList[0], nodesList.size(), nodeCoords.data());
 
-  for (auto &i:nodeCoords)
-  {
-    i = i*0.01; // scale down to m
-  }
-  DAG->moab_instance()->set_coords(&nodesList[0], nodesList.size(), nodeCoords.data());
-  DAG->write_mesh("scaled.vtk", 1);
-  
+  if (meshDimension != MeshUnits::UNSET) scale_mesh (meshDimension); // scale mesh to Metres 
+
   totalNumberOfFacets = facetsList.size();
 
   implComplementVol = DAG->entity_by_index(3, volsList.size());
@@ -558,11 +590,10 @@ ParticleSimulation::setup_sources()
     double heatfluxPerParticle = heatflux / nParticlesPerFacet;
 
     for (int i = 0; i < nParticlesPerFacet; ++i) {
-      if (particleIndex >= listOfParticles.size()) break; // Safety check
       auto launchPos = (particleLaunchPos == "fixed") ? triangle.centroid() : triangle.random_pt();
-      listOfParticles[particleIndex] = ParticleBase(coordinateSystem::CARTESIAN, launchPos, heatfluxPerParticle, facetEH);
-      listOfParticles[particleIndex].align_dir_to_surf(triangle.BdotN());
-      ++particleIndex;
+      ParticleBase particle(coordinateSystem::CARTESIAN, launchPos, heatfluxPerParticle, facetEH);
+      particle.align_dir_to_surf(triangle.BdotN());
+      listOfParticles.emplace_back(particle);
     }
   }
 }
@@ -840,7 +871,7 @@ ParticleSimulation::Execute_serial()
   // attach_mesh_attribute("Psi Start", targetFacets, psiStart);
   // attach_mesh_attribute("BdotN", targetFacets, bnList);
   // attach_mesh_attribute("Normal", targetFacets, normalList);
-  write_out_mesh(meshWriteOptions::BOTH);
+  write_out_mesh(writeMesh);
   mainParticleLoopTime = MPI_Wtime() - mainParticleLoopStart;
 
   // write out data and print final
@@ -931,7 +962,7 @@ ParticleSimulation::Execute_mpi()
     }
 
     attach_mesh_attribute("Heatflux", targetFacets, rootQvalues);
-    write_out_mesh(meshWriteOptions::BOTH, targetFacets);
+    write_out_mesh(writeMesh, targetFacets);
     mainParticleLoopTime = MPI_Wtime() - mainParticleLoopStart;
   }
 

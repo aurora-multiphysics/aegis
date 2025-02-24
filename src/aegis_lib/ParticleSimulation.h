@@ -59,6 +59,13 @@
 
 using namespace moab;
 
+enum class MeshUnits
+{
+  UNSET,
+  M,
+  CM,
+  MM
+};
 
 enum class meshWriteOptions
 {
@@ -131,7 +138,8 @@ class ParticleSimulation : public AegisBase
   void write_particle_launch_positions(std::vector<double> &particleHeatfluxes);
   void mesh_coord_transform(coordinateSystem coordSys);
   void select_coordinate_system();
-  
+  void scale_mesh(MeshUnits from);
+
   // Simulation config parameters
   std::string exeType = "dynamic";
   std::string dagmcInputFile; // no defaults because 
@@ -150,6 +158,9 @@ class ParticleSimulation : public AegisBase
   bool noMidplaneTermination = false;
   int nParticlesPerFacet = 1; // Number of particles launched per facet
   bool writeParticleLaunchPos = false;
+  MeshUnits meshDimension = MeshUnits::UNSET;
+  meshWriteOptions writeMesh = meshWriteOptions::TARGET;
+
 
   std::vector<TriangleSource> listOfTriangles;
   int totalNumberOfFacets = 0;
@@ -178,7 +189,7 @@ class ParticleSimulation : public AegisBase
   moab::EntityHandle implComplementVol; 
   double nextSurfDist = 0.0; // distance to next surface
   moab::EntityHandle intersectedFacet;
-  int rayOrientation = 1; // rays are fired along surface normals
+  int rayOrientation = -1; // rays are fired along surface normals
   double trackLength = 0.0;
 
   double startTime;

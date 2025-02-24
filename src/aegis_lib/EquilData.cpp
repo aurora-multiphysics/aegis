@@ -223,7 +223,7 @@ EquilData::read_eqdsk(std::string filename)
 
   // Fix for ITER eqdsks
 
-  OVERRIDE_ITER = true;
+  OVERRIDE_ITER = false;
 
   if (OVERRIDE_ITER == true)
   {

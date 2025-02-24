@@ -125,7 +125,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceRoot}/bin/aegis",
-      "args": ["aegis_settings.json"],
+      "args": ["mast.json"],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/inres1",
       "environment": [],
