@@ -1,17 +1,19 @@
 {
     "description": "inres1 test case to compare against SMARDDA",
     "aegis_params":{
-        "DAGMC": "inres1_shad.h5m",
+        "DAGMC": "/home/waqar/moose-workshop/mast-dagmc.h5m",
         "step_size": 0.001,
-        "max_steps": 100000,
+        "max_steps": 1000000,
         "launch_pos": "fixed",
   
         "monte_carlo_params":{
-              "number_of_particles_per_facet":10,
-              "write_particle_launch_positions":false
+              "number_of_particles_per_facet":1,
+              "write_particle_launch_positions":true
         },
   
-        "target_surfs": [1,2,3,4,5,6],
+        "target_surfs": [79436,79437,79438,79439,79440,79441,79442,79443],
+	"mesh_units": "cm",
+	"write_mesh": "target",
         "force_no_deposition": false,
         "coordinate_system": "xyz",
         "execution_type": "dynamic",
@@ -23,19 +25,19 @@
         } 
     },
     "equil_params":{
-        "eqdsk": "EQ3.eqdsk",
-        "power_sol": 7.5e+06,
-        "lambda_q": 0.012,
-        "r_outrbdry": 8.07385,
+        "eqdsk": "/home/waqar/moose-workshop/equil_MAST.eqdsk",
+        "power_sol": 3.2e+06,
+	"r_outrbdry": 8.07385,
+        "lambda_q": 6.187,
         "cenopt": 2,
         "psiref": -2.1628794,
-        "rmove": -0.006,
+        "rmove": 0.0,
         "draw_equil_rz": false,
         "draw_equil_xyz": false,
         "print_debug_info": false
     },
     "vtk_params":{
-        "draw_particle_tracks": false
+        "draw_particle_tracks": true
     }
    }
   

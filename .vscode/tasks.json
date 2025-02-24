@@ -7,7 +7,7 @@
         "options": {
           "cwd": "${workspaceRoot}/bld"
         },
-        "command": "cmake ../ -DDAGMC_DIR=/home/waqar/dagmc_bld/DAGMC"
+        "command": "cmake ../ -DDAGMC_DIR=/home/waqar/aegis-deps/DAGMC"
     },
     {
         "label": "clang-format-files",

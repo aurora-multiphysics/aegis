@@ -223,7 +223,7 @@ EquilData::read_eqdsk(std::string filename)
 
   // Fix for ITER eqdsks
 
-  OVERRIDE_ITER = true;
+  OVERRIDE_ITER = false;
 
   if (OVERRIDE_ITER == true)
   {
@@ -829,10 +829,12 @@ EquilData::b_field(const std::vector<double> & position, std::string startingFro
     zz = polarPosition[1];
   }
 
-  if (zr < rmin || zr > rmax || zz < zmin || zz > zmax)
-  {
-    return {};
-  }
+  double tolerance = 1e-9;
+  // check if out of bounds
+  if (zr < rmin - tolerance) return {};
+  if (zr > rmax + tolerance) return {};
+  if (zz < zmin - tolerance) return {};
+  if (zz > zmax + tolerance) return {};
 
   // evaluate psi and psi derivs at given (R,Z) coords
   alglib::spline2ddiff(psiSpline, zr, zz, zpsi, zdpdr, zdpdz, null);

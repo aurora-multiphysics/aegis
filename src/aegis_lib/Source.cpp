@@ -102,8 +102,7 @@ Sources::set_heatflux_params(const std::shared_ptr<EquilData> & equilibrium,
 
   polarPos = CoordTransform::cart_to_polar(launchPos);
 
-  bField = equilibrium->b_field(polarPos, "forwards");
-
+  bField = equilibrium->b_field(polarPos, "polar");
   bField = equilibrium->b_field_cart(bField, polarPos[2]);
   double product = 0;
   for (int i = 0; i < 3; i++)
