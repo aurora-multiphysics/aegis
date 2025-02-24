@@ -438,7 +438,6 @@ ParticleSimulation::init_geometry()
   }
   DAG->moab_instance()->set_coords(&nodesList[0], nodesList.size(), nodeCoords.data());
   DAG->write_mesh("scaled.vtk", 1);
-  std::exit(1);
   
   totalNumberOfFacets = facetsList.size();
 
@@ -530,7 +529,7 @@ ParticleSimulation::setup_sources()
   std::vector<double> trianglePtsA(3), trianglePtsB(3), trianglePtsC(3);
 
   // Preallocate exactly num_particles_launched() elements
-  listOfParticles.resize(num_particles_launched());
+  listOfParticles.reserve(num_particles_launched());
 
   // Index-based modification
   size_t particleIndex = 0;
