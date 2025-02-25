@@ -178,7 +178,7 @@ class ParticleSimulation : public AegisBase
   moab::EntityHandle implComplementVol; 
   double nextSurfDist = 0.0; // distance to next surface
   moab::EntityHandle intersectedFacet;
-  int rayOrientation = 1; // rays are fired along surface normals
+  int rayOrientation = -1; // 1 == rays are exiting | -1 == rays are entering
   double trackLength = 0.0;
 
   double startTime;
